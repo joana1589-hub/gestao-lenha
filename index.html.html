@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LenhaPro v28.0 - Cloud</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root { --primary: #1a252f; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; --warning: #f39c12; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; font-size: 0.82rem; color: #333; padding-bottom: 60px; }
+        .navbar { background-color: var(--primary) !important; border-bottom: 3px solid var(--accent); }
+        .card-stats { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); background: #fff; }
+        .tab-content { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-height: 500px; border: 1px solid #eee; }
+        .metric-large-value { font-size: 2.8rem; font-weight: 900; line-height: 1; color: #111; }
+        .metric-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #7f8c8d; }
+        .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; }
+        .bg-pendente { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .bg-concluido { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .lote-card { border-left: 5px solid var(--primary); margin-bottom: 12px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
+        .text-money { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark mb-3 p-2 sticky-top">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v28.0</span>
+            <div id="sync-status" style="font-size: 0.6rem; color: #aaa;">A conetar...</div>
+        </div>
+        <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="window.abrirModal('modalSaldoInicial')">💰 DEFINIR SALDO INICIAL</button>
+    </div>
+</nav>
+
+<div class="container">
+    <!-- DASHBOARD -->
+    <div class="row g-2 mb-3">
+        <div class="col-md-5">
+            <div class="card card-stats p-3 text-center h-100 shadow-sm border-2 border-warning" style="background:#fff3cd">
+                <div class="metric-label text-dark"><i class="bi bi-truck me-1"></i> TOTAL POR ENTREGAR</div>
+                <div id="resumoPendentesGlobal" class="metric-large-value mt-2">0.0 m³</div>
+                <small class="text-muted">Lenha encomendada em falta</small>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="row g-2">
+                <div class="col-6"><div class="card card-stats p-2 border-start border-danger border-4 h-100">
+                    <div class="metric-label text-danger">Dívida p/ Receber</div>
+                    <div id="resumoDividaEntregue" class="fw-bold h5 mb-0 text-danger text-money">0.00€</div>
+                    <small style="font-size:0.55rem">Já saiu e não foi pago</small>
+                </div></div>
+                <div class="col-6"><div class="card card-stats p-2 border-start border-success border-4 h-100">
+                    <div class="metric-label text-success">Lucro Real</div>
+                    <div id="resumoLucro" class="fw-bold h5 mb-0 text-success text-money">0.00€</div>
+                    <small style="font-size:0.55rem">Vendas - Gastos (S/ inicial)</small>
+                </div></div>
+                <div class="col-12"><div class="card card-stats p-3 bg-primary text-white shadow">
+                    <div class="metric-label text-white-50">DINHEIRO TOTAL EM MÃO</div>
+                    <div id="resumoCaixaTotal" class="fw-bold h4 mb-0 text-money">0.00€</div>
+                    <small style="font-size:0.6rem">Saldo Inicial + Recebido - Gasto</small>
+                </div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <ul class="nav nav-tabs mb-2" id="mainTabs">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEnc">🛒 Vendas</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLotes">📦 Lotes</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Clientes</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFin">📊 Finanças</button></li>
+    </ul>
+
+    <div class="tab-content shadow-sm mb-5">
+        <!-- VENDAS -->
+        <div id="tabEnc" class="tab-pane fade show active">
+            <div class="d-flex gap-2 mb-3">
+                <input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Filtrar cliente..." onkeyup="window.render()">
+                <button class="btn btn-primary btn-sm px-4 fw-bold" onclick="window.abrirModalEncomenda()">+ NOVA</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th></th></tr>
+                    </thead>
+                    <tbody id="corpoEncomendas"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- LOTES -->
+        <div id="tabLotes" class="tab-pane fade">
+            <button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModal('modalNovoLote')">+ COMPRAR CARGA</button>
+            <div id="listaLotes"></div>
+        </div>
+
+        <!-- CLIENTES -->
+        <div id="tabCli" class="tab-pane fade">
+            <input type="text" id="filtroCli" class="form-control form-control-sm mb-2" placeholder="🔍 Filtrar clientes..." onkeyup="window.render()">
+            <button class="btn btn-success btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModal('modalCli')">+ NOVO CLIENTE</button>
+            <table class="table table-sm"><thead><tr><th>Nome</th><th>Info</th><th></th></tr></thead><tbody id="listaClientesTabela"></tbody></table>
+        </div>
+
+        <!-- FINANÇAS -->
+        <div id="tabFin" class="tab-pane fade">
+            <div class="row mb-3 g-2">
+                <div class="col-md-4"><input type="month" id="filtroMesExport" class="form-control form-control-sm"></div>
+                <div class="col-6 col-md-4"><button class="btn btn-success btn-sm w-100" onclick="window.exportarVendas()">📥 Exportar Vendas</button></div>
+                <div class="col-6 col-md-4"><button class="btn btn-danger btn-sm w-100" onclick="window.exportarDespesas()">📥 Exportar Gastos</button></div>
+            </div>
+            <button class="btn btn-outline-danger btn-sm w-100 mb-3" onclick="window.abrirModal('modalDespesa')">+ REGISTAR GASTO GERAL</button>
+            <table class="table table-sm"><tbody id="corpoDespesas"></tbody></table>
+            <div class="mt-3 p-2 bg-light text-center rounded">
+                <small class="text-muted">Início: <b id="dbgInic">0</b>€ | Recebido: <b id="dbgRec">0</b>€ | Gasto: <b id="dbgGas">0</b>€</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAIS -->
+<div class="modal fade" id="modalSaldoInicial" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>Definir Saldo Inicial em Caixa</h6>
+    <input type="number" id="inputSaldoInicial" class="form-control mb-3" step="0.01">
+    <button class="btn btn-warning w-100 fw-bold" onclick="window.confirmarSaldoInicial()">GRAVAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalCli" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>Novo Cliente</h6>
+    <input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome">
+    <input type="text" id="cliInfo" class="form-control mb-3" placeholder="Telemóvel">
+    <button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>Nova Encomenda</h6>
+    <select id="encCliente" class="form-select mb-2"></select>
+    <select id="encTipoLenha" class="form-select mb-2">
+        <option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option>
+    </select>
+    <div class="row g-2 mb-3">
+        <div class="col-6"><label class="small">Metros:</label><input type="number" id="encMetros" class="form-control"></div>
+        <div class="col-6"><label class="small">Preço €/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div>
+    </div>
+    <input type="date" id="encDataC" class="form-control mb-3">
+    <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">CRIAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalNovoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>Compra de Carga</h6>
+    <input type="text" id="loteNome" class="form-control mb-2" placeholder="Identificação da Carga">
+    <input type="number" id="loteCusto" class="form-control mb-3" placeholder="Preço de Compra Total €">
+    <input type="date" id="loteData" class="form-control mb-3">
+    <button class="btn btn-dark w-100 fw-bold" onclick="window.salvarLote()">REGISTAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalGastoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6 class="text-danger">Gasto Extra nesta Carga</h6>
+    <input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Ex: Gasóleo">
+    <input type="number" id="gastoLoteValor" class="form-control mb-3" placeholder="Valor €">
+    <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">ADICIONAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalSaidaLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3">
+    <h6>Saída de Stock</h6>
+    <input type="number" id="saidaLoteM3" class="form-control mb-2" placeholder="m³">
+    <input type="number" id="saidaLoteValor" class="form-control mb-3" placeholder="€ Recebido (opcional)">
+    <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarSaidaLote()">CONFIRMAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalEntrega" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4">
+    <h6>Registar Entrega</h6>
+    <p>Falta entregar: <b id="faltaM3Texto"></b> m³</p>
+    <button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarEntregaTotal()">ENTREGA TOTAL</button>
+    <div class="input-group"><input type="number" id="qtdParcialM3" class="form-control" placeholder="Parcial"><button class="btn btn-warning" onclick="window.executarEntregaParcial()">Ok</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalPagamento" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4">
+    <h6>Receber Pagamento</h6>
+    <p class="text-danger">Dívida Total: <b id="faltaDinheiroTexto"></b></p>
+    <button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarPagamentoTotal()">PAGO TOTAL</button>
+    <div class="input-group"><input type="number" id="qtdParcialDinheiro" class="form-control" placeholder="Parcial"><button class="btn btn-warning" onclick="window.executarPagamentoParcial()">Ok</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalDespesa" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>Gasto Geral</h6>
+    <input type="text" id="despDesc" class="form-control mb-2" placeholder="Descrição">
+    <input type="number" id="despValor" class="form-control mb-2" placeholder="Valor €">
+    <input type="date" id="despData" class="form-control mb-3">
+    <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">GRAVAR</button>
+</div></div></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDOsSDIznQ-dpYsLNrfM1JVyHyifJfYOtE",
+        authDomain: "lenhapro1.firebaseapp.com",
+        projectId: "lenhapro1",
+        storageBucket: "lenhapro1.firebasestorage.app",
+        messagingSenderId: "357732471130",
+        appId: "1:357732471130:web:f4ce43cddb6a996981a363"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const dbFirestore = getFirestore(app);
+    const docRef = doc(dbFirestore, "producao", "dados_mestre");
+
+    window.db = { clientes: [], encomendas: [], despesas: [], lotes: [], saldoInicial: 0 };
+    let idAtivo = null, loteIdAtivo = null;
+
+    const toN = (v) => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+
+    onSnapshot(docRef, (docSnap) => {
+        const status = document.getElementById('sync-status');
+        if (docSnap.exists()) {
+            window.db = docSnap.data();
+            status.innerText = "🟢 Nuvem Conetada";
+            status.style.color = "#2ecc71";
+        } else {
+            status.innerText = "🟡 A criar base de dados...";
+            window.atualizarBD();
+        }
+        window.render();
+    });
+
+    window.atualizarBD = async function() {
+        try { await setDoc(docRef, window.db); } catch (e) { console.error("Erro ao gravar:", e); }
+    }
+
+    // MODAIS
+    window.abrirModal = (id) => new bootstrap.Modal(document.getElementById(id)).show();
+    window.fecharModal = (id) => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById(id));
+        if(modal) modal.hide();
+        window.atualizarBD();
+    }
+
+    // FUNÇÕES
+    window.confirmarSaldoInicial = () => { window.db.saldoInicial = toN(document.getElementById('inputSaldoInicial').value); window.fecharModal('modalSaldoInicial'); };
+    window.salvarCliente = () => { if(document.getElementById('cliNome').value) window.db.clientes.push({ id: Date.now().toString(), nome: document.getElementById('cliNome').value, info: document.getElementById('cliInfo').value }); window.fecharModal('modalCli'); };
+    
+    window.abrirModalEncomenda = () => {
+        if(!window.db.clientes || window.db.clientes.length === 0) return alert("Crie um cliente primeiro.");
+        document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+        document.getElementById('encDataC').value = new Date().toISOString().split('T')[0];
+        window.abrirModal('modalEnc');
+    };
+
+    window.salvarEncomenda = () => {
+        const m = toN(document.getElementById('encMetros').value), p = toN(document.getElementById('encPreco').value);
+        window.db.encomendas.push({ id: Date.now().toString(), clienteId: document.getElementById('encCliente').value, tipoLenha: document.getElementById('encTipoLenha').value, dataEnc: document.getElementById('encDataC').value, metrosTotal: m, metrosEntregues: 0, precoM3: p, valorTotal: m * p, valorPago: 0 });
+        window.fecharModal('modalEnc');
+    };
+
+    window.salvarLote = () => { window.db.lotes.push({ id: Date.now().toString(), nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value || new Date().toISOString().split('T')[0], gastosExtras: [], saidasLenha: [] }); window.fecharModal('modalNovoLote'); };
+    window.abrirGastoLote = (id) => { loteIdAtivo = id; window.abrirModal('modalGastoLote'); };
+    window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == loteIdAtivo); if(!l.gastosExtras) l.gastosExtras = []; l.gastosExtras.push({ desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) }); window.fecharModal('modalGastoLote'); };
+    window.abrirSaidaLote = (id) => { loteIdAtivo = id; window.abrirModal('modalSaidaLote'); };
+    window.salvarSaidaLote = () => { window.db.lotes.find(l => l.id == loteIdAtivo).saidasLenha.push({ m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }); window.fecharModal('modalSaidaLote'); };
+    window.abrirEntrega = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaM3Texto').innerText = (toN(e.metrosTotal) - toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
+    window.executarEntregaTotal = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues = window.db.encomendas.find(e => e.id == idAtivo).metrosTotal; window.fecharModal('modalEntrega'); };
+    window.executarEntregaParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues += toN(document.getElementById('qtdParcialM3').value); window.fecharModal('modalEntrega'); };
+    window.abrirPagamento = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaDinheiroTexto').innerText = (toN(e.valorTotal) - toN(e.valorPago)).toFixed(2) + "€"; window.abrirModal('modalPagamento'); };
+    window.executarPagamentoTotal = () => { const e = window.db.encomendas.find(e => e.id == idAtivo); e.valorPago = e.valorTotal; window.fecharModal('modalPagamento'); };
+    window.executarPagamentoParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).valorPago += toN(document.getElementById('qtdParcialDinheiro').value); window.fecharModal('modalPagamento'); };
+    window.salvarDespesa = () => { window.db.despesas.push({ id: Date.now().toString(), desc: document.getElementById('despDesc').value, valor: toN(document.getElementById('despValor').value), data: document.getElementById('despData').value || new Date().toISOString().split('T')[0] }); window.fecharModal('modalDespesa'); };
+    window.apagar = (t, id) => { if(confirm("Eliminar registo?")) { window.db[t] = window.db[t].filter(x => x.id != id); window.atualizarBD(); } };
+
+    // RENDERIZAÇÃO
+    window.render = function() {
+        const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
+        const fCli = document.getElementById('filtroCli').value.toLowerCase();
+        let sRecEnc = 0, sRecLot = 0, sCusLotTot = 0, sGstGer = 0, dEntregueTot = 0, m3FaltaTot = 0;
+
+        // Render Lotes
+        document.getElementById('listaLotes').innerHTML = (window.db.lotes || []).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l => {
+            const vM3 = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.m3),0);
+            const rLot = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.valor),0);
+            const gExtra = (l.gastosExtras || []).reduce((a,c)=>a+toN(c.valor),0);
+            const cTotalLote = toN(l.custoCompra) + gExtra;
+            sCusLotTot += cTotalLote; sRecLot += rLot;
+            const balLote = rLot - cTotalLote;
+            return `<div class="lote-card shadow-sm"><div class="row align-items-center"><div class="col-8"><b>${l.nome}</b><br><small class="text-muted">Custo: ${cTotalLote.toFixed(1)}€ | Vendido: ${vM3.toFixed(1)} m³</small></div><div class="col-4 text-end"><button class="btn btn-sm btn-primary mb-1" onclick="window.abrirSaidaLote('${l.id}')">Saída</button> <button class="btn btn-sm btn-danger mb-1" onclick="window.abrirGastoLote('${l.id}')">Gasto</button></div></div><div class="mt-1 small d-flex justify-content-between border-top pt-1"><span>Bal: ${balLote.toFixed(1)}€</span><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div>`;
+        }).join('');
+
+        // Render Encomendas
+        document.getElementById('corpoEncomendas').innerHTML = (window.db.encomendas || []).filter(e => {
+            const c = window.db.clientes.find(cli=>cli.id==e.clienteId);
+            return c && c.nome.toLowerCase().includes(fEnc);
+        }).sort((a,b)=>new Date(b.dataEnc)-new Date(a.dataEnc)).map(e => {
+            const cli = window.db.clientes.find(c => c.id == e.clienteId);
+            const vPago = toN(e.valorPago), vTotal = toN(e.valorTotal), fEnt = toN(e.metrosTotal) - toN(e.metrosEntregues), dEnt = (toN(e.metrosEntregues) * toN(e.precoM3)) - vPago;
+            sRecEnc += vPago; 
+            if(dEnt > 0) dEntregueTot += dEnt; 
+            if(fEnt > 0) m3FaltaTot += fEnt;
+            return `<tr><td><b>${cli?cli.nome:'?'}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vTotal.toFixed(0)}€</td><td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fEnt<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vPago>=vTotal?'text-success':'text-danger fw-bold'}">${vPago.toFixed(0)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
+        }).join('');
+
+        // Clientes
+        document.getElementById('listaClientesTabela').innerHTML = (window.db.clientes || []).filter(c=>c.nome.toLowerCase().includes(fCli)).map(c => `<tr><td><b>${c.nome}</b></td><td>${c.info||''}</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
+        
+        // Despesas Gerais
+        sGstGer = (window.db.despesas || []).reduce((a,c) => a + toN(c.valor), 0);
+        document.getElementById('corpoDespesas').innerHTML = (window.db.despesas || []).map(d => `<tr class="small"><td>${d.data}</td><td>${d.desc}</td><td>${d.valor}€</td><td class="text-end" onclick="window.apagar('despesas', '${d.id}')">❌</td></tr>`).join('');
+
+        // CÁLCULOS FINAIS
+        const sInic = toN(window.db.saldoInicial);
+        const totalRecebido = sRecEnc + sRecLot;
+        const totalGasto = sCusLotTot + sGstGer;
+        const lucroFinal = totalRecebido - totalGasto;
+        const caixaAtual = sInic + lucroFinal;
+
+        document.getElementById('resumoLucro').innerText = lucroFinal.toFixed(2) + "€";
+        document.getElementById('resumoDividaEntregue').innerText = dEntregueTot.toFixed(2) + "€";
+        document.getElementById('resumoCaixaTotal').innerText = caixaAtual.toFixed(2) + "€";
+        document.getElementById('resumoPendentesGlobal').innerText = m3FaltaTot.toFixed(1) + " m³";
+        
+        // Debug/Rodapé Finanças
+        document.getElementById('dbgInic').innerText = sInic.toFixed(2); 
+        document.getElementById('dbgRec').innerText = totalRecebido.toFixed(2); 
+        document.getElementById('dbgGas').innerText = totalGasto.toFixed(2);
+        
+        document.getElementById('inputSaldoInicial').value = sInic;
+    };
+
+    window.exportarVendas = () => { let csv = "Data;Cliente;Tipo;Metros;Pago\n"; window.db.encomendas.forEach(e => { const c = window.db.clientes.find(cli=>cli.id==e.clienteId); csv += `${e.dataEnc};${c?c.nome:'?'};${e.tipoLenha};${e.metrosTotal};${e.valorPago}\n`; }); window.baixarCSV(csv, "Vendas.csv"); };
+    window.exportarDespesas = () => { let csv = "Data;Descricao;Valor\n"; window.db.despesas.forEach(d => csv += `${d.data};${d.desc};${d.valor}\n`); window.db.lotes.forEach(l => { csv += `${l.data};COMPRA: ${l.nome};${l.custoCompra}\n`; (l.gastosExtras || []).forEach(g => csv += `${l.data};GASTO LOTE: ${g.desc};${g.valor}\n`); }); window.baixarCSV(csv, "Gastos.csv"); };
+    window.baixarCSV = (csv, n) => { const b = new Blob(["\ufeff"+csv],{type:'text/csv;charset=utf-8;'}); const l = document.createElement("a"); l.href=URL.createObjectURL(b); l.download=n; l.click(); };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
