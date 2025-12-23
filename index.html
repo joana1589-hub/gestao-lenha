@@ -17,8 +17,10 @@
         .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; }
         .bg-pendente { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .bg-concluido { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .lote-card { border-left: 5px solid var(--primary); margin-bottom: 12px; padding: 12px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
+        .lote-card { border-left: 5px solid var(--primary); margin-bottom: 15px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
         .text-money { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+        .movimento-item { font-size: 0.75rem; padding: 2px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
+        .btn-obs { border: none; background: none; padding: 0 5px; }
     </style>
 </head>
 <body>
@@ -66,25 +68,41 @@
 
     <!-- TABS -->
     <ul class="nav nav-tabs mb-2" id="mainTabs">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEnc">🛒 Vendas</button></li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEnc">🛒 Encomendas</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabVen">✅ Vendas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLotes">📦 Lotes</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Clientes</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFin">📊 Finanças</button></li>
     </ul>
 
     <div class="tab-content shadow-sm mb-5">
-        <!-- VENDAS -->
+        <!-- ENCOMENDAS ATIVAS -->
         <div id="tabEnc" class="tab-pane fade show active">
             <div class="d-flex gap-2 mb-3">
-                <input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Filtrar cliente..." onkeyup="window.render()">
+                <input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Filtrar encomendas..." onkeyup="window.render()">
                 <button class="btn btn-primary btn-sm px-4 fw-bold" onclick="window.abrirModalEncomenda()">+ NOVA</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle">
                     <thead class="table-light">
-                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th></th></tr>
+                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th>Obs</th><th></th></tr>
                     </thead>
                     <tbody id="corpoEncomendas"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- VENDAS CONCLUÍDAS -->
+        <div id="tabVen" class="tab-pane fade">
+            <div class="mb-3">
+                <input type="text" id="filtroVen" class="form-control form-control-sm" placeholder="🔍 Pesquisar histórico de vendas..." onkeyup="window.render()">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Pago €</th><th>Obs</th><th>Data</th><th></th></tr>
+                    </thead>
+                    <tbody id="corpoVendas"></tbody>
                 </table>
             </div>
         </div>
@@ -138,12 +156,19 @@
     <select id="encTipoLenha" class="form-select mb-2">
         <option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option>
     </select>
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-2">
         <div class="col-6"><label class="small">Metros:</label><input type="number" id="encMetros" class="form-control"></div>
         <div class="col-6"><label class="small">Preço €/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div>
     </div>
-    <input type="date" id="encDataC" class="form-control mb-3">
+    <input type="date" id="encDataC" class="form-control mb-2">
+    <textarea id="encObs" class="form-control mb-3" placeholder="Observações..."></textarea>
     <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">CRIAR</button>
+</div></div></div>
+
+<div class="modal fade" id="modalObs" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+    <h6>📝 Editar Observações</h6>
+    <textarea id="editObsTexto" class="form-control mb-3" rows="4"></textarea>
+    <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarObs()">GUARDAR</button>
 </div></div></div>
 
 <div class="modal fade" id="modalNovoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
@@ -245,20 +270,26 @@
         if(!window.db.clientes || window.db.clientes.length === 0) return alert("Crie um cliente primeiro.");
         document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
         document.getElementById('encDataC').value = new Date().toISOString().split('T')[0];
+        document.getElementById('encObs').value = "";
         window.abrirModal('modalEnc');
     };
 
     window.salvarEncomenda = () => {
         const m = toN(document.getElementById('encMetros').value), p = toN(document.getElementById('encPreco').value);
-        window.db.encomendas.push({ id: Date.now().toString(), clienteId: document.getElementById('encCliente').value, tipoLenha: document.getElementById('encTipoLenha').value, dataEnc: document.getElementById('encDataC').value, metrosTotal: m, metrosEntregues: 0, precoM3: p, valorTotal: m * p, valorPago: 0 });
+        window.db.encomendas.push({ id: Date.now().toString(), clienteId: document.getElementById('encCliente').value, tipoLenha: document.getElementById('encTipoLenha').value, dataEnc: document.getElementById('encDataC').value, metrosTotal: m, metrosEntregues: 0, precoM3: p, valorTotal: m * p, valorPago: 0, obs: document.getElementById('encObs').value || "" });
         window.fecharModal('modalEnc');
     };
 
+    window.abrirModalObs = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('editObsTexto').value = e.obs || ""; window.abrirModal('modalObs'); };
+    window.salvarObs = () => { const e = window.db.encomendas.find(x => x.id == idAtivo); if(e) e.obs = document.getElementById('editObsTexto').value; window.fecharModal('modalObs'); };
+
     window.salvarLote = () => { window.db.lotes.push({ id: Date.now().toString(), nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value || new Date().toISOString().split('T')[0], gastosExtras: [], saidasLenha: [] }); window.fecharModal('modalNovoLote'); };
     window.abrirGastoLote = (id) => { loteIdAtivo = id; window.abrirModal('modalGastoLote'); };
-    window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == loteIdAtivo); if(!l.gastosExtras) l.gastosExtras = []; l.gastosExtras.push({ desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) }); window.fecharModal('modalGastoLote'); };
+    window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == loteIdAtivo); if(!l.gastosExtras) l.gastosExtras = []; l.gastosExtras.push({ id: Date.now(), desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) }); window.fecharModal('modalGastoLote'); };
     window.abrirSaidaLote = (id) => { loteIdAtivo = id; window.abrirModal('modalSaidaLote'); };
-    window.salvarSaidaLote = () => { window.db.lotes.find(l => l.id == loteIdAtivo).saidasLenha.push({ m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }); window.fecharModal('modalSaidaLote'); };
+    window.salvarSaidaLote = () => { window.db.lotes.find(l => l.id == loteIdAtivo).saidasLenha.push({ id: Date.now(), m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }); window.fecharModal('modalSaidaLote'); };
+    
+    window.apagarMovimento = (loteId, tipo, movId) => { if(confirm("Apagar este movimento?")) { const l = window.db.lotes.find(x => x.id == loteId); l[tipo] = l[tipo].filter(m => m.id != movId); window.atualizarBD(); } };
     window.abrirEntrega = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaM3Texto').innerText = (toN(e.metrosTotal) - toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
     window.executarEntregaTotal = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues = window.db.encomendas.find(e => e.id == idAtivo).metrosTotal; window.fecharModal('modalEntrega'); };
     window.executarEntregaParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues += toN(document.getElementById('qtdParcialM3').value); window.fecharModal('modalEntrega'); };
@@ -271,61 +302,75 @@
     // RENDERIZAÇÃO
     window.render = function() {
         const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
+        const fVen = document.getElementById('filtroVen').value.toLowerCase();
         const fCli = document.getElementById('filtroCli').value.toLowerCase();
         let sRecEnc = 0, sRecLot = 0, sCusLotTot = 0, sGstGer = 0, dEntregueTot = 0, m3FaltaTot = 0;
 
         // Render Lotes
         document.getElementById('listaLotes').innerHTML = (window.db.lotes || []).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l => {
-            const vM3 = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.m3),0);
+            const m3Vendidos = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.m3),0);
             const rLot = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.valor),0);
             const gExtra = (l.gastosExtras || []).reduce((a,c)=>a+toN(c.valor),0);
             const cTotalLote = toN(l.custoCompra) + gExtra;
             sCusLotTot += cTotalLote; sRecLot += rLot;
             const balLote = rLot - cTotalLote;
-            return `<div class="lote-card shadow-sm"><div class="row align-items-center"><div class="col-8"><b>${l.nome}</b><br><small class="text-muted">Custo: ${cTotalLote.toFixed(1)}€ | Vendido: ${vM3.toFixed(1)} m³</small></div><div class="col-4 text-end"><button class="btn btn-sm btn-primary mb-1" onclick="window.abrirSaidaLote('${l.id}')">Saída</button> <button class="btn btn-sm btn-danger mb-1" onclick="window.abrirGastoLote('${l.id}')">Gasto</button></div></div><div class="mt-1 small d-flex justify-content-between border-top pt-1"><span>Bal: ${balLote.toFixed(1)}€</span><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div>`;
+            let htmlMovs = "";
+            (l.saidasLenha || []).forEach(m => { htmlMovs += `<div class="movimento-item"><span class="text-success"><i class="bi bi-plus-circle-fill"></i> Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><i class="bi bi-x text-muted" onclick="window.apagarMovimento('${l.id}','saidasLenha','${m.id}')"></i></div>`; });
+            (l.gastosExtras || []).forEach(g => { htmlMovs += `<div class="movimento-item"><span class="text-danger"><i class="bi bi-dash-circle-fill"></i> Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><i class="bi bi-x text-muted" onclick="window.apagarMovimento('${l.id}','gastosExtras','${g.id}')"></i></div>`; });
+            return `<div class="lote-card shadow-sm"><div class="row align-items-center"><div class="col-7"><span class="badge bg-dark mb-1">${l.data}</span><br><h6 class="mb-0 fw-bold">${l.nome}</h6><small class="text-muted">Custo: ${cTotalLote.toFixed(0)}€</small></div><div class="col-5 text-end"><button class="btn btn-sm btn-primary py-0" onclick="window.abrirSaidaLote('${l.id}')">+ Saída</button> <button class="btn btn-sm btn-danger py-0" onclick="window.abrirGastoLote('${l.id}')">+ Gasto</button></div></div><div class="bg-light p-2 rounded mt-2 mb-2" style="max-height: 120px; overflow-y: auto;">${htmlMovs || '<div class="text-center text-muted small py-2">Sem movimentos</div>'}</div><div class="d-flex justify-content-between align-items-center border-top pt-2"><div class="small"><b>Vendido:</b> ${m3Vendidos.toFixed(1)} m³ | <b>Bal:</b> <span class="${balLote>=0?'text-success':'text-danger'} fw-bold">${balLote.toFixed(1)}€</span></div><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div>`;
         }).join('');
 
-        // Render Encomendas
-        document.getElementById('corpoEncomendas').innerHTML = (window.db.encomendas || []).filter(e => {
-            const c = window.db.clientes.find(cli=>cli.id==e.clienteId);
-            return c && c.nome.toLowerCase().includes(fEnc);
-        }).sort((a,b)=>new Date(b.dataEnc)-new Date(a.dataEnc)).map(e => {
+        // SEPARAÇÃO ENCOMENDAS vs VENDAS
+        let htmlEnc = "", htmlVen = "";
+        (window.db.encomendas || []).sort((a,b)=>new Date(b.dataEnc)-new Date(a.dataEnc)).forEach(e => {
             const cli = window.db.clientes.find(c => c.id == e.clienteId);
-            const vPago = toN(e.valorPago), vTotal = toN(e.valorTotal), fEnt = toN(e.metrosTotal) - toN(e.metrosEntregues), dEnt = (toN(e.metrosEntregues) * toN(e.precoM3)) - vPago;
-            sRecEnc += vPago; 
-            if(dEnt > 0) dEntregueTot += dEnt; 
-            if(fEnt > 0) m3FaltaTot += fEnt;
-            return `<tr><td><b>${cli?cli.nome:'?'}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vTotal.toFixed(0)}€</td><td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fEnt<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vPago>=vTotal?'text-success':'text-danger fw-bold'}">${vPago.toFixed(0)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
-        }).join('');
+            if(!cli) return;
+            
+            const vPago = toN(e.valorPago), vTotal = toN(e.valorTotal), mTot = toN(e.metrosTotal), mEnt = toN(e.metrosEntregues);
+            const isConcluida = (mEnt >= mTot && vPago >= vTotal);
+            const temObs = e.obs && e.obs.trim().length > 0;
+            
+            sRecEnc += vPago;
+            if(!isConcluida) {
+                const fEnt = mTot - mEnt, dEnt = (mEnt * toN(e.precoM3)) - vPago;
+                if(dEnt > 0) dEntregueTot += dEnt;
+                if(fEnt > 0) m3FaltaTot += fEnt;
+                
+                if(cli.nome.toLowerCase().includes(fEnc)) {
+                    htmlEnc += `<tr><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vTotal.toFixed(0)}€</td><td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fEnt<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vPago>=vTotal?'text-success':'text-danger fw-bold'}">${vPago.toFixed(0)}€</td><td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temObs ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
+                }
+            } else {
+                if(cli.nome.toLowerCase().includes(fVen)) {
+                    htmlVen += `<tr class="table-success"><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vTotal.toFixed(0)}€</td><td>${vPago.toFixed(0)}€</td><td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temObs ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td><td><small>${e.dataEnc}</small></td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
+                }
+            }
+        });
 
-        // Clientes
+        document.getElementById('corpoEncomendas').innerHTML = htmlEnc;
+        document.getElementById('corpoVendas').innerHTML = htmlVen;
+
+        // Clientes e Finanças
         document.getElementById('listaClientesTabela').innerHTML = (window.db.clientes || []).filter(c=>c.nome.toLowerCase().includes(fCli)).map(c => `<tr><td><b>${c.nome}</b></td><td>${c.info||''}</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
-        
-        // Despesas Gerais
         sGstGer = (window.db.despesas || []).reduce((a,c) => a + toN(c.valor), 0);
         document.getElementById('corpoDespesas').innerHTML = (window.db.despesas || []).map(d => `<tr class="small"><td>${d.data}</td><td>${d.desc}</td><td>${d.valor}€</td><td class="text-end" onclick="window.apagar('despesas', '${d.id}')">❌</td></tr>`).join('');
 
-        // CÁLCULOS FINAIS
+        // Totais Dashboard
         const sInic = toN(window.db.saldoInicial);
         const totalRecebido = sRecEnc + sRecLot;
         const totalGasto = sCusLotTot + sGstGer;
         const lucroFinal = totalRecebido - totalGasto;
         const caixaAtual = sInic + lucroFinal;
-
         document.getElementById('resumoLucro').innerText = lucroFinal.toFixed(2) + "€";
         document.getElementById('resumoDividaEntregue').innerText = dEntregueTot.toFixed(2) + "€";
         document.getElementById('resumoCaixaTotal').innerText = caixaAtual.toFixed(2) + "€";
         document.getElementById('resumoPendentesGlobal').innerText = m3FaltaTot.toFixed(1) + " m³";
-        
-        // Debug/Rodapé Finanças
         document.getElementById('dbgInic').innerText = sInic.toFixed(2); 
         document.getElementById('dbgRec').innerText = totalRecebido.toFixed(2); 
         document.getElementById('dbgGas').innerText = totalGasto.toFixed(2);
-        
         document.getElementById('inputSaldoInicial').value = sInic;
     };
 
-    window.exportarVendas = () => { let csv = "Data;Cliente;Tipo;Metros;Pago\n"; window.db.encomendas.forEach(e => { const c = window.db.clientes.find(cli=>cli.id==e.clienteId); csv += `${e.dataEnc};${c?c.nome:'?'};${e.tipoLenha};${e.metrosTotal};${e.valorPago}\n`; }); window.baixarCSV(csv, "Vendas.csv"); };
+    window.exportarVendas = () => { let csv = "Data;Cliente;Tipo;Metros;Pago;Observacoes\n"; window.db.encomendas.forEach(e => { const c = window.db.clientes.find(cli=>cli.id==e.clienteId); const obsLimpa = (e.obs || "").replace(/(\r\n|\n|\r|;)/gm, " "); csv += `${e.dataEnc};${c?c.nome:'?'};${e.tipoLenha};${e.metrosTotal};${e.valorPago};${obsLimpa}\n`; }); window.baixarCSV(csv, "Vendas.csv"); };
     window.exportarDespesas = () => { let csv = "Data;Descricao;Valor\n"; window.db.despesas.forEach(d => csv += `${d.data};${d.desc};${d.valor}\n`); window.db.lotes.forEach(l => { csv += `${l.data};COMPRA: ${l.nome};${l.custoCompra}\n`; (l.gastosExtras || []).forEach(g => csv += `${l.data};GASTO LOTE: ${g.desc};${g.valor}\n`); }); window.baixarCSV(csv, "Gastos.csv"); };
     window.baixarCSV = (csv, n) => { const b = new Blob(["\ufeff"+csv],{type:'text/csv;charset=utf-8;'}); const l = document.createElement("a"); l.href=URL.createObjectURL(b); l.download=n; l.click(); };
 </script>
