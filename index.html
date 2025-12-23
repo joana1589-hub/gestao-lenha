@@ -12,7 +12,7 @@
         .navbar { background-color: var(--primary) !important; border-bottom: 3px solid var(--accent); }
         .card-stats { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); background: #fff; }
         .tab-content { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-height: 500px; border: 1px solid #eee; }
-        .metric-large-value { font-size: 2.8rem; font-weight: 900; line-height: 1; color: #111; }
+        .metric-large-value { font-size: 2.2rem; font-weight: 900; line-height: 1; color: #111; }
         .metric-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #7f8c8d; }
         .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; }
         .bg-pendente { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
@@ -21,6 +21,7 @@
         .text-money { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
         .movimento-item { font-size: 0.75rem; padding: 2px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
         .btn-obs { border: none; background: none; padding: 0 5px; }
+        .pendente-item { font-size: 0.7rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1px 0; }
     </style>
 </head>
 <body>
@@ -39,10 +40,10 @@
     <!-- DASHBOARD -->
     <div class="row g-2 mb-3">
         <div class="col-md-5">
-            <div class="card card-stats p-3 text-center h-100 shadow-sm border-2 border-warning" style="background:#fff3cd">
-                <div class="metric-label text-dark"><i class="bi bi-truck me-1"></i> TOTAL POR ENTREGAR</div>
-                <div id="resumoPendentesGlobal" class="metric-large-value mt-2">0.0 m³</div>
-                <small class="text-muted">Lenha encomendada em falta</small>
+            <div class="card card-stats p-3 h-100 shadow-sm border-2 border-warning" style="background:#fff3cd">
+                <div class="metric-label text-dark text-center"><i class="bi bi-truck me-1"></i> TOTAL POR ENTREGAR</div>
+                <div id="resumoPendentesGlobal" class="metric-large-value mt-1 mb-2 text-center">0.0 m³</div>
+                <div id="listaPendentesPorTipo" class="px-2"></div>
             </div>
         </div>
         <div class="col-md-7">
@@ -50,12 +51,12 @@
                 <div class="col-6"><div class="card card-stats p-2 border-start border-danger border-4 h-100">
                     <div class="metric-label text-danger">Dívida p/ Receber</div>
                     <div id="resumoDividaEntregue" class="fw-bold h5 mb-0 text-danger text-money">0.00€</div>
-                    <small style="font-size:0.55rem">Já saiu e não foi pago</small>
+                    <small style="font-size:0.55rem">Entregue e não pago</small>
                 </div></div>
                 <div class="col-6"><div class="card card-stats p-2 border-start border-success border-4 h-100">
                     <div class="metric-label text-success">Lucro Real</div>
                     <div id="resumoLucro" class="fw-bold h5 mb-0 text-success text-money">0.00€</div>
-                    <small style="font-size:0.55rem">Vendas - Gastos (S/ inicial)</small>
+                    <small style="font-size:0.55rem">Vendas - Gastos</small>
                 </div></div>
                 <div class="col-12"><div class="card card-stats p-3 bg-primary text-white shadow">
                     <div class="metric-label text-white-50">DINHEIRO TOTAL EM MÃO</div>
@@ -76,7 +77,7 @@
     </ul>
 
     <div class="tab-content shadow-sm mb-5">
-        <!-- ENCOMENDAS ATIVAS -->
+        <!-- ENCOMENDAS -->
         <div id="tabEnc" class="tab-pane fade show active">
             <div class="d-flex gap-2 mb-3">
                 <input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Filtrar encomendas..." onkeyup="window.render()">
@@ -85,22 +86,20 @@
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle">
                     <thead class="table-light">
-                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th>Obs</th><th></th></tr>
+                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th>Obs</th><th>Ações</th></tr>
                     </thead>
                     <tbody id="corpoEncomendas"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- VENDAS CONCLUÍDAS -->
+        <!-- HISTÓRICO VENDAS -->
         <div id="tabVen" class="tab-pane fade">
-            <div class="mb-3">
-                <input type="text" id="filtroVen" class="form-control form-control-sm" placeholder="🔍 Pesquisar histórico de vendas..." onkeyup="window.render()">
-            </div>
+            <input type="text" id="filtroVen" class="form-control form-control-sm mb-3" placeholder="🔍 Pesquisar vendas concluídas..." onkeyup="window.render()">
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle">
                     <thead class="table-light">
-                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Pago €</th><th>Obs</th><th>Data</th><th></th></tr>
+                        <tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Pago €</th><th>Obs</th><th>Data</th><th>Ações</th></tr>
                     </thead>
                     <tbody id="corpoVendas"></tbody>
                 </table>
@@ -129,9 +128,6 @@
             </div>
             <button class="btn btn-outline-danger btn-sm w-100 mb-3" onclick="window.abrirModal('modalDespesa')">+ REGISTAR GASTO GERAL</button>
             <table class="table table-sm"><tbody id="corpoDespesas"></tbody></table>
-            <div class="mt-3 p-2 bg-light text-center rounded">
-                <small class="text-muted">Início: <b id="dbgInic">0</b>€ | Recebido: <b id="dbgRec">0</b>€ | Gasto: <b id="dbgGas">0</b>€</small>
-            </div>
         </div>
     </div>
 </div>
@@ -151,10 +147,10 @@
 </div></div></div>
 
 <div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
-    <h6>Nova Encomenda</h6>
+    <h6 id="modalEncTitulo">Nova Encomenda</h6>
     <select id="encCliente" class="form-select mb-2"></select>
     <select id="encTipoLenha" class="form-select mb-2">
-        <option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option>
+        <option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="OLI/CAR">OLI/CAR</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option>
     </select>
     <div class="row g-2 mb-2">
         <div class="col-6"><label class="small">Metros:</label><input type="number" id="encMetros" class="form-control"></div>
@@ -162,7 +158,7 @@
     </div>
     <input type="date" id="encDataC" class="form-control mb-2">
     <textarea id="encObs" class="form-control mb-3" placeholder="Observações..."></textarea>
-    <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">CRIAR</button>
+    <button id="btnSalvarEnc" class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">CRIAR</button>
 </div></div></div>
 
 <div class="modal fade" id="modalObs" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
@@ -233,7 +229,7 @@
     const docRef = doc(dbFirestore, "producao", "dados_mestre");
 
     window.db = { clientes: [], encomendas: [], despesas: [], lotes: [], saldoInicial: 0 };
-    let idAtivo = null, loteIdAtivo = null;
+    let idAtivo = null, loteIdAtivo = null, encIdEdicao = null;
 
     const toN = (v) => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
 
@@ -262,42 +258,80 @@
         window.atualizarBD();
     }
 
-    // FUNÇÕES
+    // CLIENTES
     window.confirmarSaldoInicial = () => { window.db.saldoInicial = toN(document.getElementById('inputSaldoInicial').value); window.fecharModal('modalSaldoInicial'); };
     window.salvarCliente = () => { if(document.getElementById('cliNome').value) window.db.clientes.push({ id: Date.now().toString(), nome: document.getElementById('cliNome').value, info: document.getElementById('cliInfo').value }); window.fecharModal('modalCli'); };
     
+    // ENCOMENDAS - CRIAR E EDITAR
     window.abrirModalEncomenda = () => {
-        if(!window.db.clientes || window.db.clientes.length === 0) return alert("Crie um cliente primeiro.");
+        encIdEdicao = null;
+        document.getElementById('modalEncTitulo').innerText = "Nova Encomenda";
+        document.getElementById('btnSalvarEnc').innerText = "CRIAR";
         document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+        document.getElementById('encMetros').value = "";
+        document.getElementById('encPreco').value = 75;
         document.getElementById('encDataC').value = new Date().toISOString().split('T')[0];
         document.getElementById('encObs').value = "";
         window.abrirModal('modalEnc');
     };
 
+    window.abrirEditarEncomenda = (id) => {
+        encIdEdicao = id;
+        const e = window.db.encomendas.find(x => x.id == id);
+        document.getElementById('modalEncTitulo').innerText = "Editar Encomenda";
+        document.getElementById('btnSalvarEnc').innerText = "GUARDAR ALTERAÇÕES";
+        document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}" ${c.id==e.clienteId?'selected':''}>${c.nome}</option>`).join('');
+        document.getElementById('encTipoLenha').value = e.tipoLenha;
+        document.getElementById('encMetros').value = e.metrosTotal;
+        document.getElementById('encPreco').value = e.precoM3;
+        document.getElementById('encDataC').value = e.dataEnc;
+        document.getElementById('encObs').value = e.obs || "";
+        window.abrirModal('modalEnc');
+    };
+
     window.salvarEncomenda = () => {
-        const m = toN(document.getElementById('encMetros').value), p = toN(document.getElementById('encPreco').value);
-        window.db.encomendas.push({ id: Date.now().toString(), clienteId: document.getElementById('encCliente').value, tipoLenha: document.getElementById('encTipoLenha').value, dataEnc: document.getElementById('encDataC').value, metrosTotal: m, metrosEntregues: 0, precoM3: p, valorTotal: m * p, valorPago: 0, obs: document.getElementById('encObs').value || "" });
+        const m = toN(document.getElementById('encMetros').value);
+        const p = toN(document.getElementById('encPreco').value);
+        const data = {
+            clienteId: document.getElementById('encCliente').value,
+            tipoLenha: document.getElementById('encTipoLenha').value,
+            dataEnc: document.getElementById('encDataC').value,
+            metrosTotal: m,
+            precoM3: p,
+            valorTotal: m * p,
+            obs: document.getElementById('encObs').value
+        };
+
+        if (encIdEdicao) {
+            const index = window.db.encomendas.findIndex(x => x.id == encIdEdicao);
+            window.db.encomendas[index] = { ...window.db.encomendas[index], ...data };
+        } else {
+            window.db.encomendas.push({ id: Date.now().toString(), metrosEntregues: 0, valorPago: 0, ...data });
+        }
         window.fecharModal('modalEnc');
     };
 
     window.abrirModalObs = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('editObsTexto').value = e.obs || ""; window.abrirModal('modalObs'); };
     window.salvarObs = () => { const e = window.db.encomendas.find(x => x.id == idAtivo); if(e) e.obs = document.getElementById('editObsTexto').value; window.fecharModal('modalObs'); };
 
+    // LOTES
     window.salvarLote = () => { window.db.lotes.push({ id: Date.now().toString(), nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value || new Date().toISOString().split('T')[0], gastosExtras: [], saidasLenha: [] }); window.fecharModal('modalNovoLote'); };
     window.abrirGastoLote = (id) => { loteIdAtivo = id; window.abrirModal('modalGastoLote'); };
     window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == loteIdAtivo); if(!l.gastosExtras) l.gastosExtras = []; l.gastosExtras.push({ id: Date.now(), desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) }); window.fecharModal('modalGastoLote'); };
     window.abrirSaidaLote = (id) => { loteIdAtivo = id; window.abrirModal('modalSaidaLote'); };
     window.salvarSaidaLote = () => { window.db.lotes.find(l => l.id == loteIdAtivo).saidasLenha.push({ id: Date.now(), m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }); window.fecharModal('modalSaidaLote'); };
-    
     window.apagarMovimento = (loteId, tipo, movId) => { if(confirm("Apagar este movimento?")) { const l = window.db.lotes.find(x => x.id == loteId); l[tipo] = l[tipo].filter(m => m.id != movId); window.atualizarBD(); } };
+
+    // ENTREGAS E PAGAMENTOS
     window.abrirEntrega = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaM3Texto').innerText = (toN(e.metrosTotal) - toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
     window.executarEntregaTotal = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues = window.db.encomendas.find(e => e.id == idAtivo).metrosTotal; window.fecharModal('modalEntrega'); };
     window.executarEntregaParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues += toN(document.getElementById('qtdParcialM3').value); window.fecharModal('modalEntrega'); };
     window.abrirPagamento = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaDinheiroTexto').innerText = (toN(e.valorTotal) - toN(e.valorPago)).toFixed(2) + "€"; window.abrirModal('modalPagamento'); };
     window.executarPagamentoTotal = () => { const e = window.db.encomendas.find(e => e.id == idAtivo); e.valorPago = e.valorTotal; window.fecharModal('modalPagamento'); };
     window.executarPagamentoParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).valorPago += toN(document.getElementById('qtdParcialDinheiro').value); window.fecharModal('modalPagamento'); };
+    
     window.salvarDespesa = () => { window.db.despesas.push({ id: Date.now().toString(), desc: document.getElementById('despDesc').value, valor: toN(document.getElementById('despValor').value), data: document.getElementById('despData').value || new Date().toISOString().split('T')[0] }); window.fecharModal('modalDespesa'); };
-    window.apagar = (t, id) => { if(confirm("Eliminar registo?")) { window.db[t] = window.db[t].filter(x => x.id != id); window.atualizarBD(); } };
+    window.apagar = (t, id) => { if(confirm("Eliminar registo permanente?")) { window.db[t] = window.db[t].filter(x => x.id != id); window.atualizarBD(); } };
 
     // RENDERIZAÇÃO
     window.render = function() {
@@ -305,6 +339,7 @@
         const fVen = document.getElementById('filtroVen').value.toLowerCase();
         const fCli = document.getElementById('filtroCli').value.toLowerCase();
         let sRecEnc = 0, sRecLot = 0, sCusLotTot = 0, sGstGer = 0, dEntregueTot = 0, m3FaltaTot = 0;
+        const pendentesPorTipo = { "Mistura": 0, "Oliveira": 0, "Carvalho": 0, "OLI/CAR": 0, "Eucalipto": 0, "Pinho": 0 };
 
         // Render Lotes
         document.getElementById('listaLotes').innerHTML = (window.db.lotes || []).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l => {
@@ -320,24 +355,34 @@
             return `<div class="lote-card shadow-sm"><div class="row align-items-center"><div class="col-7"><span class="badge bg-dark mb-1">${l.data}</span><br><h6 class="mb-0 fw-bold">${l.nome}</h6><small class="text-muted">Custo: ${cTotalLote.toFixed(0)}€</small></div><div class="col-5 text-end"><button class="btn btn-sm btn-primary py-0" onclick="window.abrirSaidaLote('${l.id}')">+ Saída</button> <button class="btn btn-sm btn-danger py-0" onclick="window.abrirGastoLote('${l.id}')">+ Gasto</button></div></div><div class="bg-light p-2 rounded mt-2 mb-2" style="max-height: 120px; overflow-y: auto;">${htmlMovs || '<div class="text-center text-muted small py-2">Sem movimentos</div>'}</div><div class="d-flex justify-content-between align-items-center border-top pt-2"><div class="small"><b>Vendido:</b> ${m3Vendidos.toFixed(1)} m³ | <b>Bal:</b> <span class="${balLote>=0?'text-success':'text-danger'} fw-bold">${balLote.toFixed(1)}€</span></div><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div>`;
         }).join('');
 
-        // SEPARAÇÃO ENCOMENDAS vs VENDAS
+        // ENCOMENDAS vs VENDAS
         let htmlEnc = "", htmlVen = "";
         (window.db.encomendas || []).sort((a,b)=>new Date(b.dataEnc)-new Date(a.dataEnc)).forEach(e => {
             const cli = window.db.clientes.find(c => c.id == e.clienteId);
             if(!cli) return;
-            
             const vPago = toN(e.valorPago), vTotal = toN(e.valorTotal), mTot = toN(e.metrosTotal), mEnt = toN(e.metrosEntregues);
             const isConcluida = (mEnt >= mTot && vPago >= vTotal);
             const temObs = e.obs && e.obs.trim().length > 0;
-            
             sRecEnc += vPago;
+
             if(!isConcluida) {
                 const fEnt = mTot - mEnt, dEnt = (mEnt * toN(e.precoM3)) - vPago;
                 if(dEnt > 0) dEntregueTot += dEnt;
-                if(fEnt > 0) m3FaltaTot += fEnt;
-                
+                if(fEnt > 0) { m3FaltaTot += fEnt; if(pendentesPorTipo[e.tipoLenha] !== undefined) pendentesPorTipo[e.tipoLenha] += fEnt; }
                 if(cli.nome.toLowerCase().includes(fEnc)) {
-                    htmlEnc += `<tr><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vTotal.toFixed(0)}€</td><td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fEnt<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vPago>=vTotal?'text-success':'text-danger fw-bold'}">${vPago.toFixed(0)}€</td><td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temObs ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
+                    htmlEnc += `<tr>
+                        <td><b>${cli.nome}</b></td>
+                        <td><small>${e.tipoLenha}</small></td>
+                        <td>${e.metrosTotal}</td>
+                        <td>${vTotal.toFixed(0)}€</td>
+                        <td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fEnt<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td>
+                        <td onclick="window.abrirPagamento('${e.id}')" class="${vPago>=vTotal?'text-success':'text-danger fw-bold'}">${vPago.toFixed(0)}€</td>
+                        <td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temObs ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td>
+                        <td class="text-end">
+                            <i class="bi bi-pencil-square text-primary me-2" style="cursor:pointer" onclick="window.abrirEditarEncomenda('${e.id}')"></i>
+                            <i class="bi bi-trash text-danger" style="cursor:pointer" onclick="window.apagar('encomendas','${e.id}')"></i>
+                        </td>
+                    </tr>`;
                 }
             } else {
                 if(cli.nome.toLowerCase().includes(fVen)) {
@@ -345,28 +390,28 @@
                 }
             }
         });
-
         document.getElementById('corpoEncomendas').innerHTML = htmlEnc;
         document.getElementById('corpoVendas').innerHTML = htmlVen;
 
-        // Clientes e Finanças
+        // Pendentes por Tipo
+        let htmlPendentesTipo = "";
+        for (const t in pendentesPorTipo) if(pendentesPorTipo[t] > 0) htmlPendentesTipo += `<div class="pendente-item"><span>${t}:</span> <b>${pendentesPorTipo[t].toFixed(1)} m³</b></div>`;
+        document.getElementById('listaPendentesPorTipo').innerHTML = htmlPendentesTipo || '<div class="text-center text-muted small">Tudo em dia!</div>';
+
+        // Clientes e Despesas
         document.getElementById('listaClientesTabela').innerHTML = (window.db.clientes || []).filter(c=>c.nome.toLowerCase().includes(fCli)).map(c => `<tr><td><b>${c.nome}</b></td><td>${c.info||''}</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
         sGstGer = (window.db.despesas || []).reduce((a,c) => a + toN(c.valor), 0);
         document.getElementById('corpoDespesas').innerHTML = (window.db.despesas || []).map(d => `<tr class="small"><td>${d.data}</td><td>${d.desc}</td><td>${d.valor}€</td><td class="text-end" onclick="window.apagar('despesas', '${d.id}')">❌</td></tr>`).join('');
 
-        // Totais Dashboard
+        // TOTAIS
         const sInic = toN(window.db.saldoInicial);
         const totalRecebido = sRecEnc + sRecLot;
         const totalGasto = sCusLotTot + sGstGer;
         const lucroFinal = totalRecebido - totalGasto;
-        const caixaAtual = sInic + lucroFinal;
         document.getElementById('resumoLucro').innerText = lucroFinal.toFixed(2) + "€";
         document.getElementById('resumoDividaEntregue').innerText = dEntregueTot.toFixed(2) + "€";
-        document.getElementById('resumoCaixaTotal').innerText = caixaAtual.toFixed(2) + "€";
+        document.getElementById('resumoCaixaTotal').innerText = (sInic + lucroFinal).toFixed(2) + "€";
         document.getElementById('resumoPendentesGlobal').innerText = m3FaltaTot.toFixed(1) + " m³";
-        document.getElementById('dbgInic').innerText = sInic.toFixed(2); 
-        document.getElementById('dbgRec').innerText = totalRecebido.toFixed(2); 
-        document.getElementById('dbgGas').innerText = totalGasto.toFixed(2);
         document.getElementById('inputSaldoInicial').value = sInic;
     };
 
