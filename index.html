@@ -3,116 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LenhaPro v28.0 - Cloud</title>
+    <title>LenhaPro v33.5 - Estabilidade Total</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #1a252f; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; --warning: #f39c12; }
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; font-size: 0.82rem; color: #333; padding-bottom: 60px; }
         .navbar { background-color: var(--primary) !important; border-bottom: 3px solid var(--accent); }
         .card-stats { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); background: #fff; }
-        .tab-content { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-height: 500px; border: 1px solid #eee; }
-        .metric-large-value { font-size: 2.2rem; font-weight: 900; line-height: 1; color: #111; }
-        .metric-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #7f8c8d; }
-        .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; }
+        .tab-content { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-height: 500px; border: 1px solid #eee; border-top: none; }
+        .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-block; }
         .bg-pendente { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .bg-concluido { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .lote-card { border-left: 5px solid var(--primary); margin-bottom: 15px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
-        .movimento-item { font-size: 0.75rem; padding: 5px 0; border-bottom: 1px dashed #eee; display: flex; flex-direction: column; }
-        .movimento-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .movimento-obs { font-size: 0.68rem; color: #666; font-style: italic; padding-left: 18px; line-height: 1.2; margin-top: 2px; }
-        .text-money { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
-        .pendente-item { font-size: 0.7rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1px 0; }
+        .bg-data { background-color: #e9ecef; color: #495057; border: 1px solid #dee2e6; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .lote-card { border-radius: 10px; border-left: 6px solid #34495e; background: #fff; margin-bottom: 20px; border: 1px solid #ddd; }
+        .obs-container { max-width: 150px; font-size: 0.72rem; line-height: 1.1; color: #666; word-wrap: break-word; white-space: normal; }
+        .table th { background-color: #f8f9fa; text-transform: uppercase; font-size: 0.62rem; color: #7f8c8d; border-bottom: 2px solid #dee2e6; white-space: nowrap; }
+        .chart-container { position: relative; height: 220px; width: 100%; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark mb-3 p-2 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
-        <div>
-            <span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v28.0</span>
-            <div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Conetando...</div>
-        </div>
-        <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="window.abrirModal('modalSaldoInicial')">💰 DEFINIR SALDO INICIAL</button>
+        <div><span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v33.5</span><div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Sincronizando...</div></div>
+        <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="window.abrirModal('modalSaldoInicial')">💰 AJUSTAR CAIXA</button>
     </div>
 </nav>
 
 <div class="container">
-    <!-- DASHBOARD -->
-    <div class="row g-2 mb-3">
+    <!-- DASHBOARD TOPO -->
+    <div class="row g-2 mb-3 text-center">
         <div class="col-md-5">
-            <div class="card card-stats p-3 h-100 shadow-sm border-2 border-warning" style="background:#fff3cd">
-                <div class="metric-label text-dark text-center"><i class="bi bi-truck me-1"></i> TOTAL POR ENTREGAR</div>
-                <div id="resumoPendentesGlobal" class="metric-large-value mt-1 mb-2 text-center">0.0 m³</div>
-                <div id="listaPendentesPorTipo" class="px-2"></div>
+            <div class="card card-stats p-3 h-100 border-2 border-warning shadow-sm" style="background:#fff9e6">
+                <small class="text-muted fw-bold">TOTAL POR ENTREGAR</small>
+                <div id="resumoPendentesGlobal" class="h2 fw-900 mb-0 text-warning">0.0 m³</div>
+                <div id="listaPendentesPorTipo"></div>
             </div>
         </div>
         <div class="col-md-7">
-            <div class="row g-2">
-                <div class="col-6"><div class="card card-stats p-2 border-start border-danger border-4 h-100"><div class="metric-label text-danger">Dívida p/ Receber</div><div id="resumoDividaEntregue" class="fw-bold h5 mb-0 text-danger text-money">0.00€</div><small style="font-size:0.55rem">Entregue e não pago</small></div></div>
-                <div class="col-6"><div class="card card-stats p-2 border-start border-success border-4 h-100"><div class="metric-label text-success">Lucro Real</div><div id="resumoLucro" class="fw-bold h5 mb-0 text-success text-money">0.00€</div><small style="font-size:0.55rem">Encomendas - Gastos</small></div></div>
-                <div class="col-12"><div class="card card-stats p-3 bg-primary text-white shadow"><div class="metric-label text-white-50">DINHEIRO TOTAL EM MÃO</div><div id="resumoCaixaTotal" class="fw-bold h4 mb-0 text-money">0.00€</div><small style="font-size:0.6rem">Saldo Inicial + Recebido - Gasto</small></div></div>
+            <div class="row g-2 h-100">
+                <div class="col-6"><div class="card card-stats p-2 border-start border-primary border-4 h-100"><small class="text-muted fw-bold">DINHEIRO EM MÃO</small><div id="resumoCaixaTotal" class="fw-bold h5 mb-0 text-primary">0.00€</div></div></div>
+                <div class="col-6"><div class="card card-stats p-2 border-start border-danger border-4 h-100"><small class="text-muted fw-bold">DÍVIDA CLIENTES</small><div id="resumoDividaEntregue" class="fw-bold h5 mb-0 text-danger">0.00€</div></div></div>
+                <div class="col-12"><div class="card card-stats p-2 border-start border-success border-4 bg-light"><small class="text-muted fw-bold">LUCRO HISTÓRICO</small><div id="resumoLucro" class="fw-bold h5 mb-0 text-success">0.00€</div></div></div>
             </div>
         </div>
     </div>
 
-    <!-- TABS -->
+    <!-- NAVEGAÇÃO -->
     <ul class="nav nav-tabs mb-2" id="mainTabs">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEnc">🛒 Encomendas</button></li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDash">📈 Dash</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEnc">🛒 Enc.</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDiv">🚩 Dívidas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabVen">✅ Vendas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLotes">📦 Lotes</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Clientes</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFin">📊 Finanças</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
     </ul>
 
     <div class="tab-content shadow-sm mb-5">
-        <div id="tabEnc" class="tab-pane fade show active">
-            <div class="d-flex gap-2 mb-3"><input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Filtrar encomendas..." onkeyup="window.render()"><button class="btn btn-primary btn-sm px-4 fw-bold" onclick="window.abrirModalEncomenda()">+ NOVA</button></div>
-            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead class="table-light"><tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago €</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoEncomendas"></tbody></table></div>
+        <!-- ABA DASHBOARD -->
+        <div id="tabDash" class="tab-pane fade show active">
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-4"><label class="small fw-bold">Modo:</label><select id="dashModoFiltro" class="form-select form-select-sm" onchange="window.render()"><option value="mes">Mês</option><option value="ano">Ano</option></select></div>
+                <div class="col-6 col-md-4"><label class="small fw-bold">Ano:</label><select id="dashFiltroAno" class="form-select form-select-sm" onchange="window.render()"></select></div>
+                <div id="colMesDash" class="col-12 col-md-4"><label class="small fw-bold">Mês:</label><select id="dashFiltroMes" class="form-select form-select-sm" onchange="window.render()"><option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option><option value="04">Abr</option><option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option><option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option></select></div>
+            </div>
+            <div class="row g-2 mb-3 text-center">
+                <div class="col-4"><div class="card p-2 bg-success text-white small">Receita: <b id="dashReceitaMes">0€</b></div></div>
+                <div class="col-4"><div class="card p-2 bg-danger text-white small">Gastos: <b id="dashGastoMes">0€</b></div></div>
+                <div class="col-4"><div class="card p-2 bg-primary text-white small">m³: <b id="dashMetrosMes">0</b></div></div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-7"><div class="chart-container"><canvas id="chartClientes"></canvas></div></div>
+                <div class="col-md-5"><div class="chart-container"><canvas id="chartTipos"></canvas></div></div>
+            </div>
         </div>
+
+        <!-- ABA ENCOMENDAS -->
+        <div id="tabEnc" class="tab-pane fade">
+            <button class="btn btn-primary btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalEncomenda()">+ NOVA ENCOMENDA</button>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoEncomendas"></tbody></table></div>
+        </div>
+
+        <!-- ABA DIVIDAS -->
+        <div id="tabDiv" class="tab-pane fade">
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoDividas"></tbody></table></div>
+        </div>
+
+        <!-- ABA VENDAS -->
         <div id="tabVen" class="tab-pane fade">
-            <input type="text" id="filtroVen" class="form-control form-control-sm mb-3" placeholder="🔍 Pesquisar vendas..." onkeyup="window.render()">
-            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead class="table-light"><tr><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Pago €</th><th>Obs</th><th>Data</th><th>Ações</th></tr></thead><tbody id="corpoVendas"></tbody></table></div>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoVendas"></tbody></table></div>
         </div>
-        <div id="tabLotes" class="tab-pane fade"><button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoLote()">+ COMPRAR CARGA</button><div id="listaLotes"></div></div>
-        <div id="tabCli" class="tab-pane fade">
-            <div class="d-flex gap-2 mb-3"><input type="text" id="filtroCli" class="form-control form-control-sm" placeholder="🔍 Filtrar clientes..." onkeyup="window.render()"><button class="btn btn-success btn-sm px-4 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO</button></div>
-            <table class="table table-sm"><thead><tr><th>Nome</th><th>Info</th><th class="text-end">Ações</th></tr></thead><tbody id="listaClientesTabela"></tbody></table>
-        </div>
+
+        <!-- OUTRAS TABS -->
+        <div id="tabLotes" class="tab-pane fade"><button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModal('modalLote')">+ COMPRAR CARGA</button><div id="listaLotes"></div></div>
         <div id="tabFin" class="tab-pane fade">
-            <div class="card p-3 border-0 bg-light mb-4 shadow-sm border-start border-primary border-4">
-                <h6 class="fw-bold mb-3">📁 Exportar Mensal para Excel</h6>
+            <div class="card p-3 bg-light border-0 mb-3 shadow-sm border-start border-primary border-4">
+                <h6 class="fw-bold">📥 Exportar Excel (CSV)</h6>
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-4">
-                        <label class="small fw-bold">Mês para o Relatório:</label>
-                        <input type="month" id="filtroMesExport" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-6 col-md-4">
-                        <button class="btn btn-success btn-sm w-100 fw-bold shadow-sm" onclick="window.exportarVendas()">📥 RECEITAS (ENC.)</button>
-                    </div>
-                    <div class="col-6 col-md-4">
-                        <button class="btn btn-danger btn-sm w-100 fw-bold shadow-sm" onclick="window.exportarDespesas()">📥 GASTOS (TOTAL)</button>
-                    </div>
+                    <div class="col-md-4"><label class="small">Mês:</label><input type="month" id="inputMesExport" class="form-control form-control-sm"></div>
+                    <div class="col-6 col-md-4"><button class="btn btn-success btn-sm w-100 fw-bold" onclick="window.exportarReceitas()">RECEITAS</button></div>
+                    <div class="col-6 col-md-4"><button class="btn btn-danger btn-sm w-100 fw-bold" onclick="window.exportarGastos()">GASTOS</button></div>
                 </div>
-                <div class="mt-2 small text-muted">Vazio = Exporta tudo. Relatório de Receitas foca apenas em encomendas de clientes.</div>
             </div>
             <button class="btn btn-outline-danger btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovaDespesa()">+ REGISTAR GASTO GERAL</button>
-            <table class="table table-sm table-hover"><thead class="table-light"><tr><th>Data</th><th>Descrição / Notas</th><th>Valor</th><th class="text-end">Ações</th></tr></thead><tbody id="corpoDespesas"></tbody></table>
+            <table class="table table-sm"><thead class="table-light"><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th></tr></thead><tbody id="corpoDespesas"></tbody></table>
+        </div>
+        <div id="tabCli" class="tab-pane fade">
+            <button class="btn btn-success btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO CLIENTE</button>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Nome</th><th>Contacto</th><th>Observações Fixas</th><th class="text-end">Ações</th></tr></thead><tbody id="listaClientesTabela"></tbody></table></div>
         </div>
     </div>
 </div>
 
 <!-- MODAIS -->
-<div class="modal fade" id="modalSaldoInicial" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6>Saldo Inicial</h6><input type="number" id="inputSaldoInicial" class="form-control mb-3" step="0.01"><button class="btn btn-warning w-100 fw-bold" onclick="window.confirmarSaldoInicial()">GRAVAR</button></div></div></div>
-<div class="modal fade" id="modalCli" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="modalCliTitulo">Cliente</h6><input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome"><input type="text" id="cliInfo" class="form-control mb-3" placeholder="Telemóvel / Morada"><button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR</button></div></div></div>
-<div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="modalEncTitulo">Encomenda</h6><select id="encCliente" class="form-select mb-2"></select><select id="encTipoLenha" class="form-select mb-2"><option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="OLI/CAR">OLI/CAR</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option></select><div class="row g-2 mb-2"><div class="col-6"><label class="small">Metros:</label><input type="number" id="encMetros" class="form-control"></div><div class="col-6"><label class="small">Preço €/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div></div><input type="date" id="encDataC" class="form-control mb-2"><textarea id="encObs" class="form-control mb-3" placeholder="Observações..."></textarea><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">GUARDAR</button></div></div></div>
-<div class="modal fade" id="modalLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="modalLoteTitulo">Lote</h6><input type="text" id="loteNome" class="form-control mb-2" placeholder="Nome da Carga"><input type="number" id="loteCusto" class="form-control mb-2" placeholder="Preço Total €"><input type="date" id="loteData" class="form-control mb-3"><button class="btn btn-dark w-100 fw-bold" onclick="window.salvarLote()">GUARDAR</button></div></div></div>
-<div class="modal fade" id="modalGastoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="modalGastoLoteTitulo" class="text-danger">Gasto no Lote</h6><input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Descrição"><input type="number" id="gastoLoteValor" class="form-control mb-2" placeholder="Valor €"><textarea id="gastoLoteObs" class="form-control mb-3" placeholder="Notas extras..."></textarea><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">GUARDAR GASTO</button></div></div></div>
-<div class="modal fade" id="modalSaidaLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6>Venda Direta (Lote)</h6><input type="number" id="saidaLoteM3" class="form-control mb-2" placeholder="m³"><input type="number" id="saidaLoteValor" class="form-control mb-3" placeholder="€ Recebido"><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarSaidaLote()">CONFIRMAR</button></div></div></div>
-<div class="modal fade" id="modalDespesa" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="modalDespesaTitulo">Gasto Geral</h6><input type="text" id="despDesc" class="form-control mb-2" placeholder="Descrição"><input type="number" id="despValor" class="form-control mb-2" placeholder="Valor €"><input type="date" id="despData" class="form-control mb-2"><textarea id="despObs" class="form-control mb-3" placeholder="Notas..."></textarea><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">GUARDAR</button></div></div></div>
-<div class="modal fade" id="modalObs" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6>📝 Editar Notas</h6><textarea id="editObsTexto" class="form-control mb-3" rows="4"></textarea><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarObs()">GUARDAR</button></div></div></div>
-<div class="modal fade" id="modalEntrega" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Entrega</h6><p>Falta: <b id="faltaM3Texto"></b> m³</p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarEntregaTotal()">ENTREGA TOTAL</button><div class="input-group"><input type="number" id="qtdParcialM3" class="form-control" placeholder="Parcial"><button class="btn btn-warning" onclick="window.executarEntregaParcial()">Ok</button></div></div></div></div>
-<div class="modal fade" id="modalPagamento" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Pagamento</h6><p class="text-danger">Dívida: <b id="faltaDinheiroTexto"></b></p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarPagamentoTotal()">PAGO TOTAL</button><div class="input-group"><input type="number" id="qtdParcialDinheiro" class="form-control" placeholder="Parcial"><button class="btn btn-warning" onclick="window.executarPagamentoParcial()">Ok</button></div></div></div></div>
+<div class="modal fade" id="modalCli" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloCli">Cliente</h6><input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome"><input type="text" id="cliContacto" class="form-control mb-2" placeholder="Contacto"><textarea id="cliObs" class="form-control mb-3" placeholder="Obs fixas..."></textarea><button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR CLIENTE</button></div></div></div>
+<div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloEnc">Encomenda</h6><select id="encCliente" class="form-select mb-2" onchange="window.puxarObsCliente(this.value)"></select><select id="encTipoLenha" class="form-select mb-2"><option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="OLI/CAR">OLI/CAR</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option></select><div class="row g-2 mb-2"><div class="col-6"><label class="small">m³:</label><input type="number" id="encMetros" class="form-control" step="0.1"></div><div class="col-6"><label class="small">€/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div></div><input type="date" id="encDataC" class="form-control mb-2"><textarea id="encObs" class="form-control mb-3" placeholder="Notas..."></textarea><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">GUARDAR</button></div></div></div>
+<div class="modal fade" id="modalDespesa" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6 id="tituloDesp">Gasto Geral</h6><input type="text" id="despDesc" class="form-control mb-2" placeholder="Desc"><input type="number" id="despValor" class="form-control mb-2" placeholder="€"><input type="date" id="despData" class="form-control mb-3"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">SALVAR</button></div></div></div>
+<div class="modal fade" id="modalLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloLote">Carga</h6><input type="text" id="loteNome" class="form-control mb-2" placeholder="Ref"><input type="number" id="loteCusto" class="form-control mb-2" placeholder="Custo €"><input type="date" id="loteData" class="form-control mb-3"><button class="btn btn-dark w-100 fw-bold" onclick="window.salvarLote()">GRAVAR</button></div></div></div>
+<div class="modal fade" id="modalSaldoInicial" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6>Caixa Inicial</h6><input type="number" id="inputSaldoInicial" class="form-control mb-3"><button class="btn btn-warning w-100 fw-bold" onclick="window.confirmarSaldoInicial()">GRAVAR</button></div></div></div>
+<div class="modal fade" id="modalSaidaLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6>Saída Lote</h6><input type="number" id="saidaLoteM3" class="form-control mb-2" placeholder="m³"><input type="number" id="saidaLoteValor" class="form-control mb-3" placeholder="€"><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarSaidaLote()">OK</button></div></div></div>
+<div class="modal fade" id="modalGastoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6>Gasto Carga</h6><input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Diesel..."><input type="number" id="gastoLoteValor" class="form-control mb-3" placeholder="€"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">OK</button></div></div></div>
+<div class="modal fade" id="modalEntrega" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Entrega</h6><p>Falta: <b id="faltaM3Texto"></b> m³</p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarEntregaTotal()">TOTAL</button><div class="input-group"><input type="number" id="qtdParcialM3" class="form-control"><button class="btn btn-warning" onclick="window.executarEntregaParcial()">Ok</button></div></div></div></div>
+<div class="modal fade" id="modalPagamento" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Pagamento</h6><p class="text-danger">Dívida: <b id="faltaDinheiroTexto"></b></p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarPagamentoTotal()">PAGO TUDO</button><div class="input-group"><input type="number" id="qtdParcialDinheiro" class="form-control"><button class="btn btn-warning" onclick="window.executarPagamentoParcial()">Ok</button></div></div></div></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -124,12 +139,20 @@
     const docRef = doc(dbFirestore, "producao", "dados_mestre");
 
     window.db = { clientes: [], encomendas: [], despesas: [], lotes: [], saldoInicial: 0 };
-    let idAtivo = null, loteIdAtivo = null, movIdEdicao = null, encIdEdicao = null, loteIdEdicao = null, cliIdEdicao = null, despesaIdEdicao = null;
+    window.cliIdEdicao = null; window.encIdEdicao = null; window.loteIdEdicao = null; window.despIdEdicao = null;
+    window.idAtivo = null; window.loteIdAtivo = null; window.movIdAtivo = null;
+    let chartCli = null, chartTp = null;
 
     const toN = (v) => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
 
     onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) { window.db = docSnap.data(); document.getElementById('sync-status').innerText = "🟢 Nuvem Conetada"; }
+        if (docSnap.exists()) { window.db = docSnap.data(); }
+        if(!window.db.clientes) window.db.clientes = [];
+        if(!window.db.encomendas) window.db.encomendas = [];
+        if(!window.db.despesas) window.db.despesas = [];
+        if(!window.db.lotes) window.db.lotes = [];
+        document.getElementById('sync-status').innerText = "🟢 Sincronizado";
+        window.popularAnos();
         window.render();
     });
 
@@ -137,149 +160,96 @@
     window.abrirModal = (id) => new bootstrap.Modal(document.getElementById(id)).show();
     window.fecharModal = (id) => { const m = bootstrap.Modal.getInstance(document.getElementById(id)); if(m) m.hide(); window.atualizarBD(); }
 
-    // SALDO / CLIENTES / ENCOMENDAS
-    window.confirmarSaldoInicial = () => { window.db.saldoInicial = toN(document.getElementById('inputSaldoInicial').value); window.fecharModal('modalSaldoInicial'); };
-    window.abrirModalNovoCliente = () => { cliIdEdicao = null; document.getElementById('modalCliTitulo').innerText = "Novo Cliente"; document.getElementById('cliNome').value = ""; document.getElementById('cliInfo').value = ""; window.abrirModal('modalCli'); };
-    window.abrirEditarCliente = (id) => { cliIdEdicao = id; const c = window.db.clientes.find(x => x.id == id); document.getElementById('modalCliTitulo').innerText = "Editar Cliente"; document.getElementById('cliNome').value = c.nome; document.getElementById('cliInfo').value = c.info || ""; window.abrirModal('modalCli'); };
-    window.salvarCliente = () => { const n = document.getElementById('cliNome').value; if(cliIdEdicao){ const i = window.db.clientes.findIndex(x=>x.id==cliIdEdicao); window.db.clientes[i].nome = n; window.db.clientes[i].info = document.getElementById('cliInfo').value; } else { window.db.clientes.push({id:Date.now().toString(), nome:n, info:document.getElementById('cliInfo').value}); } window.fecharModal('modalCli'); };
-    window.abrirModalEncomenda = () => { encIdEdicao = null; document.getElementById('modalEncTitulo').innerText = "Nova Encomenda"; document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}">${c.nome}</option>`).join(''); document.getElementById('encMetros').value = ""; document.getElementById('encPreco').value = 75; document.getElementById('encDataC').value = new Date().toISOString().split('T')[0]; document.getElementById('encObs').value = ""; window.abrirModal('modalEnc'); };
-    window.abrirEditarEncomenda = (id) => { encIdEdicao = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('modalEncTitulo').innerText = "Editar Encomenda"; document.getElementById('encCliente').innerHTML = window.db.clientes.map(c => `<option value="${c.id}" ${c.id==e.clienteId?'selected':''}>${c.nome}</option>`).join(''); document.getElementById('encTipoLenha').value = e.tipoLenha; document.getElementById('encMetros').value = e.metrosTotal; document.getElementById('encPreco').value = e.precoM3; document.getElementById('encDataC').value = e.dataEnc; document.getElementById('encObs').value = e.obs || ""; window.abrirModal('modalEnc'); };
-    window.salvarEncomenda = () => { const m = toN(document.getElementById('encMetros').value), p = toN(document.getElementById('encPreco').value); const data = { clienteId: document.getElementById('encCliente').value, tipoLenha: document.getElementById('encTipoLenha').value, dataEnc: document.getElementById('encDataC').value, metrosTotal: m, precoM3: p, valorTotal: m * p, obs: document.getElementById('encObs').value }; if (encIdEdicao) { const idx = window.db.encomendas.findIndex(x => x.id == encIdEdicao); window.db.encomendas[idx] = { ...window.db.encomendas[idx], ...data }; } else { window.db.encomendas.push({ id: Date.now().toString(), metrosEntregues: 0, valorPago: 0, ...data }); } window.fecharModal('modalEnc'); };
+    // GESTÃO CLIENTES (CORRIGIDO)
+    window.abrirModalNovoCliente = () => { window.cliIdEdicao = null; document.getElementById('tituloCli').innerText="Novo Cliente"; document.getElementById('cliNome').value=""; document.getElementById('cliContacto').value=""; document.getElementById('cliObs').value=""; window.abrirModal('modalCli'); };
+    window.abrirEditarCliente = (id) => { window.cliIdEdicao = id; const c = window.db.clientes.find(x=>x.id==id); document.getElementById('tituloCli').innerText="Editar Cliente"; document.getElementById('cliNome').value=c.nome; document.getElementById('cliContacto').value=c.contacto||""; document.getElementById('cliObs').value=c.obs||""; window.abrirModal('modalCli'); };
+    window.salvarCliente = () => { 
+        const n = document.getElementById('cliNome').value; if(!n) return;
+        const dados = { nome:n, contacto:document.getElementById('cliContacto').value, obs:document.getElementById('cliObs').value };
+        if(window.cliIdEdicao){ const i=window.db.clientes.findIndex(x=>x.id==window.cliIdEdicao); window.db.clientes[i]={id:window.cliIdEdicao,...dados}; }
+        else { window.db.clientes.push({id:Date.now().toString(),...dados}); }
+        window.fecharModal('modalCli');
+    };
 
-    // LOTES / MOVIMENTOS
-    window.abrirModalNovoLote = () => { loteIdEdicao = null; document.getElementById('loteNome').value = ""; document.getElementById('loteCusto').value = ""; document.getElementById('loteData').value = new Date().toISOString().split('T')[0]; window.abrirModal('modalLote'); };
-    window.abrirEditarLote = (id) => { loteIdEdicao = id; const l = window.db.lotes.find(x => x.id == id); document.getElementById('loteNome').value = l.nome; document.getElementById('loteCusto').value = l.custoCompra; document.getElementById('loteData').value = l.data; window.abrirModal('modalLote'); };
-    window.salvarLote = () => { const data = { nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value }; if (loteIdEdicao) { const idx = window.db.lotes.findIndex(x => x.id == loteIdEdicao); window.db.lotes[idx] = { ...window.db.lotes[idx], ...data }; } else { window.db.lotes.push({ id: Date.now().toString(), ...data, gastosExtras: [], saidasLenha: [] }); } window.fecharModal('modalLote'); };
-    window.abrirGastoLote = (lId) => { loteIdAtivo = lId; movIdEdicao = null; document.getElementById('gastoLoteDesc').value = ""; document.getElementById('gastoLoteValor').value = ""; document.getElementById('gastoLoteObs').value = ""; window.abrirModal('modalGastoLote'); };
-    window.abrirEditarGastoLote = (lId, mId) => { loteIdAtivo = lId; movIdEdicao = mId; const g = window.db.lotes.find(x => x.id == lId).gastosExtras.find(x => x.id == mId); document.getElementById('gastoLoteDesc').value = g.desc; document.getElementById('gastoLoteValor').value = g.valor; document.getElementById('gastoLoteObs').value = g.obs || ""; window.abrirModal('modalGastoLote'); };
-    window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == loteIdAtivo); const d = { desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value), obs: document.getElementById('gastoLoteObs').value }; if(movIdEdicao) { const i = l.gastosExtras.findIndex(x=>x.id==movIdEdicao); l.gastosExtras[i] = { ...l.gastosExtras[i], ...d }; } else { l.gastosExtras.push({ id: Date.now(), ...d }); } window.fecharModal('modalGastoLote'); };
-    window.abrirSaidaLote = (id) => { loteIdAtivo = id; window.abrirModal('modalSaidaLote'); };
-    window.salvarSaidaLote = () => { window.db.lotes.find(l => l.id == loteIdAtivo).saidasLenha.push({ id: Date.now(), m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }); window.fecharModal('modalSaidaLote'); };
+    // RESTO DAS FUNÇÕES
+    window.abrirModalEncomenda = () => { window.encIdEdicao=null; document.getElementById('tituloEnc').innerText="Nova Encomenda"; document.getElementById('encCliente').innerHTML='<option value="">Escolher...</option>'+window.db.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join(''); document.getElementById('encMetros').value=""; document.getElementById('encObs').value=""; document.getElementById('encDataC').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalEnc'); };
+    window.salvarEncomenda = () => { const m=toN(document.getElementById('encMetros').value); const p=toN(document.getElementById('encPreco').value); const d={ clienteId:document.getElementById('encCliente').value, tipoLenha:document.getElementById('encTipoLenha').value, dataEnc:document.getElementById('encDataC').value, metrosTotal:m, precoM3:p, valorTotal:m*p, obs:document.getElementById('encObs').value }; if(window.encIdEdicao){ const i=window.db.encomendas.findIndex(x=>x.id==window.encIdEdicao); window.db.encomendas[i]={...window.db.encomendas[i],...d}; } else { window.db.encomendas.push({id:Date.now().toString(), metrosEntregues:0, valorPago:0,...d}); } window.fecharModal('modalEnc'); };
+    window.abrirModalNovaDespesa = () => { window.despIdEdicao=null; document.getElementById('tituloDesp').innerText="Registar Gasto"; document.getElementById('despDesc').value=""; document.getElementById('despValor').value=""; document.getElementById('despData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalDespesa'); };
+    window.salvarDespesa = () => { const d = { desc: document.getElementById('despDesc').value, valor: toN(document.getElementById('despValor').value), data: document.getElementById('despData').value }; if(!d.desc || !d.data) return alert("Preencha descrição e data!"); if(window.despIdEdicao){ const i=window.db.despesas.findIndex(x=>x.id==window.despIdEdicao); window.db.despesas[i]={id:window.despIdEdicao,...d}; } else { window.db.despesas.push({id:Date.now().toString(),...d}); } window.fecharModal('modalDespesa'); };
+    window.salvarLote = () => { const d = { nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value }; if(window.loteIdEdicao){ const i = window.db.lotes.findIndex(x=>x.id==window.loteIdEdicao); window.db.lotes[i] = {...window.db.lotes[i], ...d}; } else { window.db.lotes.push({id:Date.now().toString(), ...d, gastosExtras:[], saidasLenha:[]}); } window.fecharModal('modalLote'); };
+    window.salvarSaidaLote = () => { const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); const d = { m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) }; if(window.movIdAtivo){ const i = l.saidasLenha.findIndex(x=>x.id==window.movIdAtivo); l.saidasLenha[i] = {...l.saidasLenha[i], ...d}; } else { l.saidasLenha.push({id:Date.now(), ...d}); } window.fecharModal('modalSaidaLote'); };
+    window.salvarGastoLote = () => { const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); const d = { desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) }; if(window.movIdAtivo){ const i = l.gastosExtras.findIndex(x=>x.id==window.movIdAtivo); l.gastosExtras[i] = {...l.gastosExtras[i], ...d}; } else { l.gastosExtras.push({id:Date.now(), ...d}); } window.fecharModal('modalGastoLote'); };
+    window.confirmarSaldoInicial=()=>{ window.db.saldoInicial=toN(document.getElementById('inputSaldoInicial').value); window.fecharModal('modalSaldoInicial'); };
+    window.puxarObsCliente=(id)=>{ const c=window.db.clientes.find(x=>x.id==id); if(c && !window.encIdEdicao) document.getElementById('encObs').value=c.obs||""; };
+    window.abrirEntrega=(id)=>{ window.idAtivo=id; const e=window.db.encomendas.find(x=>x.id==id); document.getElementById('faltaM3Texto').innerText=(toN(e.metrosTotal)-toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
+    window.abrirPagamento=(id)=>{ window.idAtivo=id; const e=window.db.encomendas.find(x=>x.id==id); document.getElementById('faltaDinheiroTexto').innerText=(toN(e.valorTotal)-toN(e.valorPago)).toFixed(2)+"€"; window.abrirModal('modalPagamento'); };
+    window.executarEntregaTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo); if(e) e.metrosEntregues=e.metrosTotal; window.fecharModal('modalEntrega'); };
+    window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo); const v=toN(document.getElementById('qtdParcialM3').value); if(e && v>0) e.metrosEntregues+=v; window.fecharModal('modalEntrega'); };
+    window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo); if(e) e.valorPago=e.valorTotal; window.fecharModal('modalPagamento'); };
+    window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo); const v=toN(document.getElementById('qtdParcialDinheiro').value); if(e && v>0) e.valorPago+=v; window.fecharModal('modalPagamento'); };
+    window.apagar=(t,id)=>{ if(confirm("Apagar?")) { window.db[t]=window.db[t].filter(x=>x.id!=id); window.atualizarBD(); } };
+    window.apagarMov=(lId,t,mId)=>{ if(confirm("Apagar?")) { const l=window.db.lotes.find(x=>x.id==lId); l[t]=l[t].filter(x=>x.id!=mId); window.atualizarBD(); } };
+    window.exportarReceitas = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Cliente;m3;Pago\n"; window.db.encomendas.filter(e => !m || e.dataEnc.startsWith(m)).forEach(e => { c += `${e.dataEnc};${window.db.clientes.find(x=>x.id==e.clienteId)?.nome||''};${e.metrosTotal};${e.valorPago}\n`; }); window.baixarCSV(c, "Receitas.csv"); };
+    window.exportarGastos = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Desc;Valor\n"; window.db.despesas.filter(d => !m || d.data.startsWith(m)).forEach(d => { c += `${d.data};${d.desc};${d.valor}\n`; }); window.baixarCSV(c, "Gastos.csv"); };
+    window.baixarCSV = (c,n) => { const b=new Blob(["\ufeff"+c],{type:'text/csv;charset=utf-8;'}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=n; a.click(); };
+    window.popularAnos = () => { const anos=new Set([new Date().getFullYear().toString()]); window.db.encomendas.forEach(e=>anos.add(e.dataEnc.split('-')[0])); document.getElementById('dashFiltroAno').innerHTML=Array.from(anos).sort().reverse().map(a => `<option value="${a}">${a}</option>`).join(''); };
 
-    // DESPESAS / OUTROS
-    window.abrirModalNovaDespesa = () => { despesaIdEdicao = null; document.getElementById('despDesc').value = ""; document.getElementById('despValor').value = ""; document.getElementById('despData').value = new Date().toISOString().split('T')[0]; document.getElementById('despObs').value = ""; window.abrirModal('modalDespesa'); };
-    window.abrirEditarDespesa = (id) => { despesaIdEdicao = id; const d = window.db.despesas.find(x => x.id == id); document.getElementById('despDesc').value = d.desc; document.getElementById('despValor').value = d.valor; document.getElementById('despData').value = d.data; document.getElementById('despObs').value = d.obs || ""; window.abrirModal('modalDespesa'); };
-    window.salvarDespesa = () => { const d = { desc: document.getElementById('despDesc').value, valor: toN(document.getElementById('despValor').value), data: document.getElementById('despData').value, obs: document.getElementById('despObs').value }; if(despesaIdEdicao){ const i = window.db.despesas.findIndex(x=>x.id==despesaIdEdicao); window.db.despesas[i] = { ...window.db.despesas[i], ...d }; } else { window.db.despesas.push({id:Date.now().toString(), ...d}); } window.fecharModal('modalDespesa'); };
-    window.abrirModalObs = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('editObsTexto').value = e.obs || ""; window.abrirModal('modalObs'); };
-    window.salvarObs = () => { window.db.encomendas.find(x => x.id == idAtivo).obs = document.getElementById('editObsTexto').value; window.fecharModal('modalObs'); };
-    window.abrirEntrega = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaM3Texto').innerText = (toN(e.metrosTotal)-toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
-    window.executarEntregaTotal = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues = window.db.encomendas.find(e => e.id == idAtivo).metrosTotal; window.fecharModal('modalEntrega'); };
-    window.executarEntregaParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).metrosEntregues += toN(document.getElementById('qtdParcialM3').value); window.fecharModal('modalEntrega'); };
-    window.abrirPagamento = (id) => { idAtivo = id; const e = window.db.encomendas.find(x => x.id == id); document.getElementById('faltaDinheiroTexto').innerText = (toN(e.valorTotal)-toN(e.valorPago)).toFixed(2)+"€"; window.abrirModal('modalPagamento'); };
-    window.executarPagamentoTotal = () => { window.db.encomendas.find(e => e.id == idAtivo).valorPago = window.db.encomendas.find(e => e.id == idAtivo).valorTotal; window.fecharModal('modalPagamento'); };
-    window.executarPagamentoParcial = () => { window.db.encomendas.find(e => e.id == idAtivo).valorPago += toN(document.getElementById('qtdParcialDinheiro').value); window.fecharModal('modalPagamento'); };
-    window.apagar = (t, id) => { if(confirm("Eliminar registo?")) { window.db[t] = window.db[t].filter(x => x.id != id); window.atualizarBD(); } };
-    window.apagarMovimento = (loteId, tipo, movId) => { if(confirm("Apagar movimento?")) { const l = window.db.lotes.find(x => x.id == loteId); l[tipo] = l[tipo].filter(m => m.id != movId); window.atualizarBD(); } };
-
-    // RENDER PRINCIPAL
+    // RENDER
     window.render = function() {
-        const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
-        const fVen = document.getElementById('filtroVen').value.toLowerCase();
-        const fCli = document.getElementById('filtroCli').value.toLowerCase();
-        let sRecEnc = 0, sRecLot = 0, sCusLotTot = 0, sGstGer = 0, dEntregueTot = 0, m3FaltaTot = 0;
-        const pendentesPorTipo = { "Mistura": 0, "Oliveira": 0, "Carvalho": 0, "OLI/CAR": 0, "Eucalipto": 0, "Pinho": 0 };
+        const modo=document.getElementById('dashModoFiltro').value, ano=document.getElementById('dashFiltroAno').value, mes=document.getElementById('dashFiltroMes').value;
+        document.getElementById('colMesDash').style.display=(modo==='ano')?'none':'block';
+        let sRecE=0, sRecL=0, sCusL=0, sGstG=0, m3F=0, divC=0, dRec=0, dGst=0, dM3=0;
+        const pT={"Mistura":0,"Oliveira":0,"Carvalho":0,"OLI/CAR":0,"Eucalipto":0,"Pinho":0}, rank={}, tps={};
 
-        document.getElementById('listaLotes').innerHTML = (window.db.lotes || []).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l => {
-            const m3V = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.m3),0), rL = (l.saidasLenha || []).reduce((a,c)=>a+toN(c.valor),0), gE = (l.gastosExtras || []).reduce((a,c)=>a+toN(c.valor),0), cT = toN(l.custoCompra) + gE;
-            sCusLotTot += cT; sRecLot += rL;
-            let mHtml = "";
-            (l.saidasLenha || []).forEach(m => { mHtml += `<div class="movimento-item"><div class="movimento-header"><span class="text-success fw-bold"><i class="bi bi-plus-circle-fill"></i> Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><i class="bi bi-x text-muted" onclick="window.apagarMovimento('${l.id}','saidasLenha','${m.id}')"></i></div></div>`; });
-            (l.gastosExtras || []).forEach(g => { mHtml += `<div class="movimento-item"><div class="movimento-header"><span class="text-danger fw-bold"><i class="bi bi-dash-circle-fill"></i> Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${l.id}','${g.id}')"></i><i class="bi bi-x text-muted" onclick="window.apagarMovimento('${l.id}','gastosExtras','${g.id}')"></i></div></div>${g.obs ? `<div class="movimento-obs">${g.obs}</div>` : ''}</div>`; });
-            return `<div class="lote-card shadow-sm"><div class="row align-items-center"><div class="col-7"><span class="badge bg-dark mb-1">${l.data}</span><br><h6 class="mb-0 fw-bold">${l.nome}</h6><small class="text-muted">Custo: ${cT.toFixed(0)}€</small></div><div class="col-5 text-end"><button class="btn btn-sm btn-primary py-0" onclick="window.abrirSaidaLote('${l.id}')">+ Saída</button> <button class="btn btn-sm btn-danger py-0" onclick="window.abrirGastoLote('${l.id}')">+ Gasto</button></div></div><div class="bg-light p-2 rounded mt-2 mb-2" style="max-height: 150px; overflow-y: auto;">${mHtml || '<div class="text-center text-muted small py-2">Sem movimentos</div>'}</div><div class="d-flex justify-content-between align-items-center border-top pt-2"><div class="small"><b>Vendido:</b> ${m3V.toFixed(1)} m³ | <b>Bal:</b> <span class="${(rL-cT)>=0?'text-success':'text-danger'} fw-bold">${(rL-cT).toFixed(1)}€</span></div><div><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarLote('${l.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
+        // Lotes
+        document.getElementById('listaLotes').innerHTML=(window.db.lotes||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>{
+            const rL=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.valor),0), gE=(l.gastosExtras||[]).reduce((a,c)=>a+toN(c.valor),0), cT=toN(l.custoCompra)+gE;
+            sCusL+=cT; sRecL+=rL;
+            if(l.data.startsWith(ano) && (modo==='ano' || l.data.split('-')[1]===mes)) { dGst+=cT; dRec+=rL; }
+            let movs="";
+            (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span>Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo='${m.id}'; window.abrirModal('modalSaidaLote')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','saidasLenha','${m.id}')"></i></div></div>`);
+            (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span>Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo='${g.id}'; window.abrirModal('modalGastoLote')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','gastosExtras','${g.id}')"></i></div></div>`);
+            return `<div class="lote-card p-3"><b>${l.nome}</b><div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center"><span class="${rL-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(rL-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalSaidaLote')">+ S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalGastoLote')">+ G</button><i class="bi bi-pencil-square text-primary me-1" onclick="window.loteIdEdicao='${l.id}'; const lot=window.db.lotes.find(x=>x.id=='${l.id}'); document.getElementById('loteNome').value=lot.nome; document.getElementById('loteCusto').value=lot.custoCompra; document.getElementById('loteData').value=lot.data; window.abrirModal('modalLote');"></i><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
         }).join('');
 
-        let htmlEnc = "", htmlVen = "";
-        (window.db.encomendas || []).forEach(e => {
-            const cli = window.db.clientes.find(c => c.id == e.clienteId); if(!cli) return;
-            const vP = toN(e.valorPago), vT = toN(e.valorTotal), mTot = toN(e.metrosTotal), mEnt = toN(e.metrosEntregues);
-            const isCon = (mEnt >= mTot && vP >= vT), temO = e.obs && e.obs.trim().length > 0;
-            sRecEnc += vP;
-            if(!isCon) {
-                const fE = mTot - mEnt, dE = (mEnt * toN(e.precoM3)) - vP; if(dE > 0) dEntregueTot += dE; if(fE > 0) { m3FaltaTot += fE; if(pendentesPorTipo[e.tipoLenha] !== undefined) pendentesPorTipo[e.tipoLenha] += fE; }
-                if(cli.nome.toLowerCase().includes(fEnc)) htmlEnc += `<tr><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vT.toFixed(0)}€</td><td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge ${fE<=0?'bg-concluido':'bg-pendente'}">${e.metrosEntregues}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td><td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temO ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarEncomenda('${e.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
-            } else {
-                if(cli.nome.toLowerCase().includes(fVen)) htmlVen += `<tr class="table-success"><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${e.metrosTotal}</td><td>${vT.toFixed(0)}€</td><td>${vP.toFixed(0)}€</td><td><button class="btn-obs" onclick="window.abrirModalObs('${e.id}')"><i class="bi ${temO ? 'bi-chat-left-dots-fill text-primary' : 'bi-chat-left-text text-muted'}"></i></button></td><td><small>${e.dataEnc}</small></td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td></tr>`;
-            }
+        // Tabelas
+        let hE="", hD="", hV="";
+        (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
+            const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return;
+            const vP=toN(e.valorPago), vT=toN(e.valorTotal), mTot=toN(e.metrosTotal), mEnt=toN(e.metrosEntregues), fM=mTot-mEnt, sDev=vT-vP;
+            sRecE+=vP;
+            if(e.dataEnc.startsWith(ano) && (modo==='ano' || e.dataEnc.split('-')[1]===mes)) { dRec+=vP; dM3+=mEnt; rank[cli.nome]=(rank[cli.nome]||0)+mEnt; tps[e.tipoLenha]=(tps[e.tipoLenha]||0)+mEnt; }
+            if(fM>0) { m3F+=fM; pT[e.tipoLenha]+=fM; }
+            
+            const actions = `<td><i class="bi bi-pencil-square text-primary me-2" onclick="window.encIdEdicao='${e.id}'; const en=window.db.encomendas.find(x=>x.id=='${e.id}'); document.getElementById('encCliente').innerHTML=window.db.clientes.map(c=>'<option value='+c.id+'>'+c.nome+'</option>').join(''); document.getElementById('encCliente').value=en.clienteId; document.getElementById('encTipoLenha').value=en.tipoLenha; document.getElementById('encMetros').value=en.metrosTotal; document.getElementById('encPreco').value=en.precoM3; document.getElementById('encDataC').value=en.dataEnc; document.getElementById('encObs').value=en.obs||''; window.abrirModal('modalEnc');"></i><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td>`;
+            const obsCell = `<td><div class="obs-container">${e.obs||''}</div></td>`;
+            const baseRow = `<td><span class="bg-data">${e.dataEnc}</span></td><td><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
+
+            if(mEnt>=mTot && vP>=vT) hV += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-success">Pago</td>${obsCell}${actions}</tr>`;
+            else if(mEnt>=mTot && vP<vT) { hD += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold cursor-pointer" onclick="window.abrirPagamento('${e.id}')">${sDev.toFixed(0)}€</td>${obsCell}${actions}</tr>`; divC+=sDev; }
+            else hE += `<tr>${baseRow}<td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge bg-pendente">${mEnt}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${actions}</tr>`;
         });
-        document.getElementById('corpoEncomendas').innerHTML = htmlEnc;
-        document.getElementById('corpoVendas').innerHTML = htmlVen;
+        document.getElementById('corpoEncomendas').innerHTML=hE; document.getElementById('corpoDividas').innerHTML=hD; document.getElementById('corpoVendas').innerHTML=hV.split('<tr>').reverse().join('<tr>');
 
-        let pHtml = ""; for (const t in pendentesPorTipo) if(pendentesPorTipo[t] > 0) pHtml += `<div class="pendente-item"><span>${t}:</span> <b>${pendentesPorTipo[t].toFixed(1)} m³</b></div>`;
-        document.getElementById('listaPendentesPorTipo').innerHTML = pHtml || '<div class="text-center text-muted small">Tudo em dia!</div>';
-        document.getElementById('listaClientesTabela').innerHTML = (window.db.clientes || []).filter(c=>c.nome.toLowerCase().includes(fCli)).map(c => `<tr><td><b>${c.nome}</b></td><td>${c.info||''}</td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${c.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
-        
-        sGstGer = (window.db.despesas || []).reduce((a,c) => a + toN(c.valor), 0);
-        document.getElementById('corpoDespesas').innerHTML = (window.db.despesas || []).map(d => `<tr><td>${d.data}</td><td><b>${d.desc}</b><br><small class="text-muted italic">${d.obs || ''}</small></td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarDespesa('${d.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
+        sGstG=(window.db.despesas||[]).reduce((a,c)=>{ if(c.data.startsWith(ano) && (modo==='ano' || c.data.split('-')[1]===mes)) dGst+=toN(c.valor); return a+toN(c.valor); }, 0);
+        document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.despIdEdicao='${d.id}'; const de=window.db.despesas.find(x=>x.id=='${d.id}'); document.getElementById('despDesc').value=de.desc; document.getElementById('despValor').value=de.valor; document.getElementById('despData').value=de.data; window.abrirModal('modalDespesa');"></i><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
+        document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.contacto||''}</td><td><div class="obs-container">${c.obs||''}</div></td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${c.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
 
-        const sI = toN(window.db.saldoInicial), tR = sRecEnc + sRecLot, tG = sCusLotTot + sGstGer, luc = tR - tG;
-        document.getElementById('resumoLucro').innerText = luc.toFixed(2) + "€"; document.getElementById('resumoDividaEntregue').innerText = dEntregueTot.toFixed(2) + "€"; document.getElementById('resumoCaixaTotal').innerText = (sI + luc).toFixed(2) + "€"; document.getElementById('resumoPendentesGlobal').innerText = m3FaltaTot.toFixed(1) + " m³"; document.getElementById('inputSaldoInicial').value = sI;
+        const lucT=(sRecE+sRecL)-(sCusL+sGstG);
+        document.getElementById('resumoCaixaTotal').innerText=(toN(window.db.saldoInicial)+lucT).toFixed(2)+"€";
+        document.getElementById('resumoPendentesGlobal').innerText=m3F.toFixed(1)+" m³";
+        document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(2)+"€";
+        document.getElementById('resumoLucro').innerText=lucT.toFixed(2)+"€";
+        document.getElementById('dashReceitaMes').innerText=dRec.toFixed(0)+"€"; document.getElementById('dashGastoMes').innerText=dGst.toFixed(0)+"€"; document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
+        let pL=""; for(let t in pT) if(pT[t]>0) pL+=`<div class="pendente-item"><span>${t}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
+        document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<div class="text-center text-muted small">Tudo entregue!</div>';
+        window.updateCharts(rank,tps);
     };
 
-    // EXPORTACOES REFORCADAS
-    window.exportarVendas = () => {
-        try {
-            const mesAlvo = document.getElementById('filtroMesExport').value;
-            let csv = "Data;Estado;Cliente;Tipo;m3 Totais;m3 Entregues;Valor Pago;Observacoes\n";
-            
-            (window.db.encomendas || []).forEach(e => {
-                if (!mesAlvo || e.dataEnc.startsWith(mesAlvo)) {
-                    const c = window.db.clientes.find(cli=>cli.id==e.clienteId);
-                    const status = (toN(e.metrosEntregues) >= toN(e.metrosTotal) && toN(e.valorPago) >= toN(e.valorTotal)) ? "CONCLUIDO" : "PENDENTE";
-                    const obs = (e.obs || "").replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
-                    csv += `${e.dataEnc};${status};${c?c.nome:'?'};${e.tipoLenha};${e.metrosTotal};${e.metrosEntregues};${e.valorPago};${obs}\n`;
-                }
-            });
-
-            window.baixarCSV(csv, `Receitas_Encomendas_${mesAlvo || 'Total'}.csv`);
-        } catch(err) {
-            alert("Erro ao exportar Receitas: " + err.message);
-        }
-    };
-
-    window.exportarDespesas = () => {
-        try {
-            const mesAlvo = document.getElementById('filtroMesExport').value;
-            let csv = "Data;Categoria;Descricao;Valor;Notas\n";
-            
-            (window.db.despesas || []).forEach(d => {
-                if (!mesAlvo || d.data.startsWith(mesAlvo)) {
-                    const obs = (d.obs || "").replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
-                    csv += `${d.data};Geral;${d.desc};${d.valor};${obs}\n`;
-                }
-            });
-
-            (window.db.lotes || []).forEach(l => {
-                // Compra do Lote
-                if (!mesAlvo || l.data.startsWith(mesAlvo)) {
-                    csv += `${l.data};Compra Lote;${l.nome};${l.custoCompra};---\n`;
-                }
-                // Gastos Extras do Lote
-                (l.gastosExtras || []).forEach(g => {
-                    if (!mesAlvo || l.data.startsWith(mesAlvo)) { 
-                        const obs = (g.obs || "").replace(/;/g, ",").replace(/(\r\n|\n|\r)/gm, " ");
-                        csv += `${l.data};Gasto Lote;${g.desc} (Lote: ${l.nome});${g.valor};${obs}\n`;
-                    }
-                });
-            });
-
-            window.baixarCSV(csv, `Gastos_Total_${mesAlvo || 'Total'}.csv`);
-        } catch(err) {
-            alert("Erro ao exportar Gastos: " + err.message);
-        }
-    };
-
-    window.baixarCSV = (csv, nome) => {
-        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = nome;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 0);
+    window.updateCharts=(rank,tps)=>{
+        if(chartCli) chartCli.destroy(); if(chartTp) chartTp.destroy();
+        chartCli=new Chart(document.getElementById('chartClientes'),{type:'bar',data:{labels:Object.keys(rank),datasets:[{label:'m³',data:Object.values(rank),backgroundColor:'#1a252f'}]},options:{responsive:true,maintainAspectRatio:false}});
+        chartTp=new Chart(document.getElementById('chartTipos'),{type:'doughnut',data:{labels:Object.keys(tps),datasets:[{data:Object.values(tps),backgroundColor:['#e67e22','#27ae60','#3498db','#f39c12','#c0392b','#7f8c8d']}]},options:{responsive:true,maintainAspectRatio:false}});
     };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
