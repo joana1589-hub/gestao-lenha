@@ -3,24 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LenhaPro v36.0 - Estabilidade Firestore</title>
+    <title>LenhaPro v44.0 - Edição de Lotes Ativa</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #1a252f; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; --warning: #f39c12; }
+        :root { --primary: #1a252f; --accent: #e67e22; --success: #27ae60; --danger: #c0392b; --warning: #f39c12; --info: #3498db; }
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; font-size: 0.82rem; color: #333; padding-bottom: 60px; }
         .navbar { background-color: var(--primary) !important; border-bottom: 3px solid var(--accent); }
         .card-stats { border-radius: 12px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.08); background: #fff; }
         .tab-content { background: white; padding: 15px; border-radius: 0 0 15px 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); min-height: 500px; border: 1px solid #eee; border-top: none; }
-        .metric-large-value { font-size: 2.2rem; font-weight: 900; line-height: 1; color: #111; }
-        .metric-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #7f8c8d; }
         .status-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; cursor: pointer; display: inline-block; }
         .bg-pendente { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .bg-concluido { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .lote-card { border-left: 5px solid var(--primary); margin-bottom: 15px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
         .movimento-item { font-size: 0.75rem; padding: 5px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
-        .pendente-item { font-size: 0.7rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1px 0; }
+        .pendente-item { font-size: 0.75rem; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 4px 0; }
         .bg-data { background-color: #e9ecef; color: #495057; border: 1px solid #dee2e6; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .obs-container { max-width: 150px; font-size: 0.72rem; line-height: 1.1; color: #666; word-wrap: break-word; white-space: normal; }
         .chart-container { position: relative; height: 220px; width: 100%; }
@@ -30,7 +27,7 @@
 
 <nav class="navbar navbar-dark mb-3 p-2 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
-        <div><span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v36.0</span><div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Sincronizando...</div></div>
+        <div><span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v44.0</span><div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Sincronizando...</div></div>
         <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="window.abrirModal('modalSaldoInicial')">💰 AJUSTAR CAIXA</button>
     </div>
 </nav>
@@ -38,10 +35,11 @@
 <div class="container">
     <div class="row g-2 mb-3 text-center">
         <div class="col-md-5">
-            <div class="card card-stats p-3 h-100 border-2 border-warning shadow-sm" style="background:#fff9e6">
-                <small class="text-muted fw-bold">TOTAL POR ENTREGAR (ENCOMENDAS)</small>
-                <div id="resumoPendentesGlobal" class="h2 fw-900 mb-0 text-warning">0.0 m³</div>
-                <div id="listaPendentesPorTipo" class="mt-1"></div>
+            <div class="card card-stats p-3 h-100 border-2 border-warning shadow-sm" style="background:#fffcf0">
+                <small class="text-muted fw-bold">TOTAL POR ENTREGAR</small>
+                <div id="resumoPendentesGlobal" class="h2 fw-900 mb-1 text-warning" style="font-size: 2.5rem;">0.0 m³</div>
+                <hr class="my-2">
+                <div id="listaPendentesPorTipo" class="text-start"></div>
             </div>
         </div>
         <div class="col-md-7">
@@ -65,6 +63,7 @@
 
     <div class="tab-content shadow-sm mb-5">
         <div id="tabDash" class="tab-pane fade show active">
+            <!-- Dash Content -->
             <div class="row g-2 mb-3">
                 <div class="col-6 col-md-4"><label class="small fw-bold">Modo:</label><select id="dashModoFiltro" class="form-select form-select-sm" onchange="window.render()"><option value="mes">Mês</option><option value="ano">Ano</option></select></div>
                 <div class="col-6 col-md-4"><label class="small fw-bold">Ano:</label><select id="dashFiltroAno" class="form-select form-select-sm" onchange="window.render()"></select></div>
@@ -94,7 +93,10 @@
             <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoVendas"></tbody></table></div>
         </div>
 
-        <div id="tabLotes" class="tab-pane fade"><button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoLote()">+ COMPRAR CARGA</button><div id="listaLotes"></div></div>
+        <div id="tabLotes" class="tab-pane fade">
+            <button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoLote()">+ COMPRAR CARGA</button>
+            <div id="listaLotes"></div>
+        </div>
 
         <div id="tabFin" class="tab-pane fade">
             <div class="card p-3 bg-light border-0 mb-3 shadow-sm border-start border-primary border-4">
@@ -105,27 +107,38 @@
                     <div class="col-6 col-md-4"><button class="btn btn-danger btn-sm w-100 fw-bold" onclick="window.exportarGastos()">GASTOS</button></div>
                 </div>
             </div>
-            <button class="btn btn-outline-danger btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovaDespesa()">+ REGISTAR GASTO GERAL</button>
-            <table class="table table-sm"><thead class="table-light"><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Ação</th></tr></thead><tbody id="corpoDespesas"></tbody></table>
+            <div class="row g-2 mb-3">
+                <div class="col-6"><button class="btn btn-danger btn-sm w-100 fw-bold shadow-sm" onclick="window.abrirModalNovaDespesa()">+ REGISTAR GASTO</button></div>
+                <div class="col-6"><button class="btn btn-info btn-sm w-100 fw-bold text-white shadow-sm" onclick="window.abrirModalNovoDividendo()">💰 REGISTAR DIVIDENDO</button></div>
+            </div>
+            <h6 class="fw-bold mt-4">Gastos Gerais</h6>
+            <table class="table table-sm mb-4"><tbody id="corpoDespesas"></tbody></table>
+            <h6 class="fw-bold mt-4 text-info">Dividendos (Retiradas)</h6>
+            <table class="table table-sm"><tbody id="corpoDividendos"></tbody></table>
         </div>
 
         <div id="tabCli" class="tab-pane fade">
-            <button class="btn btn-success btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO CLIENTE</button>
-            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Nome</th><th>Contacto</th><th>Observações Fixas</th><th class="text-end">Ações</th></tr></thead><tbody id="listaClientesTabela"></tbody></table></div>
+            <div class="row g-2 mb-3">
+                <div class="col-8"><button class="btn btn-success btn-sm w-100 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO CLIENTE</button></div>
+                <div class="col-4"><button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.abrirGerirTipos()">⚙️ TIPOS</button></div>
+            </div>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Nome</th><th>Contacto</th><th>Obs</th><th class="text-end">Ações</th></tr></thead><tbody id="listaClientesTabela"></tbody></table></div>
         </div>
     </div>
 </div>
 
 <!-- MODAIS -->
-<div class="modal fade" id="modalCli" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloCli">Cliente</h6><input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome"><input type="text" id="cliContacto" class="form-control mb-2" placeholder="Contacto"><textarea id="cliObs" class="form-control mb-3" placeholder="Obs fixas..."></textarea><button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR</button></div></div></div>
-<div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloEnc">Encomenda</h6><select id="encCliente" class="form-select mb-2" onchange="window.puxarObsCliente(this.value)"></select><select id="encTipoLenha" class="form-select mb-2"><option value="Mistura">Mistura</option><option value="Oliveira">Oliveira</option><option value="Carvalho">Carvalho</option><option value="OLI/CAR">OLI/CAR</option><option value="Eucalipto">Eucalipto</option><option value="Pinho">Pinho</option></select><div class="row g-2 mb-2"><div class="col-6"><label class="small">m³:</label><input type="number" id="encMetros" class="form-control" step="0.1"></div><div class="col-6"><label class="small">€/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div></div><input type="date" id="encDataC" class="form-control mb-2"><textarea id="encObs" class="form-control mb-3" placeholder="Notas..."></textarea><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">GUARDAR</button></div></div></div>
-<div class="modal fade" id="modalDespesa" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6 id="tituloDesp">Gasto Geral</h6><input type="text" id="despDesc" class="form-control mb-2" placeholder="Desc"><input type="number" id="despValor" class="form-control mb-2" placeholder="€"><input type="date" id="despData" class="form-control mb-3"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">SALVAR</button></div></div></div>
-<div class="modal fade" id="modalLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6 id="tituloLote">Carga</h6><input type="text" id="loteNome" class="form-control mb-2" placeholder="Ref"><input type="number" id="loteCusto" class="form-control mb-2" placeholder="Custo €"><input type="date" id="loteData" class="form-control mb-3"><button class="btn btn-dark w-100 fw-bold" onclick="window.salvarLote()">GRAVAR</button></div></div></div>
-<div class="modal fade" id="modalSaldoInicial" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3"><h6>Saldo em Caixa</h6><input type="number" id="inputSaldoInicial" class="form-control mb-3"><button class="btn btn-warning w-100 fw-bold" onclick="window.confirmarSaldoInicial()">GRAVAR</button></div></div></div>
-<div class="modal fade" id="modalSaidaLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6>Saída Lote (Isolada)</h6><input type="number" id="saidaLoteM3" class="form-control mb-2" placeholder="m³"><input type="number" id="saidaLoteValor" class="form-control mb-3" placeholder="€ (Balanço interno lote)"><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarSaidaLote()">OK</button></div></div></div>
-<div class="modal fade" id="modalGastoLote" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-3"><h6>Gasto Carga</h6><input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Diesel..."><input type="number" id="gastoLoteValor" class="form-control mb-3" placeholder="€"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">OK</button></div></div></div>
-<div class="modal fade" id="modalEntrega" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Entrega</h6><p>Falta: <b id="faltaM3Texto"></b> m³</p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarEntregaTotal()">TOTAL</button><div class="input-group"><input type="number" id="qtdParcialM3" class="form-control"><button class="btn btn-warning" onclick="window.executarEntregaParcial()">Ok</button></div></div></div></div>
-<div class="modal fade" id="modalPagamento" tabindex="-1"><div class="modal-dialog modal-dialog-centered text-center"><div class="modal-content p-4"><h6>Pagamento</h6><p class="text-danger">Dívida: <b id="faltaDinheiroTexto"></b></p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarPagamentoTotal()">PAGO TUDO</button><div class="input-group"><input type="number" id="qtdParcialDinheiro" class="form-control"><button class="btn btn-warning" onclick="window.executarPagamentoParcial()">Ok</button></div></div></div></div>
+<div class="modal fade" id="modalCli" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Cliente</h6><input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome"><input type="text" id="cliContacto" class="form-control mb-2" placeholder="Contacto"><textarea id="cliObs" class="form-control mb-3" placeholder="Obs fixas..."></textarea><button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR</button></div></div>
+<div class="modal fade" id="modalEnc" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Encomenda</h6><select id="encCliente" class="form-select mb-2" onchange="window.puxarObsCliente(this.value)"></select><select id="encTipoLenha" class="form-select mb-2"></select><div class="row g-2 mb-2"><div class="col-6"><label class="small">m³:</label><input type="number" id="encMetros" class="form-control" step="0.1"></div><div class="col-6"><label class="small">€/m³:</label><input type="number" id="encPreco" class="form-control" value="75"></div></div><input type="date" id="encDataC" class="form-control mb-2"><textarea id="encObs" class="form-control mb-3" placeholder="Notas..."></textarea><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">GUARDAR</button></div></div>
+<div class="modal fade" id="modalLote" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Carga</h6><input type="text" id="loteNome" class="form-control mb-2" placeholder="Referência"><input type="number" id="loteCusto" class="form-control mb-2" placeholder="Custo Compra €"><input type="date" id="loteData" class="form-control mb-3"><button class="btn btn-dark w-100 fw-bold" onclick="window.salvarLote()">GRAVAR</button></div></div>
+<div class="modal fade" id="modalSaidaLote" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Saída Carga</h6><input type="number" id="saidaLoteM3" class="form-control mb-2" placeholder="m³"><input type="number" id="saidaLoteValor" class="form-control mb-3" placeholder="Valor € (balanço)"><button class="btn btn-primary w-100 fw-bold" onclick="window.salvarSaidaLote()">GRAVAR</button></div></div>
+<div class="modal fade" id="modalGastoLote" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Gasto Carga</h6><input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Descrição"><input type="number" id="gastoLoteValor" class="form-control mb-3" placeholder="Valor €"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">GRAVAR</button></div></div>
+<div class="modal fade" id="modalDespesa" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Gasto Geral</h6><input type="text" id="despDesc" class="form-control mb-2" placeholder="Desc"><input type="number" id="despValor" class="form-control mb-2" placeholder="€"><input type="date" id="despData" class="form-control mb-3"><button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">SALVAR</button></div></div>
+<div class="modal fade" id="modalDividendo" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Dividendo</h6><input type="text" id="divDesc" class="form-control mb-2" placeholder="Quem?"><input type="number" id="divValor" class="form-control mb-2" placeholder="€"><input type="date" id="divData" class="form-control mb-3"><button class="btn btn-info text-white w-100 fw-bold" onclick="window.salvarDividendo()">RETIRAR</button></div></div>
+<div class="modal fade" id="modalSaldoInicial" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Saldo Caixa</h6><input type="number" id="inputSaldoInicial" class="form-control mb-3"><button class="btn btn-warning w-100 fw-bold" onclick="window.confirmarSaldoInicial()">GRAVAR</button></div></div>
+<div class="modal fade" id="modalEntrega" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-4"><h6>Entrega</h6><p>Falta: <b id="faltaM3Texto"></b> m³</p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarEntregaTotal()">TOTAL</button><div class="input-group"><input type="number" id="qtdParcialM3" class="form-control"><button class="btn btn-warning" onclick="window.executarEntregaParcial()">Ok</button></div></div></div>
+<div class="modal fade" id="modalPagamento" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-4"><h6>Pagamento</h6><p class="text-danger">Dívida: <b id="faltaDinheiroTexto"></b></p><button class="btn btn-success mb-3 w-100 fw-bold" onclick="window.executarPagamentoTotal()">PAGO TUDO</button><div class="input-group"><input type="number" id="qtdParcialDinheiro" class="form-control"><button class="btn btn-warning" onclick="window.executarPagamentoParcial()">Ok</button></div></div></div>
+<div class="modal fade" id="modalGerirTipos" tabindex="-1"><div class="modal-content modal-dialog modal-dialog-centered p-3"><h6>Tipos de Lenha</h6><div class="input-group mb-3"><input type="text" id="novoTipoMadeira" class="form-control"><button class="btn btn-success" onclick="window.adicionarTipoMadeira()">+</button></div><div id="listaTiposContainer" class="list-group"></div><button class="btn btn-secondary w-100 mt-2" data-bs-dismiss="modal">FECHAR</button></div></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -145,7 +158,7 @@
     const dbFirestore = getFirestore(app);
     const docRef = doc(dbFirestore, "producao", "dados_mestre");
 
-    window.db = { clientes: [], encomendas: [], despesas: [], lotes: [], saldoInicial: 0 };
+    window.db = { clientes: [], encomendas: [], despesas: [], lotes: [], dividendos: [], saldoInicial: 0, tiposLenha: ["Mistura", "Oliveira", "Carvalho", "ELI/CAR", "Eucalipto", "Pinho"] };
     window.cliIdEdicao = null; window.encIdEdicao = null; window.loteIdEdicao = null; window.despIdEdicao = null;
     window.idAtivo = null; window.loteIdAtivo = null; window.movIdAtivo = null;
     let chartCli = null, chartTp = null;
@@ -154,19 +167,65 @@
 
     onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) { window.db = docSnap.data(); }
-        if(!window.db.clientes) window.db.clientes = [];
-        if(!window.db.encomendas) window.db.encomendas = [];
-        if(!window.db.despesas) window.db.despesas = [];
-        if(!window.db.lotes) window.db.lotes = [];
-        document.getElementById('sync-status').innerText = "🟢 Sincronizado";
-        window.popularAnos();
         window.render();
     });
 
     window.atualizarBD = async function() { await setDoc(docRef, window.db); }
-    window.abrirModal = (id) => new bootstrap.Modal(document.getElementById(id)).show();
-    window.fecharModal = (id) => { const m = bootstrap.Modal.getInstance(document.getElementById(id)); if(m) m.hide(); window.atualizarBD(); }
+    window.limparResiduosModal = () => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.classList.remove('modal-open'); document.body.style.overflow = ''; }
+    window.fecharModal = (id) => { const m = bootstrap.Modal.getInstance(document.getElementById(id)); if(m) m.hide(); window.limparResiduosModal(); window.atualizarBD(); }
+    window.abrirModal = (id) => { window.limparResiduosModal(); new bootstrap.Modal(document.getElementById(id)).show(); }
 
+    // LOTES / MOVIMENTOS (EDIÇÃO RESTAURADA)
+    window.salvarSaidaLote = () => { 
+        const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); 
+        const d = { m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) };
+        if(window.movIdAtivo){
+            const i = l.saidasLenha.findIndex(x => x.id == window.movIdAtivo);
+            l.saidasLenha[i] = { ...l.saidasLenha[i], ...d };
+        } else {
+            l.saidasLenha.push({ id: Date.now().toString(), ...d });
+        }
+        window.fecharModal('modalSaidaLote'); 
+    };
+
+    window.salvarGastoLote = () => { 
+        const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); 
+        const d = { desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) };
+        if(window.movIdAtivo){
+            const i = l.gastosExtras.findIndex(x => x.id == window.movIdAtivo);
+            l.gastosExtras[i] = { ...l.gastosExtras[i], ...d };
+        } else {
+            l.gastosExtras.push({ id: Date.now().toString(), ...d });
+        }
+        window.fecharModal('modalGastoLote'); 
+    };
+
+    // FUNÇÕES DE ABERTURA DE MODAL COM DADOS
+    window.abrirEditarSaida = (loteId, movId) => {
+        window.loteIdAtivo = loteId; window.movIdAtivo = movId;
+        const l = window.db.lotes.find(x => x.id == loteId);
+        const m = l.saidasLenha.find(x => x.id == movId);
+        document.getElementById('saidaLoteM3').value = m.m3;
+        document.getElementById('saidaLoteValor').value = m.valor;
+        window.abrirModal('modalSaidaLote');
+    }
+
+    window.abrirEditarGastoLote = (loteId, movId) => {
+        window.loteIdAtivo = loteId; window.movIdAtivo = movId;
+        const l = window.db.lotes.find(x => x.id == loteId);
+        const g = l.gastosExtras.find(x => x.id == movId);
+        document.getElementById('gastoLoteDesc').value = g.desc;
+        document.getElementById('gastoLoteValor').value = g.valor;
+        window.abrirModal('modalGastoLote');
+    }
+
+    // RESTANTE DAS FUNÇÕES (Mantendo a v43.0)
+    window.abrirGerirTipos = () => {
+        document.getElementById('listaTiposContainer').innerHTML = (window.db.tiposLenha||[]).map(t => `<div class="list-group-item d-flex justify-content-between py-1"><span>${t}</span><i class="bi bi-trash text-danger" onclick="window.removerTipoMadeira('${t}')"></i></div>`).join('');
+        window.abrirModal('modalGerirTipos');
+    };
+    window.adicionarTipoMadeira = () => { const i = document.getElementById('novoTipoMadeira'); if(i.value) { window.db.tiposLenha.push(i.value); i.value=""; window.fecharModal('modalGerirTipos'); } };
+    window.removerTipoMadeira = (t) => { if(confirm("Apagar?")) { window.db.tiposLenha = window.db.tiposLenha.filter(x=>x!==t); window.atualizarBD(); } };
     window.abrirModalNovoCliente = () => { window.cliIdEdicao = null; document.getElementById('cliNome').value=""; document.getElementById('cliContacto').value=""; document.getElementById('cliObs').value=""; window.abrirModal('modalCli'); };
     window.abrirEditarCliente = (id) => { window.cliIdEdicao = id; const c = window.db.clientes.find(x=>x.id==id); document.getElementById('cliNome').value=c.nome; document.getElementById('cliContacto').value=c.contacto||""; document.getElementById('cliObs').value=c.obs||""; window.abrirModal('modalCli'); };
     window.salvarCliente = () => { 
@@ -176,9 +235,13 @@
         else { window.db.clientes.push({id:Date.now().toString(),...d}); }
         window.fecharModal('modalCli');
     };
-
-    window.abrirModalEncomenda = () => { window.encIdEdicao=null; document.getElementById('encCliente').innerHTML=window.db.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join(''); document.getElementById('encMetros').value=""; document.getElementById('encObs').value=""; document.getElementById('encDataC').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalEnc'); };
-    window.abrirEditarEncomenda = (id) => { window.encIdEdicao=id; const e=window.db.encomendas.find(x=>x.id==id); document.getElementById('encCliente').innerHTML=window.db.clientes.map(c=>`<option value="${c.id}" ${c.id==e.clienteId?'selected':''}>${c.nome}</option>`).join(''); document.getElementById('encTipoLenha').value=e.tipoLenha; document.getElementById('encMetros').value=e.metrosTotal; document.getElementById('encPreco').value=e.precoM3; document.getElementById('encDataC').value=e.dataEnc; document.getElementById('encObs').value=e.obs||""; window.abrirModal('modalEnc'); };
+    window.abrirModalEncomenda = () => { window.encIdEdicao=null; document.getElementById('encCliente').innerHTML=window.db.clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join(''); document.getElementById('encTipoLenha').innerHTML=window.db.tiposLenha.map(t=>`<option value="${t}">${t}</option>`).join(''); document.getElementById('encMetros').value=""; document.getElementById('encDataC').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalEnc'); };
+    window.abrirEditarEncomenda = (id) => { 
+        window.encIdEdicao=id; const e=window.db.encomendas.find(x=>x.id==id); 
+        document.getElementById('encCliente').innerHTML=window.db.clientes.map(c=>`<option value="${c.id}" ${c.id==e.clienteId?'selected':''}>${c.nome}</option>`).join(''); 
+        document.getElementById('encTipoLenha').innerHTML=window.db.tiposLenha.map(t=>`<option value="${t}" ${t==e.tipoLenha?'selected':''}>${t}</option>`).join('');
+        document.getElementById('encMetros').value=e.metrosTotal; document.getElementById('encPreco').value=e.precoM3; document.getElementById('encDataC').value=e.dataEnc; document.getElementById('encObs').value=e.obs||""; window.abrirModal('modalEnc'); 
+    };
     window.salvarEncomenda = () => { 
         const m=toN(document.getElementById('encMetros').value), p=toN(document.getElementById('encPreco').value); 
         const d={ clienteId:document.getElementById('encCliente').value, tipoLenha:document.getElementById('encTipoLenha').value, dataEnc:document.getElementById('encDataC').value, metrosTotal:m, precoM3:p, valorTotal:m*p, obs:document.getElementById('encObs').value };
@@ -186,7 +249,6 @@
         else { window.db.encomendas.push({id:Date.now().toString(), metrosEntregues:0, valorPago:0,...d}); }
         window.fecharModal('modalEnc'); 
     };
-
     window.abrirModalNovoLote = () => { window.loteIdEdicao=null; document.getElementById('loteNome').value=""; document.getElementById('loteCusto').value=""; document.getElementById('loteData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalLote'); };
     window.salvarLote = () => { 
         const d = { nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value }; 
@@ -194,23 +256,6 @@
         else { window.db.lotes.push({id:Date.now().toString(), ...d, gastosExtras:[], saidasLenha:[]}); }
         window.fecharModal('modalLote'); 
     };
-
-    window.salvarSaidaLote = () => { 
-        const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); 
-        const d = { m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) };
-        if(window.movIdAtivo){ const i = l.saidasLenha.findIndex(x=>x.id==window.movIdAtivo); l.saidasLenha[i] = {...l.saidasLenha[i], ...d}; }
-        else { l.saidasLenha.push({id:Date.now(), ...d}); }
-        window.fecharModal('modalSaidaLote'); 
-    };
-
-    window.salvarGastoLote = () => { 
-        const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); 
-        const d = { desc: document.getElementById('gastoLoteDesc').value, valor: toN(document.getElementById('gastoLoteValor').value) };
-        if(window.movIdAtivo){ const i = l.gastosExtras.findIndex(x=>x.id==window.movIdAtivo); l.gastosExtras[i] = {...l.gastosExtras[i], ...d}; }
-        else { l.gastosExtras.push({id:Date.now(), ...d}); }
-        window.fecharModal('modalGastoLote'); 
-    };
-
     window.abrirModalNovaDespesa = () => { window.despIdEdicao=null; document.getElementById('despDesc').value=""; document.getElementById('despValor').value=""; document.getElementById('despData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalDespesa'); };
     window.salvarDespesa = () => { 
         const d = { desc: document.getElementById('despDesc').value, valor: toN(document.getElementById('despValor').value), data: document.getElementById('despData').value };
@@ -218,58 +263,60 @@
         else { window.db.despesas.push({id:Date.now().toString(),...d}); }
         window.fecharModal('modalDespesa'); 
     };
-
+    window.abrirModalNovoDividendo = () => { document.getElementById('divDesc').value=""; document.getElementById('divValor').value=""; document.getElementById('divData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalDividendo'); };
+    window.salvarDividendo = () => { window.db.dividendos.push({id:Date.now().toString(), desc:document.getElementById('divDesc').value, valor:toN(document.getElementById('divValor').value), data:document.getElementById('divData').value}); window.fecharModal('modalDividendo'); };
+    
     window.render = function() {
+        if(!window.db.clientes) window.db.clientes = []; if(!window.db.encomendas) window.db.encomendas = []; if(!window.db.despesas) window.db.despesas = []; if(!window.db.dividendos) window.db.dividendos = []; if(!window.db.lotes) window.db.lotes = [];
         const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
         const modo=document.getElementById('dashModoFiltro').value, ano=document.getElementById('dashFiltroAno').value, mes=document.getElementById('dashFiltroMes').value;
         document.getElementById('colMesDash').style.display=(modo==='ano')?'none':'block';
-        
-        let sRecE=0, sCusL=0, sGstG=0, m3F=0, divC=0, dRec=0, dGst=0, dM3=0;
-        const pT={"Mistura":0,"Oliveira":0,"Carvalho":0,"OLI/CAR":0,"Eucalipto":0,"Pinho":0}, rank={}, tps={};
+        let sRecE=0, sCusL=0, sGstG=0, sDivT=0, m3FGlobal=0, divC=0, dRec=0, dGst=0, dM3=0;
+        const pT = {}; (window.db.tiposLenha||[]).forEach(t => pT[t] = 0);
+        const rank={}, tps={};
 
-        // Lotes - Lógica isolada conforme pedido: Saídas não somam ao global
+        // RENDER LOTES COM EDIÇÃO
         document.getElementById('listaLotes').innerHTML=(window.db.lotes||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>{
             const sV=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.valor),0);
             const m3V=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.m3),0);
             const gE=(l.gastosExtras||[]).reduce((a,c)=>a+toN(c.valor),0), cT=toN(l.custoCompra)+gE;
-            sCusL+=cT; 
-            if(l.data.startsWith(ano) && (modo==='ano' || l.data.split('-')[1]===mes)) { dGst+=cT; }
+            sCusL+=cT; if(l.data.startsWith(ano) && (modo==='ano' || l.data.split('-')[1]===mes)) dGst+=cT;
             let movs="";
-            (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span class="text-success">Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo='${m.id}'; window.abrirModal('modalSaidaLote')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','saidasLenha','${m.id}')"></i></div></div>`);
-            (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger">Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo='${g.id}'; window.abrirModal('modalGastoLote')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','gastosExtras','${g.id}')"></i></div></div>`);
-            return `<div class="lote-card p-3"><b>${l.nome}</b> (${l.data})<div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalSaidaLote')">+ S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalGastoLote')">+ G</button><i class="bi bi-pencil-square text-primary me-1" onclick="window.loteIdEdicao='${l.id}'; const lot=window.db.lotes.find(x=>x.id=='${l.id}'); document.getElementById('loteNome').value=lot.nome; document.getElementById('loteCusto').value=lot.custoCompra; document.getElementById('loteData').value=lot.data; window.abrirModal('modalLote');"></i><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
+            (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span class="text-success">Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarSaida('${l.id}','${m.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','saidasLenha','${m.id}')"></i></div></div>`);
+            (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger">Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${l.id}','${g.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','gastosExtras','${g.id}')"></i></div></div>`);
+            return `<div class="lote-card p-3"><b>${l.nome}</b> (${l.data})<div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalSaidaLote')">+ S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalGastoLote')">+ G</button><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
         }).join('');
 
-        // Tabelas Encomendas/Dividas/Vendas
         let hE="", hD="", hV="";
         (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
             const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return;
-            const vP=toN(e.valorPago), vT=toN(e.valorTotal), mTot=toN(e.metrosTotal), mEnt=toN(e.metrosEntregues), fM=mTot-mEnt, sDev=vT-vP;
-            sRecE+=vP;
+            const vP=toN(e.valorPago), vT=toN(e.valorTotal), mTot=toN(e.metrosTotal), mEnt=toN(e.metrosEntregues);
+            const fM = Math.max(0, mTot - mEnt), sDev = Math.max(0, vT - vP);
+            sRecE += vP;
+            if(fM > 0) { m3FGlobal += fM; pT[e.tipoLenha] = (pT[e.tipoLenha] || 0) + fM; }
             if(e.dataEnc.startsWith(ano) && (modo==='ano' || e.dataEnc.split('-')[1]===mes)) { dRec+=vP; dM3+=mEnt; rank[cli.nome]=(rank[cli.nome]||0)+mEnt; tps[e.tipoLenha]=(tps[e.tipoLenha]||0)+mEnt; }
-            if(fM>0) { m3F+=fM; pT[e.tipoLenha]+=fM; }
             const actions = `<td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarEncomenda('${e.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td>`;
             const obsCell = `<td><div class="obs-container">${e.obs||''}</div></td>`;
             const baseRow = `<td><span class="bg-data">${e.dataEnc}</span><br><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
-
             if(mEnt>=mTot && vP>=vT) hV += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-success">Pago</td>${obsCell}${actions}</tr>`;
             else if(mEnt>=mTot && vP<vT) { hD += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold cursor-pointer" onclick="window.abrirPagamento('${e.id}')">${sDev.toFixed(0)}€</td>${obsCell}${actions}</tr>`; divC+=sDev; }
             else { if(cli.nome.toLowerCase().includes(fEnc)) hE += `<tr>${baseRow}<td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge bg-pendente">${mEnt}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${actions}</tr>`; }
         });
         document.getElementById('corpoEncomendas').innerHTML=hE; document.getElementById('corpoDividas').innerHTML=hD; document.getElementById('corpoVendas').innerHTML=hV.split('<tr>').reverse().join('<tr>');
-
         sGstG=(window.db.despesas||[]).reduce((a,c)=>{ if(c.data.startsWith(ano) && (modo==='ano' || c.data.split('-')[1]===mes)) dGst+=toN(c.valor); return a+toN(c.valor); }, 0);
-        document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.despIdEdicao='${d.id}'; const de=window.db.despesas.find(x=>x.id=='${d.id}'); document.getElementById('despDesc').value=de.desc; document.getElementById('despValor').value=de.valor; document.getElementById('despData').value=de.data; window.abrirModal('modalDespesa');"></i><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
+        sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor), 0);
+        document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
+        document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('dividendos', '${d.id}')"></i></td></tr>`).join('');
         document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.contacto||''}</td><td><div class="obs-container">${c.obs||''}</div></td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${c.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
-
-        const lucT=sRecE-(sCusL+sGstG);
-        document.getElementById('resumoCaixaTotal').innerText=(toN(window.db.saldoInicial)+lucT).toFixed(2)+"€";
-        document.getElementById('resumoPendentesGlobal').innerText=m3F.toFixed(1)+" m³";
+        const lucT = sRecE - (sCusL + sGstG);
+        const caixaFinal = (toN(window.db.saldoInicial) + lucT) - sDivT;
+        document.getElementById('resumoCaixaTotal').innerText=caixaFinal.toFixed(2)+"€";
+        document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+" m³";
         document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(2)+"€";
         document.getElementById('resumoLucro').innerText=lucT.toFixed(2)+"€";
         document.getElementById('dashReceitaMes').innerText=dRec.toFixed(0)+"€"; document.getElementById('dashGastoMes').innerText=dGst.toFixed(0)+"€"; document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
         let pL=""; for(let t in pT) if(pT[t]>0) pL+=`<div class="pendente-item"><span>${t}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
-        document.getElementById('listaPendentesPorTipo').innerHTML=pL;
+        document.getElementById('listaPendentesPorTipo').innerHTML = pL || '<small class="text-muted">Nada pendente.</small>';
         window.updateCharts(rank,tps);
     };
 
@@ -284,7 +331,7 @@
     window.apagar=(t,id)=>{ if(confirm("Apagar?")) { window.db[t]=window.db[t].filter(x=>x.id!=id); window.atualizarBD(); } };
     window.apagarMov=(lId,t,mId)=>{ if(confirm("Apagar?")) { const l=window.db.lotes.find(x=>x.id==lId); l[t]=l[t].filter(x=>x.id!=mId); window.atualizarBD(); } };
     window.exportarReceitas = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Cliente;m3;Pago\n"; window.db.encomendas.filter(e => !m || e.dataEnc.startsWith(m)).forEach(e => { c += `${e.dataEnc};${window.db.clientes.find(x=>x.id==e.clienteId)?.nome||''};${e.metrosTotal};${e.valorPago}\n`; }); window.baixarCSV(c, "Receitas.csv"); };
-    window.exportarGastos = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Desc;Valor\n"; window.db.despesas.filter(d => !m || d.data.startsWith(m)).forEach(d => { c += `${d.data};${d.desc};${d.valor}\n`; }); window.db.lotes.forEach(l => { if(!m || l.data.startsWith(m)) c += `${l.data};COMPRA CARGA: ${l.nome};${l.custoCompra}\n`; (l.gastosExtras||[]).forEach(g => c += `${l.data};GASTO CARGA ${l.nome}: ${g.desc};${g.valor}\n`); }); window.baixarCSV(c, "Gastos.csv"); };
+    window.exportarGastos = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Desc;Valor\n"; window.db.despesas.filter(d => !m || d.data.startsWith(m)).forEach(d => { c += `${d.data};${d.desc};${d.valor}\n`; }); window.db.lotes.forEach(l => { if(!m || l.data.startsWith(m)) c += `${l.data};COMPRA: ${l.nome};${l.custoCompra}\n`; (l.gastosExtras||[]).forEach(g => c += `${l.data};GASTO ${l.nome}: ${g.desc};${g.valor}\n`); }); window.baixarCSV(c, "Gastos.csv"); };
     window.baixarCSV = (c,n) => { const b=new Blob(["\ufeff"+c],{type:'text/csv;charset=utf-8;'}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=n; a.click(); };
     window.popularAnos = () => { const anos=new Set([new Date().getFullYear().toString()]); window.db.encomendas.forEach(e=>anos.add(e.dataEnc.split('-')[0])); document.getElementById('dashFiltroAno').innerHTML=Array.from(anos).sort().reverse().map(a => `<option value="${a}">${a}</option>`).join(''); };
     window.updateCharts=(rank,tps)=>{
