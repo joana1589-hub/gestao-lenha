@@ -27,7 +27,7 @@
 
 <nav class="navbar navbar-dark mb-3 p-2 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
-        <div><span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v44.0</span><div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Sincronizando...</div></div>
+        <div><span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v44.0</span><div id="sync-status" style="font-size: 0.6rem; color: #aaa;">Sincronizado</div></div>
         <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="window.abrirModal('modalSaldoInicial')">💰 AJUSTAR CAIXA</button>
     </div>
 </nav>
@@ -63,7 +63,6 @@
 
     <div class="tab-content shadow-sm mb-5">
         <div id="tabDash" class="tab-pane fade show active">
-            <!-- Dash Content -->
             <div class="row g-2 mb-3">
                 <div class="col-6 col-md-4"><label class="small fw-bold">Modo:</label><select id="dashModoFiltro" class="form-select form-select-sm" onchange="window.render()"><option value="mes">Mês</option><option value="ano">Ano</option></select></div>
                 <div class="col-6 col-md-4"><label class="small fw-bold">Ano:</label><select id="dashFiltroAno" class="form-select form-select-sm" onchange="window.render()"></select></div>
@@ -80,24 +79,21 @@
             </div>
         </div>
 
+        <!-- OUTROS SEPARADORES -->
         <div id="tabEnc" class="tab-pane fade">
             <div class="d-flex gap-2 mb-3"><input type="text" id="filtroEnc" class="form-control form-control-sm" placeholder="🔍 Pesquisar..." onkeyup="window.render()"><button class="btn btn-primary btn-sm px-4 fw-bold" onclick="window.abrirModalEncomenda()">+ NOVA</button></div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoEncomendas"></tbody></table></div>
         </div>
-
         <div id="tabDiv" class="tab-pane fade">
             <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoDividas"></tbody></table></div>
         </div>
-
         <div id="tabVen" class="tab-pane fade">
             <div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr><th>Data</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Entregue</th><th>Pago</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="corpoVendas"></tbody></table></div>
         </div>
-
         <div id="tabLotes" class="tab-pane fade">
             <button class="btn btn-dark btn-sm w-100 mb-3 fw-bold" onclick="window.abrirModalNovoLote()">+ COMPRAR CARGA</button>
             <div id="listaLotes"></div>
         </div>
-
         <div id="tabFin" class="tab-pane fade">
             <div class="card p-3 bg-light border-0 mb-3 shadow-sm border-start border-primary border-4">
                 <h6 class="fw-bold">📥 Exportar Excel (CSV)</h6>
@@ -116,7 +112,6 @@
             <h6 class="fw-bold mt-4 text-info">Dividendos (Retiradas)</h6>
             <table class="table table-sm"><tbody id="corpoDividendos"></tbody></table>
         </div>
-
         <div id="tabCli" class="tab-pane fade">
             <div class="row g-2 mb-3">
                 <div class="col-8"><button class="btn btn-success btn-sm w-100 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO CLIENTE</button></div>
@@ -166,7 +161,13 @@
     const toN = (v) => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
 
     onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) { window.db = docSnap.data(); }
+        if (docSnap.exists()) { 
+            window.db = docSnap.data(); 
+            window.popularAnos();
+            if(!document.getElementById('dashFiltroMes').value) {
+                document.getElementById('dashFiltroMes').value = String(new Date().getMonth() + 1).padStart(2, '0');
+            }
+        }
         window.render();
     });
 
@@ -175,7 +176,6 @@
     window.fecharModal = (id) => { const m = bootstrap.Modal.getInstance(document.getElementById(id)); if(m) m.hide(); window.limparResiduosModal(); window.atualizarBD(); }
     window.abrirModal = (id) => { window.limparResiduosModal(); new bootstrap.Modal(document.getElementById(id)).show(); }
 
-    // LOTES / MOVIMENTOS (EDIÇÃO RESTAURADA)
     window.salvarSaidaLote = () => { 
         const l = window.db.lotes.find(x => x.id == window.loteIdAtivo); 
         const d = { m3: toN(document.getElementById('saidaLoteM3').value), valor: toN(document.getElementById('saidaLoteValor').value) };
@@ -200,7 +200,6 @@
         window.fecharModal('modalGastoLote'); 
     };
 
-    // FUNÇÕES DE ABERTURA DE MODAL COM DADOS
     window.abrirEditarSaida = (loteId, movId) => {
         window.loteIdAtivo = loteId; window.movIdAtivo = movId;
         const l = window.db.lotes.find(x => x.id == loteId);
@@ -219,7 +218,102 @@
         window.abrirModal('modalGastoLote');
     }
 
-    // RESTANTE DAS FUNÇÕES (Mantendo a v43.0)
+    window.popularAnos = () => {
+        const anos = new Set([new Date().getFullYear().toString()]);
+        (window.db.encomendas || []).forEach(e => e.dataEnc && anos.add(e.dataEnc.split('-')[0]));
+        (window.db.despesas || []).forEach(d => d.data && anos.add(d.data.split('-')[0]));
+        (window.db.lotes || []).forEach(l => l.data && anos.add(l.data.split('-')[0]));
+        const sel = document.getElementById('dashFiltroAno');
+        const atual = sel.value || new Date().getFullYear().toString();
+        sel.innerHTML = Array.from(anos).sort().reverse().map(a => `<option value="${a}" ${a==atual?'selected':''}>${a}</option>`).join('');
+    };
+
+    window.render = function() {
+        if(!window.db.clientes) window.db.clientes = []; if(!window.db.encomendas) window.db.encomendas = []; if(!window.db.despesas) window.db.despesas = []; if(!window.db.dividendos) window.db.dividendos = []; if(!window.db.lotes) window.db.lotes = [];
+        const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
+        const modo = document.getElementById('dashModoFiltro').value;
+        const ano = document.getElementById('dashFiltroAno').value;
+        const mes = document.getElementById('dashFiltroMes').value;
+        document.getElementById('colMesDash').style.display = (modo === 'ano') ? 'none' : 'block';
+
+        let sRecE=0, sCusL=0, sGstG=0, sDivT=0, m3FGlobal=0, divC=0, dRec=0, dGst=0, dM3=0;
+        const pT = {}; (window.db.tiposLenha||[]).forEach(t => pT[t] = 0);
+        const rank={}, tps={};
+
+        // LOTES
+        document.getElementById('listaLotes').innerHTML=(window.db.lotes||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>{
+            const sV=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.valor),0);
+            const m3V=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.m3),0);
+            const gE=(l.gastosExtras||[]).reduce((a,c)=>a+toN(c.valor),0), cT=toN(l.custoCompra)+gE;
+            sCusL += cT;
+            if(l.data && l.data.startsWith(ano)) {
+                if(modo === 'ano' || l.data.split('-')[1] === mes) dGst += cT;
+            }
+            let movs="";
+            (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span class="text-success">Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarSaida('${l.id}','${m.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','saidasLenha','${m.id}')"></i></div></div>`);
+            (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger">Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${l.id}','${g.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','gastosExtras','${g.id}')"></i></div></div>`);
+            return `<div class="lote-card p-3"><b>${l.nome}</b> (${l.data})<div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalSaidaLote')">+ S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalGastoLote')">+ G</button><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
+        }).join('');
+
+        // ENCOMENDAS
+        let hE="", hD="", hV="";
+        (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
+            const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return;
+            const vP=toN(e.valorPago), vT=toN(e.valorTotal), mTot=toN(e.metrosTotal), mEnt=toN(e.metrosEntregues);
+            const fM = Math.max(0, mTot - mEnt), sDev = Math.max(0, vT - vP);
+            sRecE += vP;
+            if(fM > 0) { m3FGlobal += fM; pT[e.tipoLenha] = (pT[e.tipoLenha] || 0) + fM; }
+            
+            // Filtro Dashboard
+            if(e.dataEnc && e.dataEnc.startsWith(ano)) {
+                if(modo === 'ano' || e.dataEnc.split('-')[1] === mes) {
+                    dRec += vP; dM3 += mEnt;
+                    rank[cli.nome] = (rank[cli.nome] || 0) + mEnt;
+                    tps[e.tipoLenha] = (tps[e.tipoLenha] || 0) + mEnt;
+                }
+            }
+
+            const actions = `<td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarEncomenda('${e.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td>`;
+            const obsCell = `<td><div class="obs-container">${e.obs||''}</div></td>`;
+            const baseRow = `<td><span class="bg-data">${e.dataEnc}</span><br><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
+            if(mEnt>=mTot && vP>=vT) hV += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-success">Pago</td>${obsCell}${actions}</tr>`;
+            else if(mEnt>=mTot && vP<vT) { hD += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold cursor-pointer" onclick="window.abrirPagamento('${e.id}')">${sDev.toFixed(0)}€</td>${obsCell}${actions}</tr>`; divC+=sDev; }
+            else { if(cli.nome.toLowerCase().includes(fEnc)) hE += `<tr>${baseRow}<td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge bg-pendente">${mEnt}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${actions}</tr>`; }
+        });
+
+        document.getElementById('corpoEncomendas').innerHTML=hE; document.getElementById('corpoDividas').innerHTML=hD; document.getElementById('corpoVendas').innerHTML=hV.split('<tr>').reverse().join('<tr>');
+        
+        // GASTOS GERAIS
+        sGstG=(window.db.despesas||[]).reduce((a,c)=>{ 
+            if(c.data && c.data.startsWith(ano)) {
+                if(modo === 'ano' || c.data.split('-')[1] === mes) dGst += toN(c.valor);
+            }
+            return a+toN(c.valor); 
+        }, 0);
+
+        sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor), 0);
+        document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
+        document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('dividendos', '${d.id}')"></i></td></tr>`).join('');
+        document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.contacto||''}</td><td><div class="obs-container">${c.obs||''}</div></td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${c.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
+        
+        const lucT = sRecE - (sCusL + sGstG);
+        const caixaFinal = (toN(window.db.saldoInicial) + lucT) - sDivT;
+        
+        document.getElementById('resumoCaixaTotal').innerText=caixaFinal.toFixed(2)+"€";
+        document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+" m³";
+        document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(2)+"€";
+        document.getElementById('resumoLucro').innerText=lucT.toFixed(2)+"€";
+        
+        document.getElementById('dashReceitaMes').innerText=dRec.toFixed(0)+"€"; 
+        document.getElementById('dashGastoMes').innerText=dGst.toFixed(0)+"€"; 
+        document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
+        
+        let pL=""; for(let t in pT) if(pT[t]>0) pL+=`<div class="pendente-item"><span>${t}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
+        document.getElementById('listaPendentesPorTipo').innerHTML = pL || '<small class="text-muted">Nada pendente.</small>';
+        window.updateCharts(rank,tps);
+    };
+
+    // FUNÇÕES DE APOIO
     window.abrirGerirTipos = () => {
         document.getElementById('listaTiposContainer').innerHTML = (window.db.tiposLenha||[]).map(t => `<div class="list-group-item d-flex justify-content-between py-1"><span>${t}</span><i class="bi bi-trash text-danger" onclick="window.removerTipoMadeira('${t}')"></i></div>`).join('');
         window.abrirModal('modalGerirTipos');
@@ -252,7 +346,7 @@
     window.abrirModalNovoLote = () => { window.loteIdEdicao=null; document.getElementById('loteNome').value=""; document.getElementById('loteCusto').value=""; document.getElementById('loteData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalLote'); };
     window.salvarLote = () => { 
         const d = { nome: document.getElementById('loteNome').value, custoCompra: toN(document.getElementById('loteCusto').value), data: document.getElementById('loteData').value }; 
-        if(window.loteIdEdicao){ const i = window.db.lotes.findIndex(x=>x.id==window.loteIdEdicao); window.db.lotes[i] = {...window.db.lotes[i], ...d}; }
+        if(window.loteIdEdicao){ const i = window.db.lotes.findIndex(x=>x.id==window.loteIdAtivo); window.db.lotes[i] = {...window.db.lotes[i], ...d}; }
         else { window.db.lotes.push({id:Date.now().toString(), ...d, gastosExtras:[], saidasLenha:[]}); }
         window.fecharModal('modalLote'); 
     };
@@ -265,61 +359,6 @@
     };
     window.abrirModalNovoDividendo = () => { document.getElementById('divDesc').value=""; document.getElementById('divValor').value=""; document.getElementById('divData').value=new Date().toISOString().split('T')[0]; window.abrirModal('modalDividendo'); };
     window.salvarDividendo = () => { window.db.dividendos.push({id:Date.now().toString(), desc:document.getElementById('divDesc').value, valor:toN(document.getElementById('divValor').value), data:document.getElementById('divData').value}); window.fecharModal('modalDividendo'); };
-    
-    window.render = function() {
-        if(!window.db.clientes) window.db.clientes = []; if(!window.db.encomendas) window.db.encomendas = []; if(!window.db.despesas) window.db.despesas = []; if(!window.db.dividendos) window.db.dividendos = []; if(!window.db.lotes) window.db.lotes = [];
-        const fEnc = document.getElementById('filtroEnc').value.toLowerCase();
-        const modo=document.getElementById('dashModoFiltro').value, ano=document.getElementById('dashFiltroAno').value, mes=document.getElementById('dashFiltroMes').value;
-        document.getElementById('colMesDash').style.display=(modo==='ano')?'none':'block';
-        let sRecE=0, sCusL=0, sGstG=0, sDivT=0, m3FGlobal=0, divC=0, dRec=0, dGst=0, dM3=0;
-        const pT = {}; (window.db.tiposLenha||[]).forEach(t => pT[t] = 0);
-        const rank={}, tps={};
-
-        // RENDER LOTES COM EDIÇÃO
-        document.getElementById('listaLotes').innerHTML=(window.db.lotes||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>{
-            const sV=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.valor),0);
-            const m3V=(l.saidasLenha||[]).reduce((a,c)=>a+toN(c.m3),0);
-            const gE=(l.gastosExtras||[]).reduce((a,c)=>a+toN(c.valor),0), cT=toN(l.custoCompra)+gE;
-            sCusL+=cT; if(l.data.startsWith(ano) && (modo==='ano' || l.data.split('-')[1]===mes)) dGst+=cT;
-            let movs="";
-            (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span class="text-success">Saída: ${m.m3}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarSaida('${l.id}','${m.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','saidasLenha','${m.id}')"></i></div></div>`);
-            (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger">Gasto: ${g.desc} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${l.id}','${g.id}')"></i><i class="bi bi-x text-danger" onclick="window.apagarMov('${l.id}','gastosExtras','${g.id}')"></i></div></div>`);
-            return `<div class="lote-card p-3"><b>${l.nome}</b> (${l.data})<div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalSaidaLote')">+ S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${l.id}'; window.movIdAtivo=null; window.abrirModal('modalGastoLote')">+ G</button><i class="bi bi-trash text-danger" onclick="window.apagar('lotes','${l.id}')"></i></div></div></div>`;
-        }).join('');
-
-        let hE="", hD="", hV="";
-        (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
-            const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return;
-            const vP=toN(e.valorPago), vT=toN(e.valorTotal), mTot=toN(e.metrosTotal), mEnt=toN(e.metrosEntregues);
-            const fM = Math.max(0, mTot - mEnt), sDev = Math.max(0, vT - vP);
-            sRecE += vP;
-            if(fM > 0) { m3FGlobal += fM; pT[e.tipoLenha] = (pT[e.tipoLenha] || 0) + fM; }
-            if(e.dataEnc.startsWith(ano) && (modo==='ano' || e.dataEnc.split('-')[1]===mes)) { dRec+=vP; dM3+=mEnt; rank[cli.nome]=(rank[cli.nome]||0)+mEnt; tps[e.tipoLenha]=(tps[e.tipoLenha]||0)+mEnt; }
-            const actions = `<td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarEncomenda('${e.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('encomendas','${e.id}')"></i></td>`;
-            const obsCell = `<td><div class="obs-container">${e.obs||''}</div></td>`;
-            const baseRow = `<td><span class="bg-data">${e.dataEnc}</span><br><b>${cli.nome}</b></td><td><small>${e.tipoLenha}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
-            if(mEnt>=mTot && vP>=vT) hV += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-success">Pago</td>${obsCell}${actions}</tr>`;
-            else if(mEnt>=mTot && vP<vT) { hD += `<tr>${baseRow}<td>${mEnt}</td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold cursor-pointer" onclick="window.abrirPagamento('${e.id}')">${sDev.toFixed(0)}€</td>${obsCell}${actions}</tr>`; divC+=sDev; }
-            else { if(cli.nome.toLowerCase().includes(fEnc)) hE += `<tr>${baseRow}<td><span onclick="window.abrirEntrega('${e.id}')" class="status-badge bg-pendente">${mEnt}m³</span></td><td onclick="window.abrirPagamento('${e.id}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${actions}</tr>`; }
-        });
-        document.getElementById('corpoEncomendas').innerHTML=hE; document.getElementById('corpoDividas').innerHTML=hD; document.getElementById('corpoVendas').innerHTML=hV.split('<tr>').reverse().join('<tr>');
-        sGstG=(window.db.despesas||[]).reduce((a,c)=>{ if(c.data.startsWith(ano) && (modo==='ano' || c.data.split('-')[1]===mes)) dGst+=toN(c.valor); return a+toN(c.valor); }, 0);
-        sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor), 0);
-        document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('despesas', '${d.id}')"></i></td></tr>`).join('');
-        document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${d.data}</td><td>${d.desc}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.apagar('dividendos', '${d.id}')"></i></td></tr>`).join('');
-        document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).map(c=>`<tr><td><b>${c.nome}</b></td><td>${c.contacto||''}</td><td><div class="obs-container">${c.obs||''}</div></td><td class="text-end"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${c.id}')"></i><i class="bi bi-trash text-danger" onclick="window.apagar('clientes','${c.id}')"></i></td></tr>`).join('');
-        const lucT = sRecE - (sCusL + sGstG);
-        const caixaFinal = (toN(window.db.saldoInicial) + lucT) - sDivT;
-        document.getElementById('resumoCaixaTotal').innerText=caixaFinal.toFixed(2)+"€";
-        document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+" m³";
-        document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(2)+"€";
-        document.getElementById('resumoLucro').innerText=lucT.toFixed(2)+"€";
-        document.getElementById('dashReceitaMes').innerText=dRec.toFixed(0)+"€"; document.getElementById('dashGastoMes').innerText=dGst.toFixed(0)+"€"; document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
-        let pL=""; for(let t in pT) if(pT[t]>0) pL+=`<div class="pendente-item"><span>${t}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
-        document.getElementById('listaPendentesPorTipo').innerHTML = pL || '<small class="text-muted">Nada pendente.</small>';
-        window.updateCharts(rank,tps);
-    };
-
     window.confirmarSaldoInicial=()=>{ window.db.saldoInicial=toN(document.getElementById('inputSaldoInicial').value); window.fecharModal('modalSaldoInicial'); };
     window.puxarObsCliente=(id)=>{ const c=window.db.clientes.find(x=>x.id==id); if(c && !window.encIdEdicao) document.getElementById('encObs').value=c.obs||""; };
     window.abrirEntrega=(id)=>{ window.idAtivo=id; const e=window.db.encomendas.find(x=>x.id==id); document.getElementById('faltaM3Texto').innerText=(toN(e.metrosTotal)-toN(e.metrosEntregues)).toFixed(1); window.abrirModal('modalEntrega'); };
@@ -333,11 +372,15 @@
     window.exportarReceitas = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Cliente;m3;Pago\n"; window.db.encomendas.filter(e => !m || e.dataEnc.startsWith(m)).forEach(e => { c += `${e.dataEnc};${window.db.clientes.find(x=>x.id==e.clienteId)?.nome||''};${e.metrosTotal};${e.valorPago}\n`; }); window.baixarCSV(c, "Receitas.csv"); };
     window.exportarGastos = () => { const m = document.getElementById('inputMesExport').value; let c = "Data;Desc;Valor\n"; window.db.despesas.filter(d => !m || d.data.startsWith(m)).forEach(d => { c += `${d.data};${d.desc};${d.valor}\n`; }); window.db.lotes.forEach(l => { if(!m || l.data.startsWith(m)) c += `${l.data};COMPRA: ${l.nome};${l.custoCompra}\n`; (l.gastosExtras||[]).forEach(g => c += `${l.data};GASTO ${l.nome}: ${g.desc};${g.valor}\n`); }); window.baixarCSV(c, "Gastos.csv"); };
     window.baixarCSV = (c,n) => { const b=new Blob(["\ufeff"+c],{type:'text/csv;charset=utf-8;'}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=n; a.click(); };
-    window.popularAnos = () => { const anos=new Set([new Date().getFullYear().toString()]); window.db.encomendas.forEach(e=>anos.add(e.dataEnc.split('-')[0])); document.getElementById('dashFiltroAno').innerHTML=Array.from(anos).sort().reverse().map(a => `<option value="${a}">${a}</option>`).join(''); };
+
     window.updateCharts=(rank,tps)=>{
         if(chartCli) chartCli.destroy(); if(chartTp) chartTp.destroy();
-        chartCli=new Chart(document.getElementById('chartClientes'),{type:'bar',data:{labels:Object.keys(rank),datasets:[{label:'m³',data:Object.values(rank),backgroundColor:'#1a252f'}]},options:{responsive:true,maintainAspectRatio:false}});
-        chartTp=new Chart(document.getElementById('chartTipos'),{type:'doughnut',data:{labels:Object.keys(tps),datasets:[{data:Object.values(tps),backgroundColor:['#e67e22','#27ae60','#3498db','#f39c12','#c0392b','#7f8c8d']}]},options:{responsive:true,maintainAspectRatio:false}});
+        const ctxCli = document.getElementById('chartClientes');
+        if(!ctxCli) return;
+        chartCli=new Chart(ctxCli,{type:'bar',data:{labels:Object.keys(rank),datasets:[{label:'m³',data:Object.values(rank),backgroundColor:'#1a252f'}]},options:{responsive:true,maintainAspectRatio:false}});
+        const ctxTp = document.getElementById('chartTipos');
+        if(!ctxTp) return;
+        chartTp=new Chart(ctxTp,{type:'doughnut',data:{labels:Object.keys(tps),datasets:[{data:Object.values(tps),backgroundColor:['#e67e22','#27ae60','#3498db','#f39c12','#c0392b','#7f8c8d']}]},options:{responsive:true,maintainAspectRatio:false}});
     };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
