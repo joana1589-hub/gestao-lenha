@@ -3,7 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LenhaPro v48.0</title>
+    <title>LenhaPro</title>
+    <meta name="description" content="Gestão de lenha e encomendas">
+    <meta name="theme-color" content="#1a252f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LenhaPro">
+    <link id="manifestLink" rel="manifest">
+    <link id="appleIcon" rel="apple-touch-icon">
+    <script>
+    // ── Gera ícone inline via canvas ──
+    (function(){
+        const c=document.createElement('canvas'); c.width=c.height=192;
+        const d=c.getContext('2d');
+        const r=30;
+        d.beginPath(); d.moveTo(r,0); d.lineTo(192-r,0); d.quadraticCurveTo(192,0,192,r);
+        d.lineTo(192,192-r); d.quadraticCurveTo(192,192,192-r,192);
+        d.lineTo(r,192); d.quadraticCurveTo(0,192,0,192-r);
+        d.lineTo(0,r); d.quadraticCurveTo(0,0,r,0); d.closePath();
+        d.fillStyle='#1a252f'; d.fill();
+        const logs=[{y:60,w:130},{y:88,w:160},{y:116,w:130}];
+        logs.forEach(l=>{ d.fillStyle='#e67e22'; d.beginPath(); const x=(192-l.w)/2; d.roundRect(x,l.y,l.w,22,8); d.fill(); });
+        d.fillStyle='#fff'; d.font='bold 32px sans-serif'; d.textAlign='center'; d.fillText('LP',96,158);
+        const url=c.toDataURL('image/png');
+        document.getElementById('appleIcon').href=url;
+        // Manifesto inline como data URI
+        const manifest={name:'LenhaPro',short_name:'LenhaPro',description:'Gestão de lenha',
+            start_url:'./',display:'standalone',
+            background_color:'#1a252f',theme_color:'#1a252f',
+            icons:[{src:url,sizes:'192x192',type:'image/png',purpose:'any maskable'}]};
+        const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+        document.getElementById('manifestLink').href=URL.createObjectURL(blob);
+    })();
+    // ── Service Worker inline como blob ──
+    (function(){
+        if(!('serviceWorker' in navigator)) return;
+        const swCode=`
+const CACHE='lenhapro-v2';
+const SHELL=[self.location.href.replace('/sw-blob',''),'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css','https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css','https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js','https://cdn.jsdelivr.net/npm/chart.js'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL).catch(()=>{})).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.includes('firebase')||u.hostname.includes('googleapis')||u.hostname.includes('gstatic'))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok&&e.request.method==='GET'){const cl=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cl));}return r;}).catch(()=>caches.match(e.request)));});`;
+        const blob=new Blob([swCode],{type:'application/javascript'});
+        navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'}).catch(()=>{});
+    })();
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -117,13 +161,29 @@
     </div>
 </div>
 
+<!-- ECRÃ DE LOGIN -->
+<div id="loginScreen" style="min-height:100vh;background:#1a252f;display:flex;align-items:center;justify-content:center">
+    <div class="text-center p-4">
+        <div style="font-size:4rem">🪵</div>
+        <h2 class="text-white fw-bold mt-2 mb-1">LenhaPro</h2>
+        <p class="text-white-50 mb-4">Gestão de lenha e encomendas</p>
+        <button onclick="window.loginGoogle()" class="btn btn-light btn-lg fw-bold px-4 shadow">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="22" class="me-2" style="vertical-align:middle">
+            Entrar com Google
+        </button>
+    </div>
+</div>
+
+<!-- APP (escondida até login) -->
+<div id="appContent" style="display:none">
 <nav class="navbar navbar-dark mb-3 p-2 sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
-        <span class="navbar-brand fw-bold mb-0">🪵 LenhaPro v48.0</span>
-        <div class="d-flex gap-2">
+        <span class="navbar-brand fw-bold mb-0">🪵 LenhaPro</span>
+        <div class="d-flex gap-2 align-items-center">
             <button class="btn btn-outline-secondary btn-sm" onclick="window.exportarBackup()" title="Backup JSON"><i class="bi bi-cloud-download"></i></button>
             <button class="btn btn-outline-light btn-sm" id="btnTema" onclick="window.toggleTema()" title="Tema">🌙</button>
             <button class="btn btn-warning btn-sm fw-bold" onclick="window.abrirModal('modalSaldoInicial')">💰 CAIXA</button>
+            <img id="userAvatar" src="" style="width:28px;height:28px;border-radius:50%;display:none;cursor:pointer;border:2px solid #e67e22" title="Clica para sair" onclick="window.logout()">
         </div>
     </div>
 </nav>
@@ -447,6 +507,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey:"AIzaSyDOsSDIznQ-dpYsLNrfM1JVyHyifJfYOtE", authDomain:"lenhapro1.firebaseapp.com",
@@ -456,7 +517,58 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db2 = getFirestore(app);
+const auth = getAuth(app);
 const docRef = doc(db2,"producao","dados_mestre");
+
+// ── AUTENTICAÇÃO ─────────────────────────
+// ── EMAILS AUTORIZADOS ───────────────────
+const EMAILS_PERMITIDOS = [
+    'joana1589@gmail.com',
+    'tonizito.alves92@gmail.com',
+];
+
+window.loginGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, new GoogleAuthProvider());
+        if (!EMAILS_PERMITIDOS.includes(result.user.email)) {
+            await signOut(auth);
+            mostrarToast('Acesso negado. Este email não está autorizado.', 'erro');
+        }
+    } catch(e) {
+        mostrarToast('Erro ao fazer login: ' + e.message, 'erro');
+    }
+};
+window.logout = async () => {
+    await signOut(auth);
+};
+
+onAuthStateChanged(auth, user => {
+    const appEl = document.getElementById('appContent');
+    const loginEl = document.getElementById('loginScreen');
+    if (user) {
+        loginEl.style.display = 'none';
+        appEl.style.display = '';
+        document.getElementById('userAvatar').src = user.photoURL || '';
+        document.getElementById('userAvatar').style.display = user.photoURL ? 'inline-block' : 'none';
+        document.getElementById('userName') && (document.getElementById('userName').textContent = user.displayName || user.email);
+        iniciarApp();
+    } else {
+        loginEl.style.display = 'flex';
+        appEl.style.display = 'none';
+        if (window._unsubscribe) { window._unsubscribe(); window._unsubscribe = null; }
+        _appIniciada = false;
+    }
+});
+
+let _appIniciada = false;
+function iniciarApp() {
+    if (_appIniciada) return;
+    _appIniciada = true;
+    window._unsubscribe = onSnapshot(docRef, snap => {
+        if(snap.exists()){ window.db=snap.data(); if(!window.db.precosMemoria)window.db.precosMemoria={}; migrarLegacy(); popularFiltrosAnos(); if(!document.getElementById('dashFiltroMes').value) document.getElementById('dashFiltroMes').value=String(new Date().getMonth()+1).padStart(2,'0'); }
+        window.render();
+    });
+}
 
 window.db = { clientes:[], encomendas:[], despesas:[], lotes:[], dividendos:[], saldoInicial:0, tiposLenha:["Mistura","Oliveira","Carvalho","ELI/CAR","Eucalipto","Pinho"], precosMemoria:{} };
 window.cliIdEdicao=null; window.encIdEdicao=null; window.loteIdAtivo=null; window.movIdAtivo=null; window.editRegistoCtx=null;
@@ -488,7 +600,6 @@ window.confirmarApagar=fn=>window.confirmar('Tens a certeza que queres apagar?',
 window.avisar=(msg,fn)=>{ document.getElementById('avisoMsg').innerHTML=msg; const b=document.getElementById('avisoOk'),nb=b.cloneNode(true); b.parentNode.replaceChild(nb,b); nb.addEventListener('click',()=>{ bootstrap.Modal.getInstance(document.getElementById('modalAviso'))?.hide(); fn(); }); window.abrirModal('modalAviso'); };
 
 // ── FIREBASE ─────────────────────────────
-onSnapshot(docRef,snap=>{ if(snap.exists()){ window.db=snap.data(); if(!window.db.precosMemoria) window.db.precosMemoria={}; migrarLegacy(); popularFiltrosAnos(); if(!document.getElementById('dashFiltroMes').value) document.getElementById('dashFiltroMes').value=String(new Date().getMonth()+1).padStart(2,'0'); } window.render(); });
 
 window.atualizarBD=async()=>{ mostrarToast('A guardar...','saving'); try{ await setDoc(docRef,window.db); mostrarToast('Guardado','ok'); } catch(e){ mostrarToast('Erro ao guardar! Verifica a ligação.','erro'); console.error(e); } };
 
@@ -554,14 +665,15 @@ window.render=function(){
         if(l.data&&l.data.startsWith(dAno)){
             const lm=l.data.split('-')[1];
             if(modo==='ano'||lm===dMes){dGstTotal+=toN(l.custoCompra);dGstCompras+=toN(l.custoCompra);if(toN(l.custoCompra)>0){const k="COMPRA DE CARGAS";custosAgrupados[k]=(custosAgrupados[k]||0)+toN(l.custoCompra);}}
-            if(modo==='ano') evolGst[parseInt(lm,10)-1]+=toN(l.custoCompra);
+            // evolução mensal: sempre acumula por mês (tanto em modo ano como mês)
+            evolGst[parseInt(lm,10)-1]+=toN(l.custoCompra);
         }
         (l.gastosExtras||[]).forEach(gx=>{
             const gd=gx.data||l.data;
             if(gd&&gd.startsWith(dAno)){
                 const gm=gd.split('-')[1];
                 if(modo==='ano'||gm===dMes){dGstTotal+=toN(gx.valor);dGstExtras+=toN(gx.valor);const k=gx.desc.toUpperCase();custosAgrupados[k]=(custosAgrupados[k]||0)+toN(gx.valor);}
-                if(modo==='ano') evolGst[parseInt(gm,10)-1]+=toN(gx.valor);
+                evolGst[parseInt(gm,10)-1]+=toN(gx.valor);
             }
         });
         let movs="";
@@ -588,13 +700,13 @@ window.render=function(){
         if(sDev>0&&mEnt>=mTot)divC+=sDev;
 
         // dash: m³ por data entrega, receita por data pagamento
-        entregas.forEach(x=>{ if(inPeriodo(x.data,dAno,modo==='ano'?'':dMes)){dM3+=toN(x.m3);tps[e.tipoLenha]=(tps[e.tipoLenha]||0)+toN(x.m3);rank[cli.nome]=(rank[cli.nome]||0)+toN(x.m3);} if(x.data&&x.data.startsWith(dAno)&&modo==='ano')evolRec[parseInt(x.data.split('-')[1],10)-1]+=0; });
-        pagamentos.forEach(x=>{ if(inPeriodo(x.data,dAno,modo==='ano'?'':dMes))dRec+=toN(x.valor); if(x.data&&x.data.startsWith(dAno)&&modo==='ano')evolRec[parseInt(x.data.split('-')[1],10)-1]+=toN(x.valor); });
+        entregas.forEach(x=>{ if(inPeriodo(x.data,dAno,modo==='ano'?'':dMes)){dM3+=toN(x.m3);tps[e.tipoLenha]=(tps[e.tipoLenha]||0)+toN(x.m3);rank[cli.nome]=(rank[cli.nome]||0)+toN(x.m3);} });
+        pagamentos.forEach(x=>{ if(inPeriodo(x.data,dAno,modo==='ano'?'':dMes))dRec+=toN(x.valor); if(x.data&&x.data.startsWith(dAno)) evolRec[parseInt(x.data.split('-')[1],10)-1]+=toN(x.valor); });
 
         const ultEnt=entregas.length?entregas[entregas.length-1].data:'—';
         const ultPag=pagamentos.length?pagamentos[pagamentos.length-1].data:'—';
         const diasSemEnt=fM>0?Math.floor((hoje_ms-new Date(e.dataEnc).getTime())/864e5):0;
-        const rowClass=fM>0&&diasSemEnt>30?' class="row-atrasada"':'';
+        const rowAttr=fM>0&&diasSemEnt>30?' class="row-atrasada"':'';
         const acts=`<td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarEncomenda('${esc(e.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('encomendas','${esc(e.id)}'))"></i></td>`;
         const obsCell=`<td><div class="obs-container">${esc(e.obs||'')}</div></td>`;
         const base=`<td><span class="bg-data">${esc(e.dataEnc)}</span></td><td><b>${esc(cli.nome)}</b></td><td><small>${esc(e.tipoLenha)}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
@@ -606,13 +718,13 @@ window.render=function(){
 
         if(mEnt>=mTot&&vP>=vT){
             cntVen++;
-            if(noVen&&noTxt){footVenM3+=mEnt;footVenPago+=vP;rowsV.push(`<tr${rowClass}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-success fw-bold">✅ Pago</td>${obsCell}${acts}</tr>`);}
+            if(noVen&&noTxt){footVenM3+=mEnt;footVenPago+=vP;rowsV.push(`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-success fw-bold">✅ Pago</td>${obsCell}${acts}</tr>`);}
         } else if(mEnt>=mTot&&vP<vT){
             cntDiv++;
-            if(noDiv&&noTxt){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;rowsD.push(`<tr${rowClass}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${esc(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
+            if(noDiv&&noTxt){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;rowsD.push(`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${esc(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
         } else {
             cntEnc++;
-            if(noEnc&&noTxt){rowsE.push(`<tr${rowClass}>${base}<td><span class="bg-data small">${esc(ultEnt)}</span></td><td><span onclick="window.abrirEntrega('${esc(e.id)}')" class="status-badge bg-pendente">${mEnt.toFixed(1)}m³</span></td><td><span class="bg-data small">${esc(ultPag)}</span></td><td onclick="window.abrirPagamento('${esc(e.id)}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
+            if(noEnc&&noTxt){rowsE.push(`<tr${rowAttr}>${base}<td><span class="bg-data small">${esc(ultEnt)}</span></td><td><span onclick="window.abrirEntrega('${esc(e.id)}')" class="status-badge bg-pendente">${mEnt.toFixed(1)}m³</span></td><td><span class="bg-data small">${esc(ultPag)}</span></td><td onclick="window.abrirPagamento('${esc(e.id)}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
         }
     });
 
@@ -633,7 +745,7 @@ window.render=function(){
     document.getElementById('tabBtnVen').textContent=`✅ Vendas (${cntVen})`;
 
     // ── 3. DESPESAS
-    sGstGTotal=(window.db.despesas||[]).reduce((a,c)=>{ if(inPeriodo(c.data,dAno,modo==='ano'?'':dMes)){const v=toN(c.valor);dGstTotal+=v;dGstGerais+=v;const k=c.desc.toUpperCase();custosAgrupados[k]=(custosAgrupados[k]||0)+v;if(modo==='ano')evolGst[parseInt(c.data.split('-')[1],10)-1]+=v;} return a+toN(c.valor); },0);
+    sGstGTotal=(window.db.despesas||[]).reduce((a,c)=>{ if(inPeriodo(c.data,dAno,modo==='ano'?'':dMes)){const v=toN(c.valor);dGstTotal+=v;dGstGerais+=v;const k=c.desc.toUpperCase();custosAgrupados[k]=(custosAgrupados[k]||0)+v;} if(c.data&&c.data.startsWith(dAno)) evolGst[parseInt(c.data.split('-')[1],10)-1]+=toN(c.valor); return a+toN(c.valor); },0);
 
     // ── 4. TABELA CUSTOS
     document.getElementById('tabelaCustosAgrupados').innerHTML=Object.entries(custosAgrupados).sort((a,b)=>b[1]-a[1]).map(([desc,t])=>`<tr><td>${esc(desc)}</td><td class="text-end fw-bold">${t.toFixed(2)}€</td><td class="text-end text-muted">${dGstTotal>0?((t/dGstTotal)*100).toFixed(0):0}%</td></tr>`).join('')||'<tr><td colspan="3" class="text-center text-muted">Sem registos</td></tr>';
@@ -646,9 +758,10 @@ window.render=function(){
     document.getElementById('dashGastoMes').innerText=dGstTotal.toFixed(0)+'€';
     document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
 
-    // ── 6. RESUMO GLOBAL
+    // ── 6. RESUMO GLOBAL (usa totais históricos, não filtrados por período)
+    const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0);
     sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor),0);
-    const lucT=sRecE-(sCusL+sGstGTotal);
+    const lucT=sRecE-(sCusL+totalDespesasHistorico);
     const caixaFinal=(toN(window.db.saldoInicial)+lucT)-sDivT;
     document.getElementById('resumoCaixaTotal').innerText=caixaFinal.toFixed(0)+'€';
     document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+' m³';
@@ -833,5 +946,6 @@ document.addEventListener('keydown',e=>{
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</div><!-- /appContent -->
 </body>
 </html>
