@@ -548,7 +548,9 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
         </div>
         <input type="date" id="horaData" class="form-control mb-2">
         <input type="text" id="horaNome" class="form-control mb-2" placeholder="Nome da pessoa">
-        <input type="text" id="horaTrabalho" class="form-control mb-2" placeholder="Tipo de trabalho (corte, entrega...)">
+        <!-- Tipos de trabalho: multi-select em badges -->
+        <label class="small fw-bold mb-1">Tipo de trabalho <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="font-size:.7rem" onclick="window.abrirGerirTiposTrabalho()">⚙️ gerir</button></label>
+        <div id="tiposTrabalhoSelector" class="d-flex flex-wrap gap-1 mb-2 p-2 rounded" style="background:var(--surface2);border:1px solid var(--border);min-height:38px"></div>
         <div class="row g-2 mb-2">
             <div class="col-6"><label class="small">Horas:</label><input type="number" id="horaQtd" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
             <div class="col-6"><label class="small">€/hora:</label><input type="number" id="horaValor" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
@@ -556,6 +558,16 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
         <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="horaTotalPreview">0€</b></div>
         <textarea id="horaObs" class="form-control mb-3" rows="2" placeholder="Observações..."></textarea>
         <button class="btn btn-secondary w-100 fw-bold" onclick="window.salvarHora()">GUARDAR</button>
+    </div></div>
+</div>
+
+<!-- Gerir Tipos Trabalho -->
+<div class="modal fade" id="modalGerirTiposTrabalho" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Tipos de Trabalho</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalGerirTiposTrabalho')"></button></div>
+        <div class="input-group mb-3"><input type="text" id="novoTipoTrabalho" class="form-control" placeholder="Novo tipo..."><button class="btn btn-success" onclick="window.adicionarTipoTrabalho()">+</button></div>
+        <div id="listaTiposTrabalhoContainer" class="list-group"></div>
+        <button class="btn btn-secondary w-100 mt-2" onclick="window.fecharModalSemSalvar('modalGerirTiposTrabalho');window.abrirModal('modalHora')">FECHAR</button>
     </div></div>
 </div>
 
@@ -1066,16 +1078,41 @@ window.apagar=(t,id)=>{ window.db[t]=window.db[t].filter(x=>x.id!=id);window.atu
 window.apagarMov=(lId,t,mId)=>{ const l=window.db.lotes.find(x=>x.id==lId);l[t]=l[t].filter(x=>x.id!=mId);window.atualizarBD(); };
 
 // ── HORAS ────────────────────────────────
+const TIPOS_TRABALHO_DEFAULT = ['Inserir','Cortar','Entregar','Rachar'];
+
+function getTiposTrabalho(){ return window.db.tiposTrabalho && window.db.tiposTrabalho.length ? window.db.tiposTrabalho : TIPOS_TRABALHO_DEFAULT; }
+
+function renderTiposSeletor(selecionados=[]){
+    const container=document.getElementById('tiposTrabalhoSelector');
+    container.innerHTML=getTiposTrabalho().map(t=>{
+        const sel=selecionados.includes(t);
+        return `<span class="badge rounded-pill" style="cursor:pointer;font-size:.78rem;padding:5px 10px;background:${sel?'#1a252f':'var(--surface)'};color:${sel?'#fff':'var(--text)'};border:1px solid ${sel?'#1a252f':'var(--border)'};" onclick="window.toggleTipoTrabalho(this,'${esc(t)}')">${esc(t)}</span>`;
+    }).join('');
+}
+
+window.toggleTipoTrabalho=(el,tipo)=>{
+    const sel=el.style.background.includes('1a252f');
+    el.style.background=sel?'var(--surface)':'#1a252f';
+    el.style.color=sel?'var(--text)':'#fff';
+    el.style.borderColor=sel?'var(--border)':'#1a252f';
+};
+
+function getTiposSelecionados(){
+    return [...document.querySelectorAll('#tiposTrabalhoSelector .badge')]
+        .filter(el=>el.style.background.includes('1a252f'))
+        .map(el=>el.textContent.trim());
+}
+
 window.abrirModalNovaHora=()=>{
     window.horaIdEdicao=null;
     document.getElementById('modalHoraTitulo').textContent='Registar Horas';
     document.getElementById('horaData').value=hoje();
     document.getElementById('horaNome').value='';
-    document.getElementById('horaTrabalho').value='';
     document.getElementById('horaQtd').value='';
     document.getElementById('horaValor').value='';
     document.getElementById('horaObs').value='';
     document.getElementById('horaTotalPreview').textContent='0€';
+    renderTiposSeletor([]);
     window.abrirModal('modalHora');
 };
 window.abrirEditarHora=id=>{
@@ -1084,10 +1121,12 @@ window.abrirEditarHora=id=>{
     document.getElementById('modalHoraTitulo').textContent='Editar Registo';
     document.getElementById('horaData').value=h.data;
     document.getElementById('horaNome').value=h.nome;
-    document.getElementById('horaTrabalho').value=h.trabalho||'';
     document.getElementById('horaQtd').value=h.horas;
     document.getElementById('horaValor').value=h.valorHora;
     document.getElementById('horaObs').value=h.obs||'';
+    // suporte retrocompatível: trabalho pode ser string ou array
+    const sel=Array.isArray(h.trabalho)?h.trabalho:(h.trabalho?h.trabalho.split(',').map(s=>s.trim()):[]);
+    renderTiposSeletor(sel);
     window.atualizarTotalHora();
     window.abrirModal('modalHora');
 };
@@ -1098,10 +1137,11 @@ window.atualizarTotalHora=()=>{
 };
 window.salvarHora=()=>{
     if(!window.db.horas) window.db.horas=[];
+    const tipos=getTiposSelecionados();
     const d={
         data:document.getElementById('horaData').value,
         nome:document.getElementById('horaNome').value.trim(),
-        trabalho:document.getElementById('horaTrabalho').value.trim(),
+        trabalho:tipos, // array
         horas:toN(document.getElementById('horaQtd').value),
         valorHora:toN(document.getElementById('horaValor').value),
         obs:document.getElementById('horaObs').value.trim()
@@ -1114,6 +1154,32 @@ window.salvarHora=()=>{
         window.db.horas.push({id:uid(),...d});
     }
     window.fecharModal('modalHora');
+};
+
+// ── GERIR TIPOS TRABALHO ─────────────────
+window.abrirGerirTiposTrabalho=()=>{
+    if(!window.db.tiposTrabalho||!window.db.tiposTrabalho.length) window.db.tiposTrabalho=[...TIPOS_TRABALHO_DEFAULT];
+    document.getElementById('listaTiposTrabalhoContainer').innerHTML=window.db.tiposTrabalho.map(t=>
+        `<div class="list-group-item d-flex justify-content-between align-items-center py-1">
+            <span>${esc(t)}</span>
+            <i class="bi bi-trash text-danger" style="cursor:pointer" onclick="window.confirmarApagar(()=>window.removerTipoTrabalho('${esc(t)}'))"></i>
+        </div>`).join('');
+    window.fecharModalSemSalvar('modalHora');
+    window.abrirModal('modalGerirTiposTrabalho');
+};
+window.adicionarTipoTrabalho=()=>{
+    const inp=document.getElementById('novoTipoTrabalho');
+    const val=inp.value.trim();
+    if(!val) return;
+    if(!window.db.tiposTrabalho||!window.db.tiposTrabalho.length) window.db.tiposTrabalho=[...TIPOS_TRABALHO_DEFAULT];
+    if(!window.db.tiposTrabalho.includes(val)){ window.db.tiposTrabalho.push(val); window.atualizarBD(); }
+    inp.value='';
+    window.abrirGerirTiposTrabalho();
+};
+window.removerTipoTrabalho=t=>{
+    window.db.tiposTrabalho=window.db.tiposTrabalho.filter(x=>x!==t);
+    window.atualizarBD();
+    window.abrirGerirTiposTrabalho();
 };
 window.renderHoras=()=>{
     if(!window.db.horas) window.db.horas=[];
@@ -1151,11 +1217,13 @@ window.renderHoras=()=>{
 
     filtradas.forEach(h=>{
         const custo=toN(h.horas)*toN(h.valorHora);
+        const tipos=Array.isArray(h.trabalho)?h.trabalho:(h.trabalho?[h.trabalho]:[]);
+        const tiposBadges=tipos.length?tipos.map(t=>`<span class="badge rounded-pill me-1" style="background:#1a252f;font-size:.7rem">${esc(t)}</span>`).join(''):'<small class="text-muted">—</small>';
         footH+=toN(h.horas); footEur+=custo;
         rows+=`<tr>
             <td><span class="bg-data">${esc(h.data)}</span></td>
             <td><b>${esc(h.nome)}</b></td>
-            <td><small>${esc(h.trabalho||'')}</small></td>
+            <td>${tiposBadges}</td>
             <td class="text-end fw-bold">${toN(h.horas).toFixed(1)}h</td>
             <td class="text-end">${toN(h.valorHora).toFixed(2)}€</td>
             <td class="text-end fw-bold text-warning">${custo.toFixed(2)}€</td>
@@ -1184,7 +1252,10 @@ window.renderHoras=()=>{
 };
 window.exportarCSVHoras=()=>{
     const cab='Data,Pessoa,Trabalho,Horas,€/hora,Total€,Obs';
-    const rows=(window.db.horas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(h=>[h.data,h.nome,h.trabalho||'',toN(h.horas).toFixed(1),toN(h.valorHora).toFixed(2),(toN(h.horas)*toN(h.valorHora)).toFixed(2),h.obs||''].join(','));
+    const rows=(window.db.horas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(h=>{
+        const tipos=Array.isArray(h.trabalho)?h.trabalho.join('|'):(h.trabalho||'');
+        return [h.data,h.nome,tipos,toN(h.horas).toFixed(1),toN(h.valorHora).toFixed(2),(toN(h.horas)*toN(h.valorHora)).toFixed(2),h.obs||''].join(',');
+    });
     const blob=new Blob([[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
     const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`});
     a.click();
