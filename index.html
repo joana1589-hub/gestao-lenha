@@ -1162,7 +1162,7 @@ window.abrirGerirTiposTrabalho=()=>{
     document.getElementById('listaTiposTrabalhoContainer').innerHTML=window.db.tiposTrabalho.map(t=>
         `<div class="list-group-item d-flex justify-content-between align-items-center py-1">
             <span>${esc(t)}</span>
-            <i class="bi bi-trash text-danger" style="cursor:pointer" onclick="window.confirmarApagar(()=>window.removerTipoTrabalho('${esc(t)}'))"></i>
+            <i class="bi bi-trash text-danger" style="cursor:pointer" onclick="window.removerTipoTrabalho('${esc(t)}')"></i>
         </div>`).join('');
     window.fecharModalSemSalvar('modalHora');
     window.abrirModal('modalGerirTiposTrabalho');
@@ -1177,6 +1177,7 @@ window.adicionarTipoTrabalho=()=>{
     window.abrirGerirTiposTrabalho();
 };
 window.removerTipoTrabalho=t=>{
+    if(!confirm(`Apagar "${t}"?`)) return;
     window.db.tiposTrabalho=window.db.tiposTrabalho.filter(x=>x!==t);
     window.atualizarBD();
     window.abrirGerirTiposTrabalho();
