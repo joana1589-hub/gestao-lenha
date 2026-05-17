@@ -154,11 +154,7 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="row g-2 mb-3 text-center" id="cliPanelStats"></div>
-            <h6 class="fw-bold small text-muted">ENCOMENDAS</h6>
-            <div class="table-responsive"><table class="table table-sm align-middle">
-                <thead><tr><th>Data</th><th>Tipo</th><th>m³</th><th>Total</th><th>Pago</th><th>Saldo</th><th>Estado</th></tr></thead>
-                <tbody id="cliPanelEncomendas"></tbody>
-            </table></div>
+            <div id="cliPanelEncomendas"></div>
         </div>
     </div>
 </div>
@@ -215,6 +211,7 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabVen" id="tabBtnVen">✅ Vendas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLotes">📦 Lotes</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFin">📊 Finanças</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHoras">⏱️ Horas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
     </ul>
 
@@ -236,6 +233,14 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
                 <div class="col-3"><div class="card p-2 bg-danger text-white"><small class="fw-bold">GASTOS</small><b id="dashGastoMes" class="h5 mb-0">0€</b></div></div>
                 <div class="col-3"><div class="card p-2 bg-dark text-white"><small class="fw-bold">MARGEM</small><b id="dashMargemMes" class="h5 mb-0">0%</b></div></div>
                 <div class="col-3"><div class="card p-2 bg-primary text-white"><small class="fw-bold">m³ VENDIDO</small><b id="dashMetrosMes" class="h5 mb-0">0</b></div></div>
+            </div>
+            <!-- KPIs Reais (inclui mão de obra) -->
+            <div class="mb-1 mt-1"><small class="text-muted fw-bold"><i class="bi bi-person-fill-gear"></i> VISÃO REAL — inclui mão de obra</small></div>
+            <div class="row g-2 mb-3 text-center">
+                <div class="col-3"><div class="card p-2 text-white" style="background:#5a3e8a"><small class="fw-bold">GASTOS REAIS</small><b id="dashGastoReal" class="h5 mb-0">0€</b></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#2c6b8a"><small class="fw-bold">MARGEM REAL</small><b id="dashMargemReal" class="h5 mb-0">0%</b></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#7a4a1e"><small class="fw-bold">CUSTO M.O.</small><b id="dashCustoMO" class="h5 mb-0">0€</b></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#1e6b4a"><small class="fw-bold">HORAS PERÍODO</small><b id="dashHorasPeriodo" class="h5 mb-0">0h</b></div></div>
             </div>
             <!-- Gráfico evolução mensal (novo) -->
             <div class="mb-3">
@@ -342,6 +347,44 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
             <table class="table table-sm mb-4"><tbody id="corpoDespesas"></tbody></table>
             <h6 class="fw-bold mt-3 text-info">Dividendos (Retiradas)</h6>
             <table class="table table-sm"><tbody id="corpoDividendos"></tbody></table>
+        </div>
+
+        <!-- HORAS -->
+        <div id="tabHoras" class="tab-pane fade">
+            <div class="row g-2 mb-3">
+                <div class="col-12"><button class="btn btn-secondary btn-sm w-100 fw-bold" onclick="window.abrirModalNovaHora()">+ REGISTAR HORAS</button></div>
+            </div>
+            <!-- Resumo -->
+            <div class="row g-2 mb-3 text-center">
+                <div class="col-4"><div class="kpi-card border-start border-secondary border-4"><span class="kpi-lbl">Total Horas</span><span id="horasTotalH" class="kpi-val">0h</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-warning border-4"><span class="kpi-lbl">Custo Total</span><span id="horasTotalEur" class="kpi-val text-warning">0€</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-info border-4"><span class="kpi-lbl">Este Mês</span><span id="horasMesH" class="kpi-val text-info">0h</span></div></div>
+            </div>
+            <!-- Filtros -->
+            <div class="row g-2 mb-2 align-items-end">
+                <div class="col"><input type="text" id="filtroHorasNome" class="form-control form-control-sm" placeholder="🔍 Nome..." onkeyup="window.renderHoras()"></div>
+                <div class="col-auto"><select id="filtroHorasAno" class="form-select form-select-sm" onchange="window.renderHoras()"><option value="">Todos os anos</option></select></div>
+                <div class="col-auto"><select id="filtroHorasMes" class="form-select form-select-sm" onchange="window.renderHoras()">
+                    <option value="">Todos os meses</option>
+                    <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option><option value="04">Abr</option>
+                    <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
+                    <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+                </select></div>
+                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVHoras()"><i class="bi bi-download"></i> CSV</button></div>
+            </div>
+            <!-- Tabela -->
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead><tr><th>Data</th><th>Pessoa</th><th>Trabalho</th><th class="text-end">Horas</th><th class="text-end">€/h</th><th class="text-end">Total</th><th>Obs</th><th>Ações</th></tr></thead>
+                    <tbody id="corpoHoras"></tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr><td colspan="3">TOTAL FILTRADO</td><td id="footHorasH" class="text-end">0h</td><td></td><td id="footHorasEur" class="text-end text-warning">0€</td><td colspan="2"></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <!-- Resumo por pessoa -->
+            <h6 class="fw-bold mt-3 text-muted small">RESUMO POR PESSOA</h6>
+            <div id="horasResumoPessoa"></div>
         </div>
 
         <!-- CLIENTES -->
@@ -496,6 +539,26 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.hostname.i
     </div></div>
 </div>
 
+<!-- Horas -->
+<div class="modal fade" id="modalHora" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0 fw-bold" id="modalHoraTitulo">Registar Horas</h6>
+            <button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalHora')"></button>
+        </div>
+        <input type="date" id="horaData" class="form-control mb-2">
+        <input type="text" id="horaNome" class="form-control mb-2" placeholder="Nome da pessoa">
+        <input type="text" id="horaTrabalho" class="form-control mb-2" placeholder="Tipo de trabalho (corte, entrega...)">
+        <div class="row g-2 mb-2">
+            <div class="col-6"><label class="small">Horas:</label><input type="number" id="horaQtd" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
+            <div class="col-6"><label class="small">€/hora:</label><input type="number" id="horaValor" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
+        </div>
+        <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="horaTotalPreview">0€</b></div>
+        <textarea id="horaObs" class="form-control mb-3" rows="2" placeholder="Observações..."></textarea>
+        <button class="btn btn-secondary w-100 fw-bold" onclick="window.salvarHora()">GUARDAR</button>
+    </div></div>
+</div>
+
 <!-- Gerir Tipos -->
 <div class="modal fade" id="modalGerirTipos" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
@@ -636,7 +699,7 @@ window.irPag=(key,pg)=>{ PG[key].pg=pg; window.render(); };
 
 // ── RENDER ───────────────────────────────
 window.render=function(){
-    ['clientes','encomendas','despesas','dividendos','lotes'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
+    ['clientes','encomendas','despesas','dividendos','lotes','horas'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
 
     const modo=document.getElementById('dashModoFiltro').value;
     const dAno=document.getElementById('dashFiltroAno').value;
@@ -760,6 +823,22 @@ window.render=function(){
     document.getElementById('dashGastoMes').innerText=dGstTotal.toFixed(0)+'€';
     document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
 
+    // ── KPIs REAIS (inclui custo de mão de obra do período)
+    const custoMO=(window.db.horas||[]).reduce((a,h)=>{
+        if(inPeriodo(h.data,dAno,modo==='ano'?'':dMes)) return a+toN(h.horas)*toN(h.valorHora);
+        return a;
+    },0);
+    const horasPeriodo=(window.db.horas||[]).reduce((a,h)=>{
+        if(inPeriodo(h.data,dAno,modo==='ano'?'':dMes)) return a+toN(h.horas);
+        return a;
+    },0);
+    const dGstReal=dGstTotal+custoMO;
+    const margemReal=dRec>0?(((dRec-dGstReal)/dRec)*100):0;
+    document.getElementById('dashGastoReal').innerText=dGstReal.toFixed(0)+'€';
+    document.getElementById('dashMargemReal').innerText=margemReal.toFixed(0)+'%';
+    document.getElementById('dashCustoMO').innerText=custoMO.toFixed(0)+'€';
+    document.getElementById('dashHorasPeriodo').innerText=horasPeriodo.toFixed(1)+'h';
+
     // ── 6. RESUMO GLOBAL (usa totais históricos, não filtrados por período)
     const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0);
     sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor),0);
@@ -781,6 +860,7 @@ window.render=function(){
 
     // ── 9. CHARTS
     window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais],dAno,evolRec,evolGst);
+    window.renderHoras();
 };
 
 window.updateCharts=(rank,tps,gb,dAno,evolRec,evolGst)=>{
@@ -797,23 +877,75 @@ window.updateCharts=(rank,tps,gb,dAno,evolRec,evolGst)=>{
 // ── PAINEL CLIENTE ───────────────────────
 window.abrirPainelCliente=id=>{
     const cli=window.db.clientes.find(c=>c.id==id); if(!cli) return;
-    const encs=(window.db.encomendas||[]).filter(e=>e.clienteId==id);
-    let totalM3=0,totalRec=0,totalDiv=0,totalEncs=encs.length;
-    const rows=encs.map(e=>{
-        const ent=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0);
-        const pag=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);
-        const vT=toN(e.valorTotal),saldo=Math.max(0,vT-pag);
-        totalM3+=ent; totalRec+=pag; totalDiv+=saldo;
-        const estado=ent>=toN(e.metrosTotal)&&pag>=vT?'<span class="text-success fw-bold">✅</span>':ent>=toN(e.metrosTotal)?'<span class="text-warning fw-bold">💰</span>':'<span class="text-danger fw-bold">🚚</span>';
-        return `<tr><td><span class="bg-data">${esc(e.dataEnc)}</span></td><td>${esc(e.tipoLenha)}</td><td>${toN(e.metrosTotal)}</td><td>${vT.toFixed(0)}€</td><td>${pag.toFixed(0)}€</td><td class="${saldo>0?'text-danger fw-bold':''}">${saldo.toFixed(0)}€</td><td>${estado}</td></tr>`;
+    const encs=(window.db.encomendas||[]).filter(e=>e.clienteId==id).sort((a,b)=>new Date(b.dataEnc)-new Date(a.dataEnc));
+    let totalM3=0,totalRec=0,totalDiv=0;
+
+    const blocos=encs.map(e=>{
+        const entregas=e.entregas||[], pagamentos=e.pagamentos||[];
+        const mEnt=entregas.reduce((a,x)=>a+toN(x.m3),0);
+        const vP=pagamentos.reduce((a,x)=>a+toN(x.valor),0);
+        const vT=toN(e.valorTotal), mTot=toN(e.metrosTotal);
+        const saldo=Math.max(0,vT-vP);
+        totalM3+=mEnt; totalRec+=vP; totalDiv+=saldo;
+
+        const estado=mEnt>=mTot&&vP>=vT
+            ?'<span class="badge bg-success">✅ Pago</span>'
+            :mEnt>=mTot
+            ?'<span class="badge bg-warning text-dark">💰 Por pagar</span>'
+            :'<span class="badge bg-danger">🚚 Por entregar</span>';
+
+        // histórico de entregas
+        const histEnt=entregas.length
+            ? entregas.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-success fw-bold">${toN(x.m3).toFixed(1)} m³</span></div>`).join('')
+            : '<small class="text-muted">Sem entregas</small>';
+
+        // histórico de pagamentos
+        const histPag=pagamentos.length
+            ? pagamentos.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-primary fw-bold">${toN(x.valor).toFixed(0)}€</span></div>`).join('')
+            : '<small class="text-muted">Sem pagamentos</small>';
+
+        return `
+        <div class="card mb-2 border-0 shadow-sm">
+            <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="bg-data me-1">${esc(e.dataEnc)}</span>
+                        <b>${esc(e.tipoLenha)}</b>
+                        ${e.obs?`<small class="text-muted ms-1">· ${esc(e.obs)}</small>`:''}
+                    </div>
+                    ${estado}
+                </div>
+                <div class="row g-2 mb-2 text-center" style="font-size:.75rem">
+                    <div class="col-3"><div class="kpi-card py-1"><span class="kpi-lbl">Encomendado</span><b>${mTot} m³</b></div></div>
+                    <div class="col-3"><div class="kpi-card py-1"><span class="kpi-lbl">Entregue</span><b>${mEnt.toFixed(1)} m³</b></div></div>
+                    <div class="col-3"><div class="kpi-card py-1"><span class="kpi-lbl">Total</span><b>${vT.toFixed(0)}€</b></div></div>
+                    <div class="col-3"><div class="kpi-card py-1"><span class="kpi-lbl">Saldo</span><b class="${saldo>0?'text-danger':''}">${saldo.toFixed(0)}€</b></div></div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="p-2 rounded" style="background:var(--surface2);border:1px solid var(--border)">
+                            <small class="fw-bold text-muted d-block mb-1">🚚 ENTREGAS</small>
+                            ${histEnt}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 rounded" style="background:var(--surface2);border:1px solid var(--border)">
+                            <small class="fw-bold text-muted d-block mb-1">💶 PAGAMENTOS</small>
+                            ${histPag}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
     }).join('');
+
     document.getElementById('cliPanelNome').textContent='📋 '+cli.nome+(cli.contacto?' — '+cli.contacto:'');
     document.getElementById('cliPanelStats').innerHTML=
-        `<div class="col-3"><div class="cli-panel-stat"><b>${totalEncs}</b><small>Encomendas</small></div></div>`+
+        `<div class="col-3"><div class="cli-panel-stat"><b>${encs.length}</b><small>Encomendas</small></div></div>`+
         `<div class="col-3"><div class="cli-panel-stat"><b>${totalM3.toFixed(1)} m³</b><small>Entregue</small></div></div>`+
         `<div class="col-3"><div class="cli-panel-stat"><b>${totalRec.toFixed(0)}€</b><small>Recebido</small></div></div>`+
         `<div class="col-3"><div class="cli-panel-stat"><b class="${totalDiv>0?'text-danger':''}">${totalDiv.toFixed(0)}€</b><small>Em dívida</small></div></div>`;
-    document.getElementById('cliPanelEncomendas').innerHTML=rows||'<tr><td colspan="7" class="text-center text-muted">Sem encomendas</td></tr>';
+    document.getElementById('cliPanelEncomendas').innerHTML=blocos||'<p class="text-center text-muted">Sem encomendas</p>';
     window.abrirModal('modalCliPanel');
 };
 
@@ -932,6 +1064,131 @@ window.removerTipoMadeira=t=>{ window.db.tiposLenha=window.db.tiposLenha.filter(
 // ── APAGAR ───────────────────────────────
 window.apagar=(t,id)=>{ window.db[t]=window.db[t].filter(x=>x.id!=id);window.atualizarBD(); };
 window.apagarMov=(lId,t,mId)=>{ const l=window.db.lotes.find(x=>x.id==lId);l[t]=l[t].filter(x=>x.id!=mId);window.atualizarBD(); };
+
+// ── HORAS ────────────────────────────────
+window.abrirModalNovaHora=()=>{
+    window.horaIdEdicao=null;
+    document.getElementById('modalHoraTitulo').textContent='Registar Horas';
+    document.getElementById('horaData').value=hoje();
+    document.getElementById('horaNome').value='';
+    document.getElementById('horaTrabalho').value='';
+    document.getElementById('horaQtd').value='';
+    document.getElementById('horaValor').value='';
+    document.getElementById('horaObs').value='';
+    document.getElementById('horaTotalPreview').textContent='0€';
+    window.abrirModal('modalHora');
+};
+window.abrirEditarHora=id=>{
+    window.horaIdEdicao=id;
+    const h=window.db.horas.find(x=>x.id==id);
+    document.getElementById('modalHoraTitulo').textContent='Editar Registo';
+    document.getElementById('horaData').value=h.data;
+    document.getElementById('horaNome').value=h.nome;
+    document.getElementById('horaTrabalho').value=h.trabalho||'';
+    document.getElementById('horaQtd').value=h.horas;
+    document.getElementById('horaValor').value=h.valorHora;
+    document.getElementById('horaObs').value=h.obs||'';
+    window.atualizarTotalHora();
+    window.abrirModal('modalHora');
+};
+window.atualizarTotalHora=()=>{
+    const h=toN(document.getElementById('horaQtd').value);
+    const v=toN(document.getElementById('horaValor').value);
+    document.getElementById('horaTotalPreview').textContent=(h*v).toFixed(2)+'€';
+};
+window.salvarHora=()=>{
+    if(!window.db.horas) window.db.horas=[];
+    const d={
+        data:document.getElementById('horaData').value,
+        nome:document.getElementById('horaNome').value.trim(),
+        trabalho:document.getElementById('horaTrabalho').value.trim(),
+        horas:toN(document.getElementById('horaQtd').value),
+        valorHora:toN(document.getElementById('horaValor').value),
+        obs:document.getElementById('horaObs').value.trim()
+    };
+    if(!d.nome||!d.horas){alert('Preenche o nome e as horas.');return;}
+    if(window.horaIdEdicao){
+        const i=window.db.horas.findIndex(x=>x.id==window.horaIdEdicao);
+        window.db.horas[i]={...window.db.horas[i],...d};
+    } else {
+        window.db.horas.push({id:uid(),...d});
+    }
+    window.fecharModal('modalHora');
+};
+window.renderHoras=()=>{
+    if(!window.db.horas) window.db.horas=[];
+    const filtroNome=(document.getElementById('filtroHorasNome').value||'').toLowerCase();
+    const filtroAno=document.getElementById('filtroHorasAno').value;
+    const filtroMes=document.getElementById('filtroHorasMes').value;
+    const mesAtual=String(new Date().getMonth()+1).padStart(2,'0');
+    const anoAtual=new Date().getFullYear().toString();
+
+    let totalH=0,totalEur=0,mesH=0,footH=0,footEur=0;
+    const porPessoa={};
+    let rows='';
+
+    // totais globais
+    window.db.horas.forEach(h=>{
+        const custo=toN(h.horas)*toN(h.valorHora);
+        totalH+=toN(h.horas); totalEur+=custo;
+        if(h.data&&h.data.startsWith(anoAtual)&&h.data.split('-')[1]===mesAtual) mesH+=toN(h.horas);
+        porPessoa[h.nome]=porPessoa[h.nome]||{horas:0,custo:0};
+        porPessoa[h.nome].horas+=toN(h.horas);
+        porPessoa[h.nome].custo+=custo;
+    });
+
+    document.getElementById('horasTotalH').textContent=totalH.toFixed(1)+'h';
+    document.getElementById('horasTotalEur').textContent=totalEur.toFixed(0)+'€';
+    document.getElementById('horasMesH').textContent=mesH.toFixed(1)+'h';
+
+    // filtradas
+    const filtradas=window.db.horas.filter(h=>{
+        if(filtroNome&&!h.nome.toLowerCase().includes(filtroNome)) return false;
+        if(filtroAno&&!(h.data||'').startsWith(filtroAno)) return false;
+        if(filtroMes&&(h.data||'').split('-')[1]!==filtroMes) return false;
+        return true;
+    }).sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+    filtradas.forEach(h=>{
+        const custo=toN(h.horas)*toN(h.valorHora);
+        footH+=toN(h.horas); footEur+=custo;
+        rows+=`<tr>
+            <td><span class="bg-data">${esc(h.data)}</span></td>
+            <td><b>${esc(h.nome)}</b></td>
+            <td><small>${esc(h.trabalho||'')}</small></td>
+            <td class="text-end fw-bold">${toN(h.horas).toFixed(1)}h</td>
+            <td class="text-end">${toN(h.valorHora).toFixed(2)}€</td>
+            <td class="text-end fw-bold text-warning">${custo.toFixed(2)}€</td>
+            <td><div class="obs-container">${esc(h.obs||'')}</div></td>
+            <td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarHora('${esc(h.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${esc(h.id)}'))"></i></td>
+        </tr>`;
+    });
+
+    document.getElementById('corpoHoras').innerHTML=rows||'<tr><td colspan="8" class="text-center text-muted">Sem registos</td></tr>';
+    document.getElementById('footHorasH').textContent=footH.toFixed(1)+'h';
+    document.getElementById('footHorasEur').textContent=footEur.toFixed(2)+'€';
+
+    // resumo por pessoa
+    document.getElementById('horasResumoPessoa').innerHTML=Object.entries(porPessoa)
+        .sort((a,b)=>b[1].horas-a[1].horas)
+        .map(([nome,v])=>`<div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded" style="background:var(--surface2);border:1px solid var(--border)">
+            <span class="fw-bold">${esc(nome)}</span>
+            <span>${v.horas.toFixed(1)}h &nbsp;·&nbsp; <b class="text-warning">${v.custo.toFixed(0)}€</b></span>
+        </div>`).join('')||'<small class="text-muted">Sem dados</small>';
+
+    // popular filtro de anos
+    const anos=new Set(window.db.horas.map(h=>(h.data||'').split('-')[0]).filter(Boolean));
+    const selA=document.getElementById('filtroHorasAno');
+    const curA=selA.value;
+    selA.innerHTML='<option value="">Todos os anos</option>'+Array.from(anos).sort().reverse().map(a=>`<option value="${a}" ${a==curA?'selected':''}>${a}</option>`).join('');
+};
+window.exportarCSVHoras=()=>{
+    const cab='Data,Pessoa,Trabalho,Horas,€/hora,Total€,Obs';
+    const rows=(window.db.horas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(h=>[h.data,h.nome,h.trabalho||'',toN(h.horas).toFixed(1),toN(h.valorHora).toFixed(2),(toN(h.horas)*toN(h.valorHora)).toFixed(2),h.obs||''].join(','));
+    const blob=new Blob([[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`});
+    a.click();
+};
 
 // ── CSV ──────────────────────────────────
 window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=(window.db.encomendas||[]).filter(e=>{ const en=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0),pa=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0); return isDiv?(en>=toN(e.metrosTotal)&&pa<toN(e.valorTotal)):(en>=toN(e.metrosTotal)&&pa>=toN(e.valorTotal)); }).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0),pa=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';return [e.dataEnc,cli?.nome||'',e.tipoLenha,en.toFixed(1),toN(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(toN(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob([[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
