@@ -1,6 +1,6 @@
 // LenhaPro — Service Worker
 // Muda a versão sempre que publicares uma alteração para forçar a atualização no telemóvel.
-const VERSAO = 'lenhapro-v9';
+const VERSAO = 'lenhapro-v10';
 
 const ESSENCIAIS = [
   './',

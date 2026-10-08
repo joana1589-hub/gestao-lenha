@@ -380,9 +380,9 @@
         <!-- HORAS -->
         <div id="tabHoras" class="tab-pane fade">
             <div class="p-2 mb-3 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
-                <b>⏱️ Horas</b> — nada aqui mexe na caixa.
+                <b>⏱️ Horas</b>
                 <div class="mt-1"><b>Sócios</b> (tu e o Toni): horas não pagas, contam para o <b>lucro real</b> no Dashboard.</div>
-                <div class="text-muted mt-1"><b>Pagos</b> (ex: André): o dinheiro regista-se nos <b>Gastos</b> (Mão de obra); aqui servem só para a conta de cada carga.</div>
+                <div class="mt-1"><b>Pagos</b> (ex: André): <b>saem da caixa</b> como gasto de mão de obra. Regista só aqui — não é preciso pô-las nos Gastos.</div>
             </div>
             <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
                 <div class="fw-bold mb-2">👷 Trabalhadores e preço por hora</div>
@@ -1011,7 +1011,7 @@ window.render=function(){
     const filtroTxt=(document.getElementById('filtroEnc').value||'').toLowerCase();
 
     let sRecE=0,sCusL=0,sGstGTotal=0,sDivT=0,m3FGlobal=0,divC=0;
-    let dRec=0,dGstTotal=0,dM3=0,dGstCompras=0,dGstExtras=0,dGstGerais=0;
+    let dRec=0,dGstTotal=0,dM3=0,dGstCompras=0,dGstExtras=0,dGstGerais=0,dGstMO=0;
     const custosAgrupados={}, pT={}, rank={}, tps={};
     (window.db.tiposLenha||[]).forEach(t=>pT[t]=0);
     const hoje_ms=Date.now();
@@ -1047,18 +1047,18 @@ window.render=function(){
         const hl=(window.db.horas||[]).filter(h=>h.loteId!=null&&String(h.loteId)===String(l.id));
         const hNP=hl.filter(h=>!h.pago).reduce((a,h)=>a+toN(h.horas),0), vNP=hl.filter(h=>!h.pago).reduce((a,h)=>a+valorDeHora(h),0);
         const hP=hl.filter(h=>h.pago).reduce((a,h)=>a+toN(h.horas),0), vP_=hl.filter(h=>h.pago).reduce((a,h)=>a+valorDeHora(h),0);
-        const bal=sV-cT, balReal=bal-vP_-vNP;
-        const porHora=hNP>0?(bal-vP_)/hNP:null;
+        const bal=sV-cT-vP_, balReal=bal-vNP;   // horas pagas = dinheiro que saiu
+        const porHora=hNP>0?bal/hNP:null;
         hl.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(h=>movs+=`<div class="movimento-item"><span class="${h.pago?'text-primary':'text-secondary'}">⏱️ ${fmtData(h.data)} · ${esc(h.nome)} ${toN(h.horas).toFixed(1)}h <span class="cat-badge">${h.pago?'paga':'não paga'} ${taxaDe(h).toFixed(2)}€/h</span></span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarHora('${escJs(h.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${escJs(h.id)}'))"></i></div></div>`);
         const linha=(lbl,val,cls='')=>`<div class="d-flex justify-content-between ${cls}"><span>${lbl}</span><span>${val}</span></div>`;
         const resumo=`<div class="mt-2 p-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
             ${linha(`Recebido (${m3V.toFixed(1)} m³)`,`${sV.toFixed(0)}€`,'text-success')}
             ${linha('− Compra',`${toN(l.custoCompra).toFixed(0)}€`)}
             ${gE?linha('− Gastos extra',`${gE.toFixed(0)}€`):''}
-            ${linha('<b>Balanço</b>',`<b class="${bal>=0?'text-success':'text-danger'}">${bal.toFixed(0)}€</b>`,'border-top pt-1 mt-1')}
             ${hP?linha(`− Mão de obra paga (${hP.toFixed(1)}h)`,`${vP_.toFixed(0)}€`):''}
+            ${linha('<b>Balanço</b>',`<b class="${bal>=0?'text-success':'text-danger'}">${bal.toFixed(0)}€</b>`,'border-top pt-1 mt-1')}
             ${hNP?linha(`− Vossas horas (${hNP.toFixed(1)}h)`,`${vNP.toFixed(0)}€`):''}
-            ${(hP||hNP)?linha('<b>Balanço real</b>',`<b class="${balReal>=0?'text-success':'text-danger'}">${balReal>=0?'✅':'❌'} ${balReal.toFixed(0)}€</b>`,'border-top pt-1 mt-1'):''}
+            ${hNP?linha('<b>Balanço real</b>',`<b class="${balReal>=0?'text-success':'text-danger'}">${balReal>=0?'✅':'❌'} ${balReal.toFixed(0)}€</b>`,'border-top pt-1 mt-1'):''}
             ${porHora!=null?`<div class="text-center mt-1 ${porHora>=vNP/hNP?'text-success':'text-danger'}">Cada hora vossa rendeu <b>${porHora.toFixed(2)}€</b></div>`:''}
         </div>`;
         return `<div class="lote-card">
@@ -1151,6 +1151,15 @@ window.render=function(){
     // ── 3. DESPESAS
     sGstGTotal=(window.db.despesas||[]).reduce((a,c)=>{ if(inPeriodo(c.data,dAno,modo==='ano'?'':dMes)){const v=toN(c.valor);dGstTotal+=v;dGstGerais+=v;const k=catDe(c);custosAgrupados[k]=(custosAgrupados[k]||0)+v;} if(c.data&&c.data.startsWith(dAno)) evolGst[parseInt(c.data.split('-')[1],10)-1]+=toN(c.valor); return a+toN(c.valor); },0);
 
+    // ── 3b. HORAS PAGAS = gasto de mão de obra (saem da caixa; registam-se só no separador Horas)
+    const horasPagas=(window.db.horas||[]).filter(h=>h.pago);
+    const totalHorasPagas=horasPagas.reduce((a,h)=>a+valorDeHora(h),0);
+    horasPagas.forEach(h=>{
+        const v=valorDeHora(h);
+        if(inPeriodo(h.data,dAno,modo==='ano'?'':dMes)){ dGstTotal+=v; dGstMO+=v; custosAgrupados['Mão de obra']=(custosAgrupados['Mão de obra']||0)+v; }
+        if(h.data&&h.data.startsWith(dAno)) evolGst[parseInt(h.data.split('-')[1],10)-1]+=v;
+    });
+
     // ── 4. TABELA CUSTOS
     document.getElementById('tabelaCustosAgrupados').innerHTML=Object.entries(custosAgrupados).sort((a,b)=>b[1]-a[1]).map(([desc,t])=>`<tr><td>${esc(desc)}</td><td class="text-end fw-bold">${t.toFixed(2)}€</td><td class="text-end text-muted">${dGstTotal>0?((t/dGstTotal)*100).toFixed(0):0}%</td></tr>`).join('')||'<tr><td colspan="3" class="text-center text-muted">Sem registos</td></tr>';
     document.getElementById('totalCustosDash').innerText=dGstTotal.toFixed(2)+'€';
@@ -1177,7 +1186,7 @@ window.render=function(){
     document.getElementById('dashGanhoHora').innerText=horasPeriodo>0?(lucroCaixa/horasPeriodo).toFixed(2)+'€':'—';
 
     // ── 6. RESUMO GLOBAL (usa totais históricos, não filtrados por período)
-    const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0);
+    const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0)+totalHorasPagas;
     sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor),0);
     const lucT=sRecE-(sCusL+totalDespesasHistorico);
     const caixaFinal=(toN(window.db.saldoInicial)+lucT)-sDivT;
@@ -1191,7 +1200,7 @@ window.render=function(){
     document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<small class="text-muted">Nada pendente.</small>';
 
     // ── 7. FINANÇAS
-    document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')||'<tr><td class="text-muted text-center">Sem gastos</td></tr>';
+    document.getElementById('corpoDespesas').innerHTML=(totalHorasPagas?`<tr style="cursor:pointer" onclick="document.querySelector('[data-bs-target=\\'#tabHoras\\']').click()"><td><span class="bg-data">⏱️</span></td><td><span class="cat-badge">Mão de obra</span> horas pagas (${horasPagas.reduce((a,h)=>a+toN(h.horas),0).toFixed(1)}h) <small class="text-muted">— ver separador Horas</small></td><td class="text-end">${totalHorasPagas.toFixed(2)}€</td><td></td></tr>`:'')+(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')||'<tr><td class="text-muted text-center">Sem gastos</td></tr>';
     const semCat=(window.db.despesas||[]).filter(d=>!d.categoria).length+(window.db.lotes||[]).reduce((a,l)=>a+(l.gastosExtras||[]).filter(g=>!g.categoria).length,0);
     document.getElementById('avisoCategorizar').innerHTML=semCat?`<div class="alert alert-warning py-2 px-3 small d-flex justify-content-between align-items-center mb-0">Há ${semCat} gasto(s) antigo(s) sem categoria.<button class="btn btn-warning btn-sm fw-bold py-0" onclick="window.abrirCategorizar()">🏷️ Categorizar</button></div>`:'';
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
@@ -1204,7 +1213,7 @@ window.render=function(){
     }).join('');
 
     // ── 9. CHARTS
-    window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais],dAno,evolRec,evolGst);
+    window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais,dGstMO],dAno,evolRec,evolGst);
     window.renderHoras();
 };
 
@@ -1213,7 +1222,7 @@ window.updateCharts=(rank,tps,gb,dAno,evolRec,evolGst)=>{
     const cfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
     chCli=new Chart(document.getElementById('chartClientes'),{type:'bar',data:{labels:Object.keys(rank),datasets:[{data:Object.values(rank),backgroundColor:'#1a252f'}]},options:cfg});
     chTp=new Chart(document.getElementById('chartTipos'),{type:'doughnut',data:{labels:Object.keys(tps),datasets:[{data:Object.values(tps),backgroundColor:['#e67e22','#27ae60','#3498db','#f39c12','#c0392b','#7f8c8d']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
-    chGst=new Chart(document.getElementById('chartGastoDist'),{type:'pie',data:{labels:['Cargas','Extras','Geral'],datasets:[{data:gb,backgroundColor:['#c0392b','#e67e22','#7f8c8d']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
+    chGst=new Chart(document.getElementById('chartGastoDist'),{type:'pie',data:{labels:['Cargas','Extras','Geral','Mão de obra'],datasets:[{data:gb,backgroundColor:['#c0392b','#e67e22','#7f8c8d','#5a3e8a']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
     // Evolução mensal
     document.getElementById('dashEvolAno').textContent=dAno;
     chEvol=new Chart(document.getElementById('chartEvolucao'),{type:'line',data:{labels:mesesNomes,datasets:[{label:'Receita',data:evolRec,borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,.1)',fill:true,tension:.3},{label:'Gastos',data:evolGst,borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.1)',fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{boxWidth:10,font:{size:9}}}},scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}});
@@ -1590,7 +1599,7 @@ window.atualizarTotalHora=()=>{
     if(!ws.length||h<=0){ el.innerHTML='Escolhe quem trabalhou e as horas'; return; }
     const tot=ws.reduce((a,w)=>a+h*toN(w.valorHora),0);
     el.innerHTML=ws.map(w=>`${esc(w.nome)} ${h}h × ${toN(w.valorHora).toFixed(2)}€`).join(' + ')+` = <b>${tot.toFixed(2)}€</b>`+
-        (ws.some(w=>w.pago)?'<div class="text-muted">horas pagas não mexem na caixa</div>':'');
+        (ws.some(w=>w.pago)?`<div class="text-danger">${ws.filter(w=>w.pago).reduce((a,w)=>a+h*toN(w.valorHora),0).toFixed(2)}€ de horas pagas saem da caixa</div>`:'');
 };
 window.salvarHora=()=>{
     if(!window.db.horas) window.db.horas=[];
