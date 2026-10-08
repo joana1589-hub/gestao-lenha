@@ -394,7 +394,7 @@
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
                 <div class="col-auto"><small class="text-muted"><span class="text-danger fw-bold">vermelho</span> = mais de 60 dias</small></div>
-                <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('div')"><i class="bi bi-download"></i> CSV</button></div>
+                <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('div')"><i class="bi bi-file-earmark-excel"></i> Excel</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
                 <thead><tr><th>Enc.</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Data Entrega</th><th>Entregue</th><th>Últ. Pgto</th><th>Pago €</th><th>Saldo</th><th>Obs</th><th>Ações</th></tr></thead>
@@ -417,7 +417,7 @@
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
-                <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('ven')"><i class="bi bi-download"></i> CSV</button></div>
+                <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('ven')"><i class="bi bi-file-earmark-excel"></i> Excel</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
                 <thead><tr><th>Enc.</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Data Entrega</th><th>Entregue</th><th>Data Pgto</th><th>Pago €</th><th>Estado</th><th>Obs</th><th>Ações</th></tr></thead>
@@ -453,7 +453,7 @@
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
-                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVGastos()"><i class="bi bi-download"></i> CSV</button></div>
+                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVGastos()"><i class="bi bi-file-earmark-excel"></i> Excel</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-1">
                 <thead><tr><th>Data</th><th>Categoria / descrição</th><th class="text-end">Valor</th><th></th></tr></thead>
@@ -498,7 +498,7 @@
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
-                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVHoras()"><i class="bi bi-download"></i> CSV</button></div>
+                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVHoras()"><i class="bi bi-file-earmark-excel"></i> Excel</button></div>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle">
@@ -522,7 +522,7 @@
             <div id="verifResultado"></div>
             <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
                 <div class="fw-bold">📜 Histórico de movimentos</div>
-                <button class="btn btn-outline-success btn-sm py-0" onclick="window.exportarHistorico()"><i class="bi bi-download"></i> CSV</button>
+                <button class="btn btn-outline-success btn-sm py-0" onclick="window.exportarHistorico()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
             </div>
             <div class="row g-2 mb-2">
                 <div class="col-4"><select id="histPessoa" class="form-select form-select-sm" onchange="window.renderHistorico()"><option value="">Todos</option></select></div>
@@ -1384,10 +1384,9 @@ window.reporApagado=hid=>{
     });
 };
 window.exportarHistorico=()=>{
-    const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
-    const linhas=_hist.map(h=>[h.em.slice(0,10),new Date(h.em).toTimeString().slice(0,5),q(h.por),h.acao,q(NOMES_COL[h.col]||h.col),q((h.texto||[]).join(' | '))].join(','));
-    const blob=new Blob(['﻿'+['Data,Hora,Quem,Ação,Tipo,Detalhe',...linhas].join('\n')],{type:'text/csv;charset=utf-8;'});
-    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`historico_${hoje()}.csv`}).click();
+    exportarExcel(`historico_${hoje()}.xlsx`,'Histórico',
+        [{t:'Data e hora',tipo:'dh',w:17},{t:'Quem',w:12},{t:'Ação',w:9},{t:'Tipo',w:12},{t:'O quê',w:50},{t:'Detalhes',w:60}],
+        _hist.map(h=>[dataHoraXL(h.em),h.por,h.acao,NOMES_COL[h.col]||h.col,(h.texto||[])[0]||'',(h.texto||[]).slice(1).join(' | ')]));
 };
 document.addEventListener('shown.bs.tab',e=>{ if(e.target.getAttribute('data-bs-target')==='#tabHist') window.carregarHistorico(true); });
 
@@ -1756,7 +1755,7 @@ window.render=function(){
         const hp=(window.db.horas||[]).filter(h=>h.pago&&noPer(h.data)&&(!gc||gc==='Mão de obra')&&(!gq||semAcentos('mao de obra horas pagas '+(h.nome||'')).includes(gq)));
         const vhp=hp.reduce((a,h)=>a+valorDeHora(h),0);
         if(go==='categoria') lista.sort((a,b)=>a.cat.localeCompare(b.cat,'pt')||b.d.localeCompare(a.d)); else if(go==='desc') lista.sort((a,b)=>a.desc.localeCompare(b.desc,'pt')||b.d.localeCompare(a.d)); else ordenarLinhas(lista,go);
-        window._gastosFiltrados=lista.map(x=>x.o);
+        window._gastosFiltrados=lista.map(x=>x.o); window._horasPagasFiltradas=hp;
         document.getElementById('corpoDespesas').innerHTML=(vhp?`<tr style="cursor:pointer" onclick="window.irPara('tabHoras')"><td><span class="bg-data">⏱️</span></td><td><span class="cat-badge">Mão de obra</span> horas pagas (${hp.reduce((a,h)=>a+toN(h.horas),0).toFixed(1)}h) <small class="text-muted">— ver Horas</small></td><td class="text-end">${vhp.toFixed(2)}€</td><td></td></tr>`:'')+
             lista.map(({o:d})=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')
             ||'<tr><td colspan="4" class="text-muted text-center">Sem gastos com estes filtros</td></tr>';
@@ -2535,6 +2534,7 @@ window.renderHoras=()=>{
         if(filtroMes&&(h.data||'').split('-')[1]!==filtroMes) return false;
         return true;
     }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+    window._horasFiltradas=filtradas;
     const rows=filtradas.map(h=>{
         footH+=toN(h.horas); footEur+=valorDe(h);
         const lt=h.loteId!=null?(window.db.lotes||[]).find(l=>String(l.id)===String(h.loteId)):null;
@@ -2556,20 +2556,65 @@ window.renderHoras=()=>{
     selA.innerHTML='<option value="">Todos os anos</option>'+Array.from(anos).sort().reverse().map(a=>`<option value="${a}" ${a==curA?'selected':''}>${a}</option>`).join('');
 };
 window.exportarCSVHoras=()=>{
-    const cab='Data,Pessoa,Tipo,Lote,Trabalho,Horas,€/h,Valor,Obs';
-    const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
-    const rows=(window.db.horas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(h=>{ const vh=taxaDe(h), lt=(window.db.lotes||[]).find(l=>String(l.id)===String(h.loteId)); return [h.data,q(h.nome),h.pago?'paga':'não paga',q(lt?lt.nome:''),q(Array.isArray(h.trabalho)?h.trabalho.join(' | '):(h.trabalho||'')),toN(h.horas).toFixed(1),vh.toFixed(2),(toN(h.horas)*vh).toFixed(2),q(h.obs)].join(','); });
-    const blob=new Blob(['﻿'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
-    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`}).click();
+    const lista=window._horasFiltradas||window.db.horas||[];
+    const linhas=lista.map(h=>{ const vh=taxaDe(h), lt=(window.db.lotes||[]).find(l=>String(l.id)===String(h.loteId));
+        return [dataXL(h.data),h.nome,h.pago?'paga':'não paga (sócio)',lt?lt.nome:'',Array.isArray(h.trabalho)?h.trabalho.join(', '):(h.trabalho||''),toN(h.horas),vh,r2(toN(h.horas)*vh),h.obs||'']; });
+    exportarExcel(`horas_${hoje()}.xlsx`,'Horas',
+        [{t:'Data',tipo:'data',w:11},{t:'Pessoa',w:14},{t:'Tipo',w:16},{t:'Carga',w:20},{t:'Trabalho',w:18},{t:'Horas',tipo:'num',w:8},{t:'€/hora',tipo:'eur',w:9},{t:'Valor',tipo:'eur',w:10},{t:'Obs',w:30}],
+        linhas,['TOTAL','','','','',r2(lista.reduce((a,h)=>a+toN(h.horas),0)),'',r2(lista.reduce((a,h)=>a+valorDeHora(h),0)),'']);
 };
 
 // ── CSV ──────────────────────────────────
+// ── EXCEL (.xlsx) ────────────────────────
+// A biblioteca só é carregada quando se exporta (fica em cache para usar sem rede depois)
+let _xlsx=null;
+const carregarXLSX=()=>_xlsx||(_xlsx=new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX);
+    const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    sc.onload=()=>res(window.XLSX); sc.onerror=()=>{ _xlsx=null; rej(new Error('xlsx')); }; document.head.appendChild(sc); }));
+// datas em número de série do Excel (dias desde 30/12/1899) — evita o desvio de fuso horário da biblioteca
+const serieXL=(y,m,d,h=0,mi=0)=>(Date.UTC(y,m-1,d,h,mi)-Date.UTC(1899,11,30))/864e5;
+const dataXL=t=>{ if(!t||!/^\d{4}-\d{2}-\d{2}/.test(t)) return ''; const [y,m,d]=t.slice(0,10).split('-').map(Number); return serieXL(y,m,d); };
+const dataHoraXL=iso=>{ const x=new Date(iso); return isNaN(x)?'':serieXL(x.getFullYear(),x.getMonth()+1,x.getDate(),x.getHours(),x.getMinutes()); };
+async function exportarExcel(ficheiro,folha,colunas,linhas,totais){
+    try{
+        mostrarToast('A preparar o Excel…','saving');
+        const XLSX=await carregarXLSX();
+        const aoa=[colunas.map(c=>c.t),...linhas]; if(totais&&linhas.length) aoa.push(totais);
+        const ws=XLSX.utils.aoa_to_sheet(aoa);
+        const fmt={data:'dd/mm/yyyy',dh:'dd/mm/yyyy hh:mm',eur:'#,##0.00 "€"',num:'0.0##'};
+        for(let r=1;r<aoa.length;r++) colunas.forEach((c,ci)=>{ const cel=ws[XLSX.utils.encode_cell({r,c:ci})]; if(cel&&fmt[c.tipo]&&(cel.t==='n'||cel.t==='d')) cel.z=fmt[c.tipo]; });
+        ws['!cols']=colunas.map(c=>({wch:c.w||14}));
+        ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,linhas.length),c:colunas.length-1}})};
+        const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,folha.slice(0,31));
+        XLSX.writeFile(wb,ficheiro,{compression:true});
+        mostrarToast('Excel descarregado','ok');
+    }catch(e){ console.error(e); mostrarToast('Não consegui criar o Excel — verifica a ligação à internet','erro'); }
+}
 const ordemCSV=(tipo,lista)=>{ const ids=tipo==='div'?window._idsDiv:window._idsVen; if(!ids) return lista; const m=new Map(lista.map(e=>[e.id,e])); return ids.map(id=>m.get(id)).filter(Boolean); };
-window.exportarCSVGastos=()=>{ const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
-    const rows=(window._gastosFiltrados||[]).map(d=>[d.data,q(catDe(d)),q(d.desc||''),toN(d.valor).toFixed(2),q(d.alteradoPor||d.criadoPor||'')].join(','));
-    const blob=new Blob(['\ufeff'+['Data,Categoria,Descrição,Valor€,Por',...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
-    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`gastos_${hoje()}.csv`}).click(); };
-window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=ordemCSV(tipo,(window.db.encomendas||[]).filter(e=>{ const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]); return isDiv?(en>=r3(e.metrosTotal)&&pa<r2(e.valorTotal)):(en>=r3(e.metrosTotal)&&pa>=r2(e.valorTotal)); })).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;return [e.dataEnc,q(cli?.nome||''),q(e.tipoLenha),r3(e.metrosTotal),r2(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(r2(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob(['\ufeff'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
+window.exportarCSVGastos=()=>{
+    const g=window._gastosFiltrados||[], hp=window._horasPagasFiltradas||[];
+    const linhas=[...g.map(d=>[dataXL(d.data),catDe(d),d.desc||'',r2(d.valor),d.alteradoPor||d.criadoPor||'']),
+        ...hp.map(h=>[dataXL(h.data),'Mão de obra',`Horas pagas — ${h.nome} (${toN(h.horas)}h × ${taxaDe(h)}€)`,r2(valorDeHora(h)),h.alteradoPor||h.criadoPor||''])];
+    exportarExcel(`gastos_${hoje()}.xlsx`,'Gastos',
+        [{t:'Data',tipo:'data',w:11},{t:'Categoria',w:16},{t:'Descrição',w:34},{t:'Valor',tipo:'eur',w:11},{t:'Registado por',w:13}],
+        linhas,['TOTAL','','',r2(linhas.reduce((a,l)=>a+l[3],0)),'']);
+};
+window.exportarCSV=tipo=>{
+    const isDiv=tipo==='div';
+    const lista=ordemCSV(tipo,(window.db.encomendas||[]).filter(e=>{ if(encVazia(e)) return false; const en=somaM3(e.entregas),pa=somaEur(e.pagamentos); return en>=r3(e.metrosTotal)&&(isDiv?pa<r2(e.valorTotal):pa>=r2(e.valorTotal)); }));
+    const ult=arr=>(arr||[]).reduce((m,x)=>x.data&&x.data>m?x.data:m,'');
+    const linhas=lista.map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId); const en=somaM3(e.entregas),pa=somaEur(e.pagamentos), ue=ult(e.entregas);
+        const l=[dataXL(e.dataEnc),cli?cli.nome:'(cliente apagado)',e.tipoLenha||'',r3(e.metrosTotal),r2(e.precoM3),r2(e.valorTotal),dataXL(ue),en,dataXL(ult(e.pagamentos)),pa];
+        if(isDiv) l.push(r2(r2(e.valorTotal)-pa),diasDesde(ue||e.dataEnc));
+        l.push(e.obs||''); return l; });
+    const cols=[{t:'Data encomenda',tipo:'data',w:13},{t:'Cliente',w:26},{t:'Tipo',w:12},{t:'m³',tipo:'num',w:7},{t:'€/m³',tipo:'eur',w:9},{t:'Total',tipo:'eur',w:10},
+        {t:'Última entrega',tipo:'data',w:13},{t:'Entregue m³',tipo:'num',w:10},{t:'Último pagamento',tipo:'data',w:14},{t:'Pago',tipo:'eur',w:10}];
+    if(isDiv) cols.push({t:'Em dívida',tipo:'eur',w:10},{t:'Dias',w:6});
+    cols.push({t:'Notas',w:30});
+    const soma=k=>r2(linhas.reduce((a,l)=>a+(+l[k]||0),0));
+    const tot=['TOTAL','','',soma(3),'',soma(5),'',soma(7),'',soma(9)]; if(isDiv) tot.push(soma(10),''); tot.push('');
+    exportarExcel(`${isDiv?'dividas':'vendas'}_${hoje()}.xlsx`,isDiv?'Dívidas':'Vendas',cols,linhas,tot);
+};
 
 // ── BACKUP JSON ──────────────────────────
 window.exportarBackup=()=>{ window.db.ultimoBackup=hoje(); window.atualizarBD(); const blob=new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenhapro_backup_${hoje()}.json`});a.click(); mostrarToast('Backup descarregado','ok'); };
