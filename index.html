@@ -91,6 +91,21 @@
         /* kbd shortcut hint */
         .kbd-hint { font-size:.65rem; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:1px 4px; }
 
+        .btn-contacto { padding:1px 7px; font-size:.8rem; line-height:1.4; }
+        .zona-card { border:1px solid var(--border); border-radius:10px; margin-bottom:14px; overflow:hidden; background:var(--surface); }
+        .zona-head { background:var(--primary); color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+        .ent-item { padding:10px 12px; border-top:1px solid var(--border); }
+        .ent-item:first-of-type { border-top:none; }
+        .dias-tag { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:10px; white-space:nowrap; display:inline-block; }
+        .dias-ok   { background:var(--badge-bg); color:var(--badge-color); }
+        .dias-med  { background:#fde3c4; color:#8a4b00; }
+        .dias-alto { background:#c0392b; color:#fff; }
+        .row-div-antiga { background:rgba(192,57,43,.10)!important; }
+        .row-div-antiga td:first-child { border-left:4px solid var(--danger); }
+        .cat-badge { font-size:.68rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg); color:var(--badge-color); border:1px solid var(--badge-border); white-space:nowrap; }
+        .cat-auto { font-style:italic; opacity:.75; }
+        .por-tag { font-size:.65rem; color:var(--muted); }
+
         /* ── TELEMÓVEL ── */
         .navbar { padding-top:calc(.5rem + env(safe-area-inset-top))!important; }
         body { padding-bottom:calc(60px + env(safe-area-inset-bottom)); }
@@ -207,6 +222,7 @@
     <ul class="nav nav-tabs mb-0" id="mainTabs">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDash">📈 Dash</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEnc" id="tabBtnEnc">🛒 Enc.</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEntregas" id="tabBtnEntregas">🚚 Entregas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDiv" id="tabBtnDiv">🚩 Dívidas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabVen" id="tabBtnVen">✅ Vendas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLotes">📦 Lotes</button></li>
@@ -291,6 +307,15 @@
             <div id="pagEnc" class="d-flex justify-content-between align-items-center mt-2"></div>
         </div>
 
+        <!-- ENTREGAS PENDENTES -->
+        <div id="tabEntregas" class="tab-pane fade">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div id="entregasResumo" class="small"></div>
+                <select id="filtroEntZona" class="form-select form-select-sm w-auto" onchange="window.render()"><option value="">Todas as zonas</option></select>
+            </div>
+            <div id="listaEntregasPendentes"></div>
+        </div>
+
         <!-- DÍVIDAS -->
         <div id="tabDiv" class="tab-pane fade">
             <div class="row g-2 mb-2 align-items-end">
@@ -301,6 +326,7 @@
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
+                <div class="col-auto"><small class="text-muted">Mais antigas primeiro · <span class="text-danger fw-bold">vermelho</span> = mais de 60 dias</small></div>
                 <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('div')"><i class="bi bi-download"></i> CSV</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
@@ -343,7 +369,8 @@
                 <div class="col-6"><button class="btn btn-danger btn-sm w-100 fw-bold" onclick="window.abrirModalNovaDespesa()">+ GASTO OPERACIONAL</button></div>
                 <div class="col-6"><button class="btn btn-info btn-sm w-100 fw-bold text-white" onclick="window.abrirModalNovoDividendo()">💰 DIVIDENDO</button></div>
             </div>
-            <h6 class="fw-bold mt-3">Gastos Gerais</h6>
+            <div id="avisoCategorizar"></div>
+            <div class="d-flex justify-content-between align-items-center mt-3"><h6 class="fw-bold mb-0">Gastos Gerais</h6><button class="btn btn-outline-secondary btn-sm py-0" onclick="window.abrirGerirCategorias()">⚙️ Categorias</button></div>
             <table class="table table-sm mb-4"><tbody id="corpoDespesas"></tbody></table>
             <h6 class="fw-bold mt-3 text-info">Dividendos (Retiradas)</h6>
             <table class="table table-sm"><tbody id="corpoDividendos"></tbody></table>
@@ -394,7 +421,7 @@
                 <div class="col-4"><button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.abrirGerirTipos()">⚙️ TIPOS</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
-                <thead><tr><th>Nome</th><th>Contacto</th><th>Obs</th><th class="text-end">Ações</th></tr></thead>
+                <thead><tr><th>Nome</th><th>Contacto</th><th>Zona</th><th>Obs</th><th class="text-end">Ações</th></tr></thead>
                 <tbody id="listaClientesTabela"></tbody>
             </table></div>
         </div>
@@ -407,8 +434,12 @@
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Cliente</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCli')"></button></div>
         <input type="text" id="cliNome" class="form-control mb-2" placeholder="Nome">
-        <input type="text" id="cliContacto" class="form-control mb-2" placeholder="Contacto">
-        <textarea id="cliObs" class="form-control mb-3" placeholder="Obs fixas..."></textarea>
+        <input type="tel" id="cliContacto" class="form-control mb-2" placeholder="Telefone (ex: 912 345 678)" inputmode="tel">
+        <input type="text" id="cliMorada" class="form-control mb-2" placeholder="Morada (rua, nº, localidade)">
+        <input type="text" id="cliZona" class="form-control mb-2" placeholder="Zona / localidade (para agrupar entregas)" list="listaZonas">
+        <datalist id="listaZonas"></datalist>
+        <textarea id="cliObs" class="form-control mb-2" placeholder="Obs fixas..."></textarea>
+        <div id="cliAuditoria" class="text-muted mb-2" style="font-size:.7rem"></div>
         <button class="btn btn-success w-100 fw-bold" onclick="window.salvarCliente()">SALVAR</button>
     </div></div>
 </div>
@@ -429,7 +460,8 @@
         </div>
         <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="encTotalPreview">0€</b></div>
         <input type="date" id="encDataC" class="form-control mb-2">
-        <textarea id="encObs" class="form-control mb-3" placeholder="Notas..."></textarea>
+        <textarea id="encObs" class="form-control mb-2" placeholder="Notas..."></textarea>
+        <div id="encAuditoria" class="text-muted mb-2" style="font-size:.7rem"></div>
         <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarEncomenda()">GUARDAR</button>
     </div></div>
 </div>
@@ -459,7 +491,9 @@
 <div class="modal fade" id="modalGastoLote" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Gasto Carga</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalGastoLote')"></button></div>
-        <input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Descrição">
+        <label class="small fw-bold">Categoria</label>
+        <select id="gastoLoteCategoria" class="form-select mb-2"></select>
+        <input type="text" id="gastoLoteDesc" class="form-control mb-2" placeholder="Descrição (opcional)">
         <input type="number" id="gastoLoteValor" class="form-control mb-2" placeholder="Valor €">
         <input type="date" id="gastoLoteData" class="form-control mb-3">
         <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarGastoLote()">GRAVAR</button>
@@ -470,7 +504,9 @@
 <div class="modal fade" id="modalDespesa" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Gasto Geral</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalDespesa')"></button></div>
-        <input type="text" id="despDesc" class="form-control mb-2" placeholder="Combustível, Luz...">
+        <label class="small fw-bold">Categoria <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="font-size:.7rem" onclick="window.abrirGerirCategorias()">⚙️ gerir</button></label>
+        <select id="despCategoria" class="form-select mb-2"></select>
+        <input type="text" id="despDesc" class="form-control mb-2" placeholder="Descrição (opcional) — ex: carrinha, motosserra...">
         <input type="number" id="despValor" class="form-control mb-2" placeholder="€">
         <input type="date" id="despData" class="form-control mb-3">
         <button class="btn btn-danger w-100 fw-bold" onclick="window.salvarDespesa()">SALVAR</button>
@@ -581,6 +617,26 @@
     </div></div>
 </div>
 
+<!-- Gerir Categorias de Gastos -->
+<div class="modal fade" id="modalGerirCategorias" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Categorias de Gastos</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalGerirCategorias')"></button></div>
+        <div class="input-group mb-3"><input type="text" id="novaCategoria" class="form-control" placeholder="Nova categoria..."><button class="btn btn-success" onclick="window.adicionarCategoria()">+</button></div>
+        <div id="listaCategoriasContainer" class="list-group"></div>
+        <button class="btn btn-secondary w-100 mt-2" onclick="window.fecharModalSemSalvar('modalGerirCategorias')">FECHAR</button>
+    </div></div>
+</div>
+
+<!-- Categorizar gastos antigos -->
+<div class="modal fade" id="modalCategorizar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">Categorizar gastos antigos</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCategorizar')"></button></div>
+        <p class="small text-muted mb-2">Já sugeri uma categoria a partir da descrição. Confirma ou muda e carrega em Guardar.</p>
+        <div id="listaCategorizar" style="overflow-y:auto"></div>
+        <button class="btn btn-primary w-100 fw-bold mt-2" onclick="window.salvarCategorizacao()">GUARDAR</button>
+    </div></div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -649,6 +705,7 @@ onAuthStateChanged(auth, async user => {
         return;
     }
     if (user) {
+        window._utilizador = { email:user.email, nome:(user.displayName||user.email||'?').split(/[ @]/)[0] };
         loginEl.style.display = 'none';
         appEl.style.display = '';
         document.getElementById('userAvatar').src = user.photoURL || '';
@@ -719,7 +776,8 @@ async function iniciarApp() {
             const primeira = !_carregado; _carregado = true;
             migrarLegacy();
             popularFiltrosAnos();
-            if (primeira && !document.getElementById('dashFiltroMes').value) document.getElementById('dashFiltroMes').value = String(new Date().getMonth()+1).padStart(2,'0');
+            // abrir o Dashboard no mês atual (antes abria sempre em Janeiro)
+            if (primeira) document.getElementById('dashFiltroMes').value = String(new Date().getMonth()+1).padStart(2,'0');
             window.render();
         });
     };
@@ -756,6 +814,76 @@ const esc = str => String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 const escJs = str => esc(String(str??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
 const inPeriodo = (data,ano,mes) => data && data.startsWith(ano) && (!mes||data.split('-')[1]===mes);
 const mesesNomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const fmtData = d => d ? String(d).split('-').reverse().join('/') : '';
+const diasDesde = d => d ? Math.max(0, Math.floor((Date.now() - new Date(d+'T00:00:00').getTime()) / 864e5)) : 0;
+const diasTag = n => `<span class="dias-tag ${n>60?'dias-alto':n>30?'dias-med':'dias-ok'}">${n} dias</span>`;
+
+// ── QUEM FEZ O QUÊ ───────────────────────
+const quem = () => (window._utilizador && window._utilizador.nome) || '?';
+const agoraIso = () => new Date().toISOString();
+const fmtQuando = iso => { if(!iso) return ''; const d=new Date(iso); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const textoAuditoria = x => {
+    if(!x) return '';
+    const p=[];
+    if(x.criadoPor) p.push(`Criado por <b>${esc(x.criadoPor)}</b> a ${fmtQuando(x.criadoEm)}`);
+    if(x.alteradoPor && x.alteradoEm!==x.criadoEm) p.push(`alterado por <b>${esc(x.alteradoPor)}</b> a ${fmtQuando(x.alteradoEm)}`);
+    return p.length ? '🕓 '+p.join(' · ') : '';
+};
+const porTag = x => x && (x.por||x.alteradoPor||x.criadoPor) ? `<span class="por-tag" title="${esc(fmtQuando(x.em||x.alteradoEm||x.criadoEm))}">· ${esc(x.por||x.alteradoPor||x.criadoPor)}</span>` : '';
+
+// ── CONTACTOS ────────────────────────────
+const nomeBonito = n => String(n||'').toLowerCase().replace(/(^|[\s\-\/])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+const telLimpo = t => {
+    let d=String(t||'').replace(/[^\d+]/g,'');
+    if(!d) return '';
+    if(d.startsWith('+')) d=d.slice(1); else if(d.startsWith('00')) d=d.slice(2);
+    if(d.length===9 && /^[29]/.test(d)) d='351'+d;   // número português sem indicativo
+    return d.length>=9 ? d : '';
+};
+const urlMaps = morada => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(morada)}`;
+// Botões Ligar / WhatsApp / Maps. msg = texto já escrito no WhatsApp (opcional)
+const botoesContacto = (cli, msg) => {
+    const t=telLimpo(cli&&cli.contacto), m=(cli&&cli.morada||'').trim();
+    const b=[];
+    if(t){
+        b.push(`<a class="btn btn-outline-primary btn-contacto" href="tel:+${t}" title="Ligar" onclick="event.stopPropagation()">📞</a>`);
+        b.push(`<a class="btn btn-outline-success btn-contacto" href="${esc('https://wa.me/'+t+(msg?'?text='+encodeURIComponent(msg):''))}" target="_blank" rel="noopener" title="${msg?'WhatsApp com mensagem de dívida':'WhatsApp'}" onclick="event.stopPropagation()">💬</a>`);
+    }
+    if(m) b.push(`<a class="btn btn-outline-secondary btn-contacto" href="${esc(urlMaps(m))}" target="_blank" rel="noopener" title="Abrir no Maps" onclick="event.stopPropagation()">📍</a>`);
+    return b.length ? `<span class="d-inline-flex gap-1">${b.join('')}</span>` : '';
+};
+// Mensagem de dívida. linhas = [{data, m3, tipo, saldo}]
+const msgDivida = (cli, linhas) => {
+    const n=nomeBonito(cli.nome);
+    if(linhas.length===1){
+        const l=linhas[0];
+        return `Olá ${n}, boa tarde. Ficaram em falta ${l.saldo.toFixed(2).replace('.',',')}€ da lenha (${l.m3.toFixed(1).replace('.',',')} m³ de ${l.tipo}) entregue a ${fmtData(l.data)}. Obrigado!`;
+    }
+    const tot=linhas.reduce((a,l)=>a+l.saldo,0);
+    return `Olá ${n}, boa tarde. Ficaram em falta ${tot.toFixed(2).replace('.',',')}€ da lenha:\n`+
+        linhas.map(l=>`• ${fmtData(l.data)} — ${l.m3.toFixed(1).replace('.',',')} m³ de ${l.tipo}: ${l.saldo.toFixed(2).replace('.',',')}€`).join('\n')+
+        `\nObrigado!`;
+};
+
+// ── CATEGORIAS DE GASTOS ─────────────────
+const CATEGORIAS_DEFAULT = ['Combustível','Manutenção','Seguro','Impostos e taxas','Portagens','Ferramentas','Transporte','Outros'];
+const getCategorias = () => (window.db.categoriasGasto && window.db.categoriasGasto.length) ? window.db.categoriasGasto : CATEGORIAS_DEFAULT;
+const adivinharCategoria = desc => {
+    const d=String(desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const regras=[
+        [/gasol|gasoleo|combust|diesel|abastec|galp|repsol|bp\b|cepsa|prio/,'Combustível'],
+        [/manuten|pneu|oficina|revis|oleo|repar|peca|travo|filtro|bateria|mecanic|inspec/,'Manutenção'],
+        [/seguro/,'Seguro'],
+        [/portag|via verde|autoestrada/,'Portagens'],
+        [/imposto|iuc|iva|financas|taxa|seg.*social|licen/,'Impostos e taxas'],
+        [/motosserra|moto-serra|ferrament|corrente|machado|rachador|serra/,'Ferramentas'],
+        [/transport|frete|camiao|reboque|grua/,'Transporte']
+    ];
+    for(const [r,c] of regras) if(r.test(d) && getCategorias().includes(c)) return c;
+    return null;
+};
+const catDe = g => g.categoria || adivinharCategoria(g.desc) || 'Sem categoria';
+const opcoesCategorias = sel => getCategorias().map(c=>`<option value="${esc(c)}" ${c===sel?'selected':''}>${esc(c)}</option>`).join('');
 
 // ── TEMA ─────────────────────────────────
 window.toggleTema=()=>{ const h=document.documentElement,d=h.getAttribute('data-theme')==='dark'; h.setAttribute('data-theme',d?'light':'dark'); document.getElementById('btnTema').textContent=d?'🌙':'☀️'; localStorage.setItem('tema',d?'light':'dark'); };
@@ -784,8 +912,15 @@ window.atualizarBD=async()=>{
         const antes=_base[c]||{}, agora={};
         (window.db[c]||[]).forEach(item=>{
             if(!item||item.id==null) return;
-            const id=docId(item.id), j=JSON.stringify(item); agora[id]=j;
-            if(antes[id]!==j) ops.push(b=>b.set(doc(colRef(c),id),item));
+            const id=docId(item.id);
+            if(antes[id]!==JSON.stringify(item)){
+                // quem fez o quê: carimbo automático em cada registo criado/alterado
+                const t=agoraIso();
+                if(!(id in antes)&&!item.criadoPor){ item.criadoPor=quem(); item.criadoEm=t; }
+                item.alteradoPor=quem(); item.alteradoEm=t;
+                ops.push(b=>b.set(doc(colRef(c),id),item));
+            }
+            agora[id]=JSON.stringify(item);
         });
         Object.keys(antes).forEach(id=>{ if(!(id in agora)) ops.push(b=>b.delete(doc(colRef(c),id))); });
         _base[c]=agora;
@@ -873,7 +1008,7 @@ window.render=function(){
         // lote: custo no mês da data do lote; gastos extras: no mês próprio
         if(l.data&&l.data.startsWith(dAno)){
             const lm=l.data.split('-')[1];
-            if(modo==='ano'||lm===dMes){dGstTotal+=toN(l.custoCompra);dGstCompras+=toN(l.custoCompra);if(toN(l.custoCompra)>0){const k="COMPRA DE CARGAS";custosAgrupados[k]=(custosAgrupados[k]||0)+toN(l.custoCompra);}}
+            if(modo==='ano'||lm===dMes){dGstTotal+=toN(l.custoCompra);dGstCompras+=toN(l.custoCompra);if(toN(l.custoCompra)>0){const k="Compra de cargas";custosAgrupados[k]=(custosAgrupados[k]||0)+toN(l.custoCompra);}}
             // evolução mensal: sempre acumula por mês (tanto em modo ano como mês)
             evolGst[parseInt(lm,10)-1]+=toN(l.custoCompra);
         }
@@ -881,18 +1016,19 @@ window.render=function(){
             const gd=gx.data||l.data;
             if(gd&&gd.startsWith(dAno)){
                 const gm=gd.split('-')[1];
-                if(modo==='ano'||gm===dMes){dGstTotal+=toN(gx.valor);dGstExtras+=toN(gx.valor);const k=gx.desc.toUpperCase();custosAgrupados[k]=(custosAgrupados[k]||0)+toN(gx.valor);}
+                if(modo==='ano'||gm===dMes){dGstTotal+=toN(gx.valor);dGstExtras+=toN(gx.valor);const k=catDe(gx);custosAgrupados[k]=(custosAgrupados[k]||0)+toN(gx.valor);}
                 evolGst[parseInt(gm,10)-1]+=toN(gx.valor);
             }
         });
         let movs="";
         (l.saidasLenha||[]).forEach(m=>movs+=`<div class="movimento-item"><span class="text-success">Saída: ${esc(String(m.m3))}m³ (${toN(m.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarSaida('${esc(l.id)}','${esc(m.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarMov('${esc(l.id)}','saidasLenha','${esc(m.id)}'))"></i></div></div>`);
-        (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger">Gasto: ${esc(g.desc)} ${g.data?'<span class="bg-data">'+esc(g.data)+'</span>':''} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${esc(l.id)}','${esc(g.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarMov('${esc(l.id)}','gastosExtras','${esc(g.id)}'))"></i></div></div>`);
-        return `<div class="lote-card"><b>${esc(l.nome)}</b> <span class="bg-data">${esc(l.data)}</span><div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${escJs(l.id)}';window.movIdAtivo=null;document.getElementById('saidaLoteM3').value='';document.getElementById('saidaLoteValor').value='';window.abrirModal('modalSaidaLote')">+S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${escJs(l.id)}';window.movIdAtivo=null;document.getElementById('gastoLoteDesc').value='';document.getElementById('gastoLoteValor').value='';document.getElementById('gastoLoteData').value=window.hojeStr();window.abrirModal('modalGastoLote')">+G</button><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('lotes','${esc(l.id)}'))"></i></div></div></div>`;
+        (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger"><span class="cat-badge ${g.categoria?'':'cat-auto'}">${esc(catDe(g))}</span> ${esc(g.desc||'')} ${g.data?'<span class="bg-data">'+esc(g.data)+'</span>':''} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${esc(l.id)}','${esc(g.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarMov('${esc(l.id)}','gastosExtras','${esc(g.id)}'))"></i></div></div>`);
+        return `<div class="lote-card"><b>${esc(l.nome)}</b> <span class="bg-data">${esc(l.data)}</span><div class="mt-2 bg-light rounded">${movs||'<small class="p-2 d-block text-muted">Sem registos</small>'}</div><div class="mt-2 d-flex justify-content-between align-items-center small"><span>Vendido: ${m3V.toFixed(1)}m³</span><span class="${sV-cT>=0?'text-success':'text-danger'} fw-bold">Bal: ${(sV-cT).toFixed(0)}€</span><div><button class="btn btn-sm btn-primary py-0 me-1" onclick="window.loteIdAtivo='${escJs(l.id)}';window.movIdAtivo=null;document.getElementById('saidaLoteM3').value='';document.getElementById('saidaLoteValor').value='';window.abrirModal('modalSaidaLote')">+S</button><button class="btn btn-sm btn-danger py-0 me-1" onclick="window.loteIdAtivo='${escJs(l.id)}';window.movIdAtivo=null;document.getElementById('gastoLoteCategoria').innerHTML=window.opcoesCategoriasNovo();document.getElementById('gastoLoteDesc').value='';document.getElementById('gastoLoteValor').value='';document.getElementById('gastoLoteData').value=window.hojeStr();window.abrirModal('modalGastoLote')">+G</button><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('lotes','${esc(l.id)}'))"></i></div></div></div>`;
     }).join('');
 
     // ── 2. ENCOMENDAS
     let rowsE=[],rowsD=[],rowsV=[];
+    const pendentes=[], dividasPorCliente={};
     let footDivM3=0,footDivPago=0,footDivSaldo=0,footVenM3=0,footVenPago=0;
     let cntEnc=0,cntDiv=0,cntVen=0;
 
@@ -925,12 +1061,20 @@ window.render=function(){
         const noDiv=!divAno||inPeriodo(e.dataEnc,divAno,divMes);
         const noVen=!venAno||inPeriodo(e.dataEnc,venAno,venMes);
 
+        if(fM>0) pendentes.push({e,cli,fM,dias:diasDesde(e.dataEnc)});
+
         if(mEnt>=mTot&&vP>=vT){
             cntVen++;
             if(noVen&&noTxt){footVenM3+=mEnt;footVenPago+=vP;rowsV.push(`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-success fw-bold">✅ Pago</td>${obsCell}${acts}</tr>`);}
         } else if(mEnt>=mTot&&vP<vT){
             cntDiv++;
-            if(noDiv&&noTxt){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;rowsD.push(`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${esc(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
+            const diasDiv=diasDesde(ultEnt==='—'?e.dataEnc:ultEnt);
+            (dividasPorCliente[cli.id]=dividasPorCliente[cli.id]||[]).push({data:ultEnt==='—'?e.dataEnc:ultEnt,m3:mEnt,tipo:e.tipoLenha,saldo:sDev});
+            if(noDiv&&noTxt){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;
+                const msg=msgDivida(cli,[{data:ultEnt==='—'?e.dataEnc:ultEnt,m3:mEnt,tipo:e.tipoLenha,saldo:sDev}]);
+                const baseDiv=base.replace(`<td><b>${esc(cli.nome)}</b></td>`,`<td><b>${esc(cli.nome)}</b><div class="d-flex flex-wrap gap-1 align-items-center mt-1">${diasTag(diasDiv)} ${botoesContacto(cli,msg)}</div></td>`);
+                const actsDiv=`<td class="text-nowrap"><i class="bi bi-pencil-square text-primary ms-1" onclick="window.abrirEditarEncomenda('${escJs(e.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('encomendas','${escJs(e.id)}'))"></i></td>`;
+                rowsD.push({dias:diasDiv,html:`<tr${diasDiv>60?' class="row-div-antiga"':''}>${baseDiv}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${escJs(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${actsDiv}</tr>`});}
         } else {
             cntEnc++;
             if(noEnc&&noTxt){rowsE.push(`<tr${rowAttr}>${base}<td><span class="bg-data small">${esc(ultEnt)}</span></td><td><span onclick="window.abrirEntrega('${esc(e.id)}')" class="status-badge bg-pendente">${mEnt.toFixed(1)}m³</span></td><td><span class="bg-data small">${esc(ultPag)}</span></td><td onclick="window.abrirPagamento('${esc(e.id)}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
@@ -939,7 +1083,10 @@ window.render=function(){
 
     // paginação
     document.getElementById('corpoEncomendas').innerHTML=paginar(rowsE,'enc').join('');
-    document.getElementById('corpoDividas').innerHTML=paginar(rowsD,'div').join('');
+    rowsD.sort((a,b)=>b.dias-a.dias);
+    document.getElementById('corpoDividas').innerHTML=paginar(rowsD.map(r=>r.html),'div').join('');
+    window._dividasPorCliente=dividasPorCliente;
+    renderEntregasPendentes(pendentes);
     document.getElementById('corpoVendas').innerHTML=paginar([...rowsV].reverse(),'ven').join('');
 
     document.getElementById('footDivM3').textContent=footDivM3.toFixed(1)+' m³';
@@ -954,7 +1101,7 @@ window.render=function(){
     document.getElementById('tabBtnVen').textContent=`✅ Vendas (${cntVen})`;
 
     // ── 3. DESPESAS
-    sGstGTotal=(window.db.despesas||[]).reduce((a,c)=>{ if(inPeriodo(c.data,dAno,modo==='ano'?'':dMes)){const v=toN(c.valor);dGstTotal+=v;dGstGerais+=v;const k=c.desc.toUpperCase();custosAgrupados[k]=(custosAgrupados[k]||0)+v;} if(c.data&&c.data.startsWith(dAno)) evolGst[parseInt(c.data.split('-')[1],10)-1]+=toN(c.valor); return a+toN(c.valor); },0);
+    sGstGTotal=(window.db.despesas||[]).reduce((a,c)=>{ if(inPeriodo(c.data,dAno,modo==='ano'?'':dMes)){const v=toN(c.valor);dGstTotal+=v;dGstGerais+=v;const k=catDe(c);custosAgrupados[k]=(custosAgrupados[k]||0)+v;} if(c.data&&c.data.startsWith(dAno)) evolGst[parseInt(c.data.split('-')[1],10)-1]+=toN(c.valor); return a+toN(c.valor); },0);
 
     // ── 4. TABELA CUSTOS
     document.getElementById('tabelaCustosAgrupados').innerHTML=Object.entries(custosAgrupados).sort((a,b)=>b[1]-a[1]).map(([desc,t])=>`<tr><td>${esc(desc)}</td><td class="text-end fw-bold">${t.toFixed(2)}€</td><td class="text-end text-muted">${dGstTotal>0?((t/dGstTotal)*100).toFixed(0):0}%</td></tr>`).join('')||'<tr><td colspan="3" class="text-center text-muted">Sem registos</td></tr>';
@@ -996,11 +1143,17 @@ window.render=function(){
     document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<small class="text-muted">Nada pendente.</small>';
 
     // ── 7. FINANÇAS
-    document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('');
+    document.getElementById('corpoDespesas').innerHTML=(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')||'<tr><td class="text-muted text-center">Sem gastos</td></tr>';
+    const semCat=(window.db.despesas||[]).filter(d=>!d.categoria).length+(window.db.lotes||[]).reduce((a,l)=>a+(l.gastosExtras||[]).filter(g=>!g.categoria).length,0);
+    document.getElementById('avisoCategorizar').innerHTML=semCat?`<div class="alert alert-warning py-2 px-3 small d-flex justify-content-between align-items-center mb-0">Há ${semCat} gasto(s) antigo(s) sem categoria.<button class="btn btn-warning btn-sm fw-bold py-0" onclick="window.abrirCategorizar()">🏷️ Categorizar</button></div>`:'';
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
 
     // ── 8. CLIENTES
-    document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.contacto||'')}</td><td><div class="obs-container">${esc(c.obs||'')}</div></td><td class="text-end"><button class="btn btn-outline-info btn-sm py-0 me-1" onclick="window.abrirPainelCliente('${esc(c.id)}')" title="Painel">📋</button><button class="btn btn-outline-primary btn-sm py-0 me-1" onclick="window.filtrarPorCliente('${esc(c.id)}')" title="Ver encomendas">🔍</button><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${esc(c.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.tentarApagarCliente('${esc(c.id)}')"></i></td></tr>`).join('');
+    document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{
+        const dv=(dividasPorCliente[c.id]||[]);
+        const msg=dv.length?msgDivida(c,dv):'';
+        return `<tr><td><b>${esc(c.nome)}</b>${dv.length?` <span class="badge bg-danger" title="Em dívida">${dv.reduce((a,x)=>a+x.saldo,0).toFixed(0)}€</span>`:''}${c.morada?`<div class="small text-muted">${esc(c.morada)}</div>`:''}</td><td class="text-nowrap"><div class="small">${esc(c.contacto||'')}</div>${botoesContacto(c,msg)}</td><td><small>${esc(c.zona||'')}</small></td><td><div class="obs-container">${esc(c.obs||c.info||'')}</div></td><td class="text-end text-nowrap"><button class="btn btn-outline-info btn-sm py-0 me-1" onclick="window.abrirPainelCliente('${escJs(c.id)}')" title="Painel">📋</button><button class="btn btn-outline-primary btn-sm py-0 me-1" onclick="window.filtrarPorCliente('${escJs(c.id)}')" title="Ver encomendas">🔍</button><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${escJs(c.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.tentarApagarCliente('${escJs(c.id)}')"></i></td></tr>`;
+    }).join('');
 
     // ── 9. CHARTS
     window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais],dAno,evolRec,evolGst);
@@ -1018,6 +1171,44 @@ window.updateCharts=(rank,tps,gb,dAno,evolRec,evolGst)=>{
     chEvol=new Chart(document.getElementById('chartEvolucao'),{type:'line',data:{labels:mesesNomes,datasets:[{label:'Receita',data:evolRec,borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,.1)',fill:true,tension:.3},{label:'Gastos',data:evolGst,borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.1)',fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{boxWidth:10,font:{size:9}}}},scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}});
 };
 
+// ── ENTREGAS PENDENTES (por zona) ────────
+function renderEntregasPendentes(pend){
+    const zonaDe=c=>(c.zona||'').trim()||'Sem zona';
+    const zonas=[...new Set(pend.map(p=>zonaDe(p.cli)))].sort((a,b)=>a==='Sem zona'?1:b==='Sem zona'?-1:a.localeCompare(b,'pt'));
+    const sel=document.getElementById('filtroEntZona'), cur=sel.value;
+    sel.innerHTML='<option value="">Todas as zonas</option>'+zonas.map(z=>`<option value="${esc(z)}" ${z===cur?'selected':''}>${esc(z)}</option>`).join('');
+    const lista=cur?pend.filter(p=>zonaDe(p.cli)===cur):pend;
+    const totM3=lista.reduce((a,p)=>a+p.fM,0);
+    document.getElementById('tabBtnEntregas').textContent=`🚚 Entregas (${pend.length})`;
+    document.getElementById('entregasResumo').innerHTML=lista.length?`<b>${lista.length}</b> entrega(s) · <b>${totM3.toFixed(1)} m³</b> por entregar`:'';
+    const grupos={}; lista.forEach(p=>(grupos[zonaDe(p.cli)]=grupos[zonaDe(p.cli)]||[]).push(p));
+    const html=zonas.filter(z=>grupos[z]).map(z=>{
+        const itens=grupos[z].sort((a,b)=>(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''));
+        const m3=itens.reduce((a,p)=>a+p.fM,0);
+        const porTipo={}; itens.forEach(p=>porTipo[p.e.tipoLenha]=(porTipo[p.e.tipoLenha]||0)+p.fM);
+        const moradas=[...new Set(itens.map(p=>(p.cli.morada||'').trim()).filter(Boolean))].slice(0,10);
+        const rota=moradas.length?`https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(moradas[moradas.length-1])}`+(moradas.length>1?`&waypoints=${encodeURIComponent(moradas.slice(0,-1).join('|'))}`:''):'';
+        return `<div class="zona-card">
+            <div class="zona-head"><div><b>📍 ${esc(z)}</b> <small class="opacity-75">${itens.length} entrega(s) · ${m3.toFixed(1)} m³</small>
+                <div class="small opacity-75">${Object.entries(porTipo).map(([t,v])=>`${esc(t)}: ${v.toFixed(1)} m³`).join(' · ')}</div></div>
+                ${rota?`<a class="btn btn-sm btn-warning fw-bold py-0" href="${esc(rota)}" target="_blank" rel="noopener">🗺️ Rota</a>`:''}</div>
+            ${itens.map(p=>`<div class="ent-item">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div><b>${esc(p.cli.nome)}</b> ${diasTag(p.dias)}
+                        <div><span class="badge text-bg-warning">${p.fM.toFixed(1)} m³</span> <span class="small">${esc(p.e.tipoLenha)}</span> <span class="small text-muted">· enc. ${fmtData(p.e.dataEnc)}</span></div>
+                        ${p.cli.morada?`<div class="small text-muted">${esc(p.cli.morada)}</div>`:''}
+                        ${p.e.obs?`<div class="small fst-italic text-muted">${esc(p.e.obs)}</div>`:''}
+                    </div>
+                    <div class="text-end d-flex flex-column gap-1 align-items-end">
+                        <button class="btn btn-success btn-sm fw-bold py-0" onclick="window.abrirEntrega('${escJs(p.e.id)}')">✅ Entregar</button>
+                        ${botoesContacto(p.cli)}
+                    </div>
+                </div></div>`).join('')}
+        </div>`;
+    }).join('');
+    document.getElementById('listaEntregasPendentes').innerHTML=html||'<p class="text-center text-muted my-4">Nada por entregar 🎉</p>';
+}
+
 // ── PAINEL CLIENTE ───────────────────────
 window.abrirPainelCliente=id=>{
     const cli=window.db.clientes.find(c=>c.id==id); if(!cli) return;
@@ -1030,7 +1221,7 @@ window.abrirPainelCliente=id=>{
         const vP=pagamentos.reduce((a,x)=>a+toN(x.valor),0);
         const vT=toN(e.valorTotal), mTot=toN(e.metrosTotal);
         const saldo=Math.max(0,vT-vP);
-        totalM3+=mEnt; totalRec+=vP; totalDiv+=saldo;
+        totalM3+=mEnt; totalRec+=vP; if(mEnt>=mTot) totalDiv+=saldo;
 
         const estado=mEnt>=mTot&&vP>=vT
             ?'<span class="badge bg-success">✅ Pago</span>'
@@ -1040,12 +1231,12 @@ window.abrirPainelCliente=id=>{
 
         // histórico de entregas
         const histEnt=entregas.length
-            ? entregas.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-success fw-bold">${toN(x.m3).toFixed(1)} m³</span></div>`).join('')
+            ? entregas.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-success fw-bold">${toN(x.m3).toFixed(1)} m³ ${porTag(x)}</span></div>`).join('')
             : '<small class="text-muted">Sem entregas</small>';
 
         // histórico de pagamentos
         const histPag=pagamentos.length
-            ? pagamentos.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-primary fw-bold">${toN(x.valor).toFixed(0)}€</span></div>`).join('')
+            ? pagamentos.map(x=>`<div class="hist-row"><span class="bg-data">${esc(x.data)}</span><span class="text-primary fw-bold">${toN(x.valor).toFixed(0)}€ ${porTag(x)}</span></div>`).join('')
             : '<small class="text-muted">Sem pagamentos</small>';
 
         return `
@@ -1083,7 +1274,11 @@ window.abrirPainelCliente=id=>{
         </div>`;
     }).join('');
 
-    document.getElementById('cliPanelNome').textContent='📋 '+cli.nome+(cli.contacto?' — '+cli.contacto:'');
+    document.getElementById('cliPanelNome').textContent='📋 '+cli.nome;
+    const dv=(window._dividasPorCliente||{})[cli.id]||[];
+    document.getElementById('cliPanelNome').insertAdjacentHTML('beforeend',
+        `<div class="fw-normal small text-muted mt-1">${[cli.contacto,cli.morada,cli.zona].filter(Boolean).map(esc).join(' · ')}</div>
+         <div class="mt-1">${botoesContacto(cli,dv.length?msgDivida(cli,dv):'')}${dv.length?' <small class="text-danger ms-1">💬 mensagem de dívida já escrita</small>':''}</div>`);
     document.getElementById('cliPanelStats').innerHTML=
         `<div class="col-3"><div class="cli-panel-stat"><b>${encs.length}</b><small>Encomendas</small></div></div>`+
         `<div class="col-3"><div class="cli-panel-stat"><b>${totalM3.toFixed(1)} m³</b><small>Entregue</small></div></div>`+
@@ -1118,8 +1313,8 @@ window.atualizarTotalEnc=()=>{
 };
 
 // ── ENCOMENDAS ───────────────────────────
-window.abrirModalEncomenda=()=>{ window.encIdEdicao=null;document.getElementById('encCliente').value='';document.getElementById('encClienteSearch').value='';document.getElementById('encClienteDropdown').style.display='none';document.getElementById('encTipoLenha').innerHTML=(window.db.tiposLenha||[]).map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');document.getElementById('encMetros').value='';document.getElementById('encDataC').value=hoje();document.getElementById('encObs').value='';window.sugerirPreco();window.abrirModal('modalEnc'); };
-window.abrirEditarEncomenda=id=>{ window.encIdEdicao=id;const e=window.db.encomendas.find(x=>x.id==id);const cli=window.db.clientes.find(c=>c.id==e.clienteId);document.getElementById('encCliente').value=e.clienteId;document.getElementById('encClienteSearch').value=cli?cli.nome:'';document.getElementById('encClienteDropdown').style.display='none';document.getElementById('encTipoLenha').innerHTML=(window.db.tiposLenha||[]).map(t=>`<option value="${esc(t)}" ${t==e.tipoLenha?'selected':''}>${esc(t)}</option>`).join('');document.getElementById('encMetros').value=e.metrosTotal;document.getElementById('encPreco').value=e.precoM3;document.getElementById('encDataC').value=e.dataEnc;document.getElementById('encObs').value=e.obs||'';window.atualizarTotalEnc();document.getElementById('precoSugeridoHint').textContent='';window.abrirModal('modalEnc'); };
+window.abrirModalEncomenda=()=>{ window.encIdEdicao=null;document.getElementById('encCliente').value='';document.getElementById('encClienteSearch').value='';document.getElementById('encClienteDropdown').style.display='none';document.getElementById('encTipoLenha').innerHTML=(window.db.tiposLenha||[]).map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');document.getElementById('encMetros').value='';document.getElementById('encDataC').value=hoje();document.getElementById('encObs').value='';document.getElementById('encAuditoria').innerHTML='';window.sugerirPreco();window.abrirModal('modalEnc'); };
+window.abrirEditarEncomenda=id=>{ window.encIdEdicao=id;const e=window.db.encomendas.find(x=>x.id==id);const cli=window.db.clientes.find(c=>c.id==e.clienteId);document.getElementById('encCliente').value=e.clienteId;document.getElementById('encClienteSearch').value=cli?cli.nome:'';document.getElementById('encClienteDropdown').style.display='none';document.getElementById('encTipoLenha').innerHTML=(window.db.tiposLenha||[]).map(t=>`<option value="${esc(t)}" ${t==e.tipoLenha?'selected':''}>${esc(t)}</option>`).join('');document.getElementById('encMetros').value=e.metrosTotal;document.getElementById('encPreco').value=e.precoM3;document.getElementById('encDataC').value=e.dataEnc;document.getElementById('encObs').value=e.obs||'';window.atualizarTotalEnc();document.getElementById('precoSugeridoHint').textContent='';document.getElementById('encAuditoria').innerHTML=textoAuditoria(e);window.abrirModal('modalEnc'); };
 
 window.salvarEncomenda=()=>{
     const clienteId=document.getElementById('encCliente').value;
@@ -1163,43 +1358,73 @@ window.selecionarCliente=(id,nome)=>{ document.getElementById('encCliente').valu
 document.addEventListener('click',e=>{ if(!document.getElementById('encClienteWrapper')?.contains(e.target))document.getElementById('encClienteDropdown').style.display='none'; });
 
 // ── HELPER HISTORIAL ─────────────────────
-const buildHist=(items,tipo,encId)=>{ if(!items.length)return''; const campo=tipo==='entregas'?'m3':'valor',lbl=tipo==='entregas'?'m³':'€'; return `<div class="border-top pt-2 mt-1"><small class="fw-bold text-muted">Histórico</small>`+items.map(x=>`<div class="hist-row"><span>${esc(x.data)}</span><span>${toN(x[campo]).toFixed(tipo==='entregas'?1:0)} ${lbl}</span><div><i class="bi bi-pencil text-primary me-1" onclick="window.abrirEdicaoRegisto('${encId}','${tipo}','${x.id}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarRegisto('${encId}','${tipo}','${x.id}'))"></i></div></div>`).join('')+`</div>`; };
+const buildHist=(items,tipo,encId)=>{ if(!items.length)return''; const campo=tipo==='entregas'?'m3':'valor',lbl=tipo==='entregas'?'m³':'€'; return `<div class="border-top pt-2 mt-1"><small class="fw-bold text-muted">Histórico</small>`+items.map(x=>`<div class="hist-row"><span>${esc(x.data)}</span><span>${toN(x[campo]).toFixed(tipo==='entregas'?1:0)} ${lbl} ${porTag(x)}</span><div><i class="bi bi-pencil text-primary me-1" onclick="window.abrirEdicaoRegisto('${encId}','${tipo}','${x.id}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarRegisto('${encId}','${tipo}','${x.id}'))"></i></div></div>`).join('')+`</div>`; };
 
 // ── ENTREGAS ─────────────────────────────
 window.abrirEntrega=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const ent=e.entregas||[];const mEnt=ent.reduce((a,x)=>a+toN(x.m3),0);document.getElementById('faltaM3Texto').innerText=Math.max(0,toN(e.metrosTotal)-mEnt).toFixed(1);document.getElementById('entregaData').value=hoje();document.getElementById('qtdParcialM3').value='';document.getElementById('historicoEntregas').innerHTML=buildHist(ent,'entregas',id);window.abrirModal('modalEntrega'); };
-window.executarEntregaTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const resto=Math.max(0,toN(e.metrosTotal)-mEnt);if(resto>0)e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:resto});window.fecharModal('modalEntrega'); };
-window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialM3').value);if(!e||v<=0)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const falta=Math.max(0,toN(e.metrosTotal)-mEnt);if(v>falta+0.001){mostrarToast(`Máximo: ${falta.toFixed(1)} m³`,'erro');return;}e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:v});window.fecharModal('modalEntrega'); };
+window.executarEntregaTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const resto=Math.max(0,toN(e.metrosTotal)-mEnt);if(resto>0)e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:resto,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
+window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialM3').value);if(!e||v<=0)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const falta=Math.max(0,toN(e.metrosTotal)-mEnt);if(v>falta+0.001){mostrarToast(`Máximo: ${falta.toFixed(1)} m³`,'erro');return;}e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:v,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
 
 // ── PAGAMENTOS ───────────────────────────
 window.abrirPagamento=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const pags=e.pagamentos||[];const vP=pags.reduce((a,x)=>a+toN(x.valor),0);document.getElementById('faltaDinheiroTexto').innerText=(toN(e.valorTotal)-vP).toFixed(2)+'€';document.getElementById('pagamentoData').value=hoje();document.getElementById('qtdParcialDinheiro').value='';document.getElementById('historicoPagamentos').innerHTML=buildHist(pags,'pagamentos',id);window.abrirModal('modalPagamento'); };
-window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const resto=Math.max(0,toN(e.valorTotal)-vP);if(resto>0)e.pagamentos.push({id:uid(),data:document.getElementById('pagamentoData').value,valor:resto});window.fecharModal('modalPagamento'); };
-window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const falta=toN(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const gravar=()=>{e.pagamentos.push({id:uid(),data,valor:v});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
+window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const resto=Math.max(0,toN(e.valorTotal)-vP);if(resto>0)e.pagamentos.push({id:uid(),data:document.getElementById('pagamentoData').value,valor:resto,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento'); };
+window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const falta=toN(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const gravar=()=>{e.pagamentos.push({id:uid(),data,valor:v,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
 
 // ── EDITAR REGISTO ───────────────────────
 window.abrirEdicaoRegisto=(encId,tipo,itemId)=>{ const e=window.db.encomendas.find(x=>x.id==encId);const item=e[tipo].find(x=>x.id==itemId);window.editRegistoCtx={encId,tipo,itemId};document.getElementById('editRegistoTitulo').textContent=tipo==='entregas'?'Editar Entrega':'Editar Pagamento';document.getElementById('editRegistoData').value=item.data;document.getElementById('editRegistoValor').value=tipo==='entregas'?item.m3:item.valor;window.fecharModalSemSalvar(tipo==='entregas'?'modalEntrega':'modalPagamento');window.abrirModal('modalEditarRegisto'); };
-window.salvarEdicaoRegisto=()=>{ const{encId,tipo,itemId}=window.editRegistoCtx;const e=window.db.encomendas.find(x=>x.id==encId);const item=e[tipo].find(x=>x.id==itemId);item.data=document.getElementById('editRegistoData').value;const val=toN(document.getElementById('editRegistoValor').value);if(tipo==='entregas')item.m3=val;else item.valor=val;window.fecharModal('modalEditarRegisto'); };
+window.salvarEdicaoRegisto=()=>{ const{encId,tipo,itemId}=window.editRegistoCtx;const e=window.db.encomendas.find(x=>x.id==encId);const item=e[tipo].find(x=>x.id==itemId);item.data=document.getElementById('editRegistoData').value;const val=toN(document.getElementById('editRegistoValor').value);if(tipo==='entregas')item.m3=val;else item.valor=val;item.por=quem();item.em=agoraIso();window.fecharModal('modalEditarRegisto'); };
 window.apagarRegisto=(encId,tipo,itemId)=>{ const e=window.db.encomendas.find(x=>x.id==encId);e[tipo]=e[tipo].filter(x=>x.id!=itemId);window.atualizarBD();window.fecharModalSemSalvar(tipo==='entregas'?'modalEntrega':'modalPagamento'); };
 
 // ── LOTES ────────────────────────────────
 window.salvarSaidaLote=()=>{ const l=window.db.lotes.find(x=>x.id==window.loteIdAtivo);if(!l)return;if(!l.saidasLenha)l.saidasLenha=[];const d={m3:toN(document.getElementById('saidaLoteM3').value),valor:toN(document.getElementById('saidaLoteValor').value)};if(window.movIdAtivo){const i=l.saidasLenha.findIndex(x=>x.id==window.movIdAtivo);l.saidasLenha[i]={...l.saidasLenha[i],...d};}else{l.saidasLenha.push({id:uid(),...d});}window.fecharModal('modalSaidaLote'); };
-window.salvarGastoLote=()=>{ const l=window.db.lotes.find(x=>x.id==window.loteIdAtivo);if(!l)return;if(!l.gastosExtras)l.gastosExtras=[];const d={desc:document.getElementById('gastoLoteDesc').value,valor:toN(document.getElementById('gastoLoteValor').value),data:document.getElementById('gastoLoteData').value};if(window.movIdAtivo){const i=l.gastosExtras.findIndex(x=>x.id==window.movIdAtivo);l.gastosExtras[i]={...l.gastosExtras[i],...d};}else{l.gastosExtras.push({id:uid(),...d});}window.fecharModal('modalGastoLote'); };
+window.salvarGastoLote=()=>{ const l=window.db.lotes.find(x=>x.id==window.loteIdAtivo);if(!l)return;if(!l.gastosExtras)l.gastosExtras=[];const cat=document.getElementById('gastoLoteCategoria').value,v=toN(document.getElementById('gastoLoteValor').value);if(!cat||v<=0){mostrarToast('Escolhe a categoria e indica o valor','erro');return;}const d={categoria:cat,desc:document.getElementById('gastoLoteDesc').value.trim(),valor:v,data:document.getElementById('gastoLoteData').value};if(window.movIdAtivo){const i=l.gastosExtras.findIndex(x=>x.id==window.movIdAtivo);l.gastosExtras[i]={...l.gastosExtras[i],...d};}else{l.gastosExtras.push({id:uid(),...d});}window.fecharModal('modalGastoLote'); };
 window.abrirEditarSaida=(lId,mId)=>{ window.loteIdAtivo=lId;window.movIdAtivo=mId;const l=window.db.lotes.find(x=>x.id==lId);const m=l.saidasLenha.find(x=>x.id==mId);document.getElementById('saidaLoteM3').value=m.m3;document.getElementById('saidaLoteValor').value=m.valor;window.abrirModal('modalSaidaLote'); };
-window.abrirEditarGastoLote=(lId,mId)=>{ window.loteIdAtivo=lId;window.movIdAtivo=mId;const l=window.db.lotes.find(x=>x.id==lId);const g=l.gastosExtras.find(x=>x.id==mId);document.getElementById('gastoLoteDesc').value=g.desc;document.getElementById('gastoLoteValor').value=g.valor;document.getElementById('gastoLoteData').value=g.data||'';window.abrirModal('modalGastoLote'); };
+window.abrirEditarGastoLote=(lId,mId)=>{ window.loteIdAtivo=lId;window.movIdAtivo=mId;const l=window.db.lotes.find(x=>x.id==lId);const g=l.gastosExtras.find(x=>x.id==mId);document.getElementById('gastoLoteCategoria').innerHTML=opcoesCategorias(g.categoria||adivinharCategoria(g.desc)||'');document.getElementById('gastoLoteDesc').value=g.desc||'';document.getElementById('gastoLoteValor').value=g.valor;document.getElementById('gastoLoteData').value=g.data||'';window.abrirModal('modalGastoLote'); };
 window.abrirModalNovoLote=()=>{ window.loteIdAtivo=null;document.getElementById('loteNome').value='';document.getElementById('loteCusto').value='';document.getElementById('loteData').value=hoje();window.abrirModal('modalLote'); };
 window.salvarLote=()=>{ if(!document.getElementById('loteNome').value.trim()){mostrarToast('Indica a referência da carga','erro');return;} const d={nome:document.getElementById('loteNome').value,custoCompra:toN(document.getElementById('loteCusto').value),data:document.getElementById('loteData').value};if(window.loteIdAtivo){const i=window.db.lotes.findIndex(x=>x.id==window.loteIdAtivo);window.db.lotes[i]={...window.db.lotes[i],...d};}else{window.db.lotes.push({id:uid(),...d,gastosExtras:[],saidasLenha:[]});}window.fecharModal('modalLote'); };
 
 // ── CLIENTES ─────────────────────────────
-window.abrirModalNovoCliente=()=>{ window.cliIdEdicao=null;document.getElementById('cliNome').value='';document.getElementById('cliContacto').value='';document.getElementById('cliObs').value='';window.abrirModal('modalCli'); };
-window.abrirEditarCliente=id=>{ window.cliIdEdicao=id;const c=window.db.clientes.find(x=>x.id==id);document.getElementById('cliNome').value=c.nome;document.getElementById('cliContacto').value=c.contacto||'';document.getElementById('cliObs').value=c.obs||'';window.abrirModal('modalCli'); };
-window.salvarCliente=()=>{ const n=document.getElementById('cliNome').value;if(!n)return;const d={nome:n,contacto:document.getElementById('cliContacto').value,obs:document.getElementById('cliObs').value};if(window.cliIdEdicao){const i=window.db.clientes.findIndex(x=>x.id==window.cliIdEdicao);window.db.clientes[i]={id:window.cliIdEdicao,...d};}else{window.db.clientes.push({id:uid(),...d});}window.fecharModal('modalCli'); };
+const preencherZonas=()=>{ document.getElementById('listaZonas').innerHTML=[...new Set((window.db.clientes||[]).map(c=>(c.zona||'').trim()).filter(Boolean))].sort().map(z=>`<option value="${esc(z)}">`).join(''); };
+window.abrirModalNovoCliente=()=>{ window.cliIdEdicao=null;['cliNome','cliContacto','cliMorada','cliZona','cliObs'].forEach(i=>document.getElementById(i).value='');document.getElementById('cliAuditoria').innerHTML='';preencherZonas();window.abrirModal('modalCli'); };
+window.abrirEditarCliente=id=>{ window.cliIdEdicao=id;const c=window.db.clientes.find(x=>x.id==id);document.getElementById('cliNome').value=c.nome;document.getElementById('cliContacto').value=c.contacto||'';document.getElementById('cliMorada').value=c.morada||'';document.getElementById('cliZona').value=c.zona||'';document.getElementById('cliObs').value=c.obs||c.info||'';document.getElementById('cliAuditoria').innerHTML=textoAuditoria(c);preencherZonas();window.abrirModal('modalCli'); };
+window.salvarCliente=()=>{ const n=document.getElementById('cliNome').value.trim();if(!n){mostrarToast('Indica o nome','erro');return;}const d={nome:n,contacto:document.getElementById('cliContacto').value.trim(),morada:document.getElementById('cliMorada').value.trim(),zona:document.getElementById('cliZona').value.trim(),obs:document.getElementById('cliObs').value};if(window.cliIdEdicao){const i=window.db.clientes.findIndex(x=>x.id==window.cliIdEdicao);window.db.clientes[i]={...window.db.clientes[i],...d};}else{window.db.clientes.push({id:uid(),...d});}window.fecharModal('modalCli'); };
 
 // ── FINANÇAS ─────────────────────────────
-window.abrirEditarDespesa=id=>{ const d=window.db.despesas.find(x=>x.id==id);if(!d)return;window.despIdEdicao=id;document.getElementById('despDesc').value=d.desc;document.getElementById('despValor').value=d.valor;document.getElementById('despData').value=d.data;window.abrirModal('modalDespesa'); };
-window.abrirModalNovaDespesa=()=>{ window.despIdEdicao=null;document.getElementById('despDesc').value='';document.getElementById('despValor').value='';document.getElementById('despData').value=hoje();window.abrirModal('modalDespesa'); };
-window.salvarDespesa=()=>{ if(!document.getElementById('despDesc').value.trim()||toN(document.getElementById('despValor').value)<=0){mostrarToast('Preenche a descrição e o valor','erro');return;} if(window.despIdEdicao){const d=window.db.despesas.find(x=>x.id==window.despIdEdicao);d.desc=document.getElementById('despDesc').value.toUpperCase();d.valor=toN(document.getElementById('despValor').value);d.data=document.getElementById('despData').value;window.fecharModal('modalDespesa');return;} window.db.despesas.push({id:uid(),desc:document.getElementById('despDesc').value.toUpperCase(),valor:toN(document.getElementById('despValor').value),data:document.getElementById('despData').value});window.fecharModal('modalDespesa'); };
+window.abrirEditarDespesa=id=>{ const d=window.db.despesas.find(x=>x.id==id);if(!d)return;window.despIdEdicao=id;document.getElementById('despCategoria').innerHTML=opcoesCategorias(d.categoria||adivinharCategoria(d.desc)||'');document.getElementById('despDesc').value=d.desc||'';document.getElementById('despValor').value=d.valor;document.getElementById('despData').value=d.data;window.abrirModal('modalDespesa'); };
+window.abrirModalNovaDespesa=()=>{ window.despIdEdicao=null;document.getElementById('despCategoria').innerHTML='<option value="">— escolhe —</option>'+opcoesCategorias('');document.getElementById('despDesc').value='';document.getElementById('despValor').value='';document.getElementById('despData').value=hoje();window.abrirModal('modalDespesa'); };
+window.salvarDespesa=()=>{ const cat=document.getElementById('despCategoria').value, v=toN(document.getElementById('despValor').value);if(!cat||v<=0){mostrarToast('Escolhe a categoria e indica o valor','erro');return;} const d={categoria:cat,desc:document.getElementById('despDesc').value.trim(),valor:v,data:document.getElementById('despData').value}; if(window.despIdEdicao){Object.assign(window.db.despesas.find(x=>x.id==window.despIdEdicao),d);}else{window.db.despesas.push({id:uid(),...d});} window.fecharModal('modalDespesa'); };
 window.abrirModalNovoDividendo=()=>{ document.getElementById('divDesc').value='';document.getElementById('divValor').value='';document.getElementById('divData').value=hoje();window.abrirModal('modalDividendo'); };
 window.salvarDividendo=()=>{ if(toN(document.getElementById('divValor').value)<=0){mostrarToast('Indica o valor','erro');return;} window.db.dividendos.push({id:uid(),desc:document.getElementById('divDesc').value,valor:toN(document.getElementById('divValor').value),data:document.getElementById('divData').value});window.fecharModal('modalDividendo'); };
 window.confirmarSaldoInicial=()=>{ window.db.saldoInicial=toN(document.getElementById('inputSaldoInicial').value);window.fecharModal('modalSaldoInicial'); };
+
+// ── CATEGORIAS ───────────────────────────
+window.opcoesCategoriasNovo=()=>'<option value="">— escolhe —</option>'+opcoesCategorias('');
+const renderListaCategorias=()=>{ document.getElementById('listaCategoriasContainer').innerHTML=getCategorias().map(c=>`<div class="list-group-item d-flex justify-content-between align-items-center py-1"><span>${esc(c)}</span><i class="bi bi-trash text-danger" onclick="window.removerCategoria('${escJs(c)}')"></i></div>`).join(''); };
+window.abrirGerirCategorias=()=>{ ['modalDespesa','modalGastoLote'].forEach(m=>bootstrap.Modal.getInstance(document.getElementById(m))?.hide()); renderListaCategorias(); window.abrirModal('modalGerirCategorias'); };
+window.adicionarCategoria=()=>{ const i=document.getElementById('novaCategoria'),v=i.value.trim(); if(!v)return; if(!window.db.categoriasGasto||!window.db.categoriasGasto.length)window.db.categoriasGasto=[...CATEGORIAS_DEFAULT]; if(!window.db.categoriasGasto.some(c=>c.toLowerCase()===v.toLowerCase())){window.db.categoriasGasto.push(v);window.atualizarBD();} i.value=''; renderListaCategorias(); };
+window.removerCategoria=c=>{ const usada=(window.db.despesas||[]).some(d=>d.categoria===c)||(window.db.lotes||[]).some(l=>(l.gastosExtras||[]).some(g=>g.categoria===c)); if(usada){mostrarToast(`"${c}" está a ser usada — não pode ser apagada`,'erro');return;} if(!window.db.categoriasGasto||!window.db.categoriasGasto.length)window.db.categoriasGasto=[...CATEGORIAS_DEFAULT]; window.db.categoriasGasto=window.db.categoriasGasto.filter(x=>x!==c); window.atualizarBD(); renderListaCategorias(); };
+window.abrirCategorizar=()=>{
+    const itens=[];
+    (window.db.despesas||[]).filter(d=>!d.categoria).forEach(d=>itens.push({t:'d',id:d.id,lote:'',desc:d.desc,valor:d.valor,data:d.data,origem:'Gasto geral'}));
+    (window.db.lotes||[]).forEach(l=>(l.gastosExtras||[]).filter(g=>!g.categoria).forEach(g=>itens.push({t:'l',id:g.id,lote:l.id,desc:g.desc,valor:g.valor,data:g.data||l.data,origem:'Carga '+l.nome})));
+    itens.sort((a,b)=>(a.desc||'').localeCompare(b.desc||'','pt'));
+    document.getElementById('listaCategorizar').innerHTML=itens.map(x=>`<div class="d-flex align-items-center gap-2 py-1 border-bottom" data-t="${x.t}" data-id="${esc(x.id)}" data-lote="${esc(x.lote)}">
+        <div class="flex-grow-1 small"><b>${esc(x.desc||'—')}</b><br><span class="text-muted">${fmtData(x.data)} · ${toN(x.valor).toFixed(2)}€ · ${esc(x.origem)}</span></div>
+        <select class="form-select form-select-sm" style="max-width:150px">${'<option value="">—</option>'+opcoesCategorias(adivinharCategoria(x.desc)||'')}</select></div>`).join('')||'<p class="text-muted">Nada por categorizar.</p>';
+    window.abrirModal('modalCategorizar');
+};
+window.salvarCategorizacao=()=>{
+    let n=0;
+    document.querySelectorAll('#listaCategorizar [data-t]').forEach(row=>{
+        const cat=row.querySelector('select').value; if(!cat) return;
+        const id=row.dataset.id;
+        const item=row.dataset.t==='d' ? (window.db.despesas||[]).find(d=>String(d.id)===id)
+            : ((window.db.lotes||[]).find(l=>String(l.id)===row.dataset.lote)?.gastosExtras||[]).find(g=>String(g.id)===id);
+        if(item){ item.categoria=cat; n++; }
+    });
+    window.fecharModal('modalCategorizar');
+    if(n) setTimeout(()=>mostrarToast(`${n} gasto(s) categorizados`,'ok'),600);
+};
 
 // ── TIPOS ────────────────────────────────
 window.abrirGerirTipos=()=>{ document.getElementById('listaTiposContainer').innerHTML=(window.db.tiposLenha||[]).map(t=>`<div class="list-group-item d-flex justify-content-between py-1"><span>${esc(t)}</span><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.removerTipoMadeira('${escJs(t)}'))"></i></div>`).join('');window.abrirModal('modalGerirTipos'); };
