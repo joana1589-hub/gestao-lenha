@@ -106,6 +106,11 @@
         .cat-auto { font-style:italic; opacity:.75; }
         .chip-pessoa.btn-success::before { content:'✓ '; }
         .km-tag { font-size:.7rem; font-weight:600; color:var(--info); text-decoration:none; white-space:nowrap; }
+        .hist-dia { font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; margin:12px 0 4px; }
+        .hist-item { border:1px solid var(--border); border-radius:8px; padding:7px 10px; margin-bottom:6px; background:var(--surface); font-size:.8rem; }
+        .hist-item .linhas { color:var(--muted); font-size:.75rem; }
+        .verif-item { border-left:4px solid; padding:6px 10px; margin-bottom:6px; border-radius:6px; background:var(--surface2); font-size:.8rem; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+        .verif-erro { border-color:var(--danger); } .verif-aviso { border-color:var(--warning); } .verif-info { border-color:var(--info); }
         .por-tag { font-size:.65rem; color:var(--muted); }
 
         .btn-grande { height:92px; font-weight:700; font-size:.95rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:14px; box-shadow:0 3px 8px rgba(0,0,0,.08); }
@@ -261,6 +266,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHoras">⏱️ Horas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSim">🧮 Simular</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHist">📜 Histórico</button></li>
     </ul>
 
     <div class="tab-content shadow-sm mb-5">
@@ -482,6 +488,28 @@
             </div>
             <h6 class="fw-bold mt-3 text-muted small">RESUMO POR PESSOA</h6>
             <div id="horasResumoPessoa"></div>
+        </div>
+
+        <!-- HISTÓRICO + VERIFICAR -->
+        <div id="tabHist" class="tab-pane fade">
+            <div class="d-flex gap-2 mb-2">
+                <button class="btn btn-warning fw-bold flex-fill" onclick="window.verificarDados()">🔍 Verificar dados</button>
+                <button class="btn btn-outline-secondary" onclick="window.exportarBackup()" title="Cópia de segurança completa">💾 Cópia</button>
+            </div>
+            <div id="verifResultado"></div>
+            <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                <div class="fw-bold">📜 Histórico de movimentos</div>
+                <button class="btn btn-outline-success btn-sm py-0" onclick="window.exportarHistorico()"><i class="bi bi-download"></i> CSV</button>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-4"><select id="histPessoa" class="form-select form-select-sm" onchange="window.renderHistorico()"><option value="">Todos</option></select></div>
+                <div class="col-4"><select id="histTipo" class="form-select form-select-sm" onchange="window.renderHistorico()"><option value="">Tudo</option>
+                    <option value="encomendas">Encomendas</option><option value="clientes">Clientes</option><option value="despesas">Gastos</option><option value="lotes">Cargas</option>
+                    <option value="horas">Horas</option><option value="dividendos">Dividendos</option><option value="definicoes">Definições</option><option value="apagou">🗑️ Só apagados</option></select></div>
+                <div class="col-4"><input type="text" id="histTexto" class="form-control form-control-sm" placeholder="🔍 Procurar" oninput="window.renderHistorico()"></div>
+            </div>
+            <div id="histLista"></div>
+            <button id="histMais" class="btn btn-outline-secondary btn-sm w-100 mt-2" style="display:none" onclick="window.carregarHistorico(false)">Carregar mais antigos</button>
         </div>
 
         <!-- SIMULAR PREÇO -->
@@ -832,7 +860,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, onSnapshot, getDoc, getDocs, writeBatch, query, orderBy, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -1176,31 +1204,46 @@ window.avisar=(msg,fn)=>{ document.getElementById('avisoMsg').innerHTML=msg; con
 window.atualizarBD=async()=>{
     window.render();
     if(!_carregado||!_base){ mostrarToast('Ainda a carregar dados — tenta daqui a pouco','erro'); return; }
-    const ops=[];
+    const ops=[], hist=[], t=agoraIso();
+    const registar=(acao,col,id,antesObj,depoisObj)=>{
+        if(acao==='criou'&&window._repor&&window._repor.col===col&&window._repor.id===id){ acao='repôs'; window._repor=null; }
+        const texto=acao==='repôs'?[`Repôs ${(NOMES_COL[col]||col).toLowerCase()} apagado: ${rotulo(col,depoisObj)}`]:descreverMudanca(acao,col,antesObj,depoisObj); if(!texto.length) return;
+        const h={id:uid(),em:t,por:quem(),porEmail:(window._utilizador&&window._utilizador.email)||'',acao,col,docId:id,texto,
+            antes:antesObj?limparHist(antesObj):null,depois:depoisObj?limparHist(depoisObj):null};
+        hist.push(h);
+    };
     COLS.forEach(c=>{
         const antes=_base[c]||{}, agora={};
         (window.db[c]||[]).forEach(item=>{
             if(!item||item.id==null) return;
             const id=docId(item.id);
             if(antes[id]!==JSON.stringify(item)){
-                // quem fez o quê: carimbo automático em cada registo criado/alterado
-                const t=agoraIso();
-                if(!(id in antes)&&!item.criadoPor){ item.criadoPor=quem(); item.criadoEm=t; }
-                item.alteradoPor=quem(); item.alteradoEm=t;
+                const antesObj=id in antes?JSON.parse(antes[id]):null;
+                // quem fez o quê: carimbo só quando muda algo que interessa (não por cálculos automáticos de km)
+                if(!antesObj||mudouAlgo(antesObj,item)){
+                    if(!antesObj&&!item.criadoPor){ item.criadoPor=quem(); item.criadoEm=t; }
+                    item.alteradoPor=quem(); item.alteradoEm=t;
+                    registar(antesObj?'alterou':'criou',c,id,antesObj,item);
+                }
                 ops.push(b=>b.set(doc(colRef(c),id),item));
             }
             agora[id]=JSON.stringify(item);
         });
-        Object.keys(antes).forEach(id=>{ if(!(id in agora)) ops.push(b=>b.delete(doc(colRef(c),id))); });
+        Object.keys(antes).forEach(id=>{ if(!(id in agora)){ ops.push(b=>b.delete(doc(colRef(c),id))); registar('apagou',c,id,JSON.parse(antes[id]),null); } });
         _base[c]=agora;
     });
-    const cfgMud={};
+    const cfgMud={}, cfgAntes={};
     Object.keys(window.db).forEach(k=>{
         if(COLS.includes(k)) return;
         const j=JSON.stringify(window.db[k]);
-        if(j!==undefined&&_base._config[k]!==j){ cfgMud[k]=window.db[k]; _base._config[k]=j; }
+        if(j!==undefined&&_base._config[k]!==j){ cfgMud[k]=window.db[k]; cfgAntes[k]=_base._config[k]!=null?JSON.parse(_base._config[k]):null; _base._config[k]=j; }
     });
-    if(Object.keys(cfgMud).length) ops.push(b=>b.set(configRef,cfgMud,{merge:true}));
+    if(Object.keys(cfgMud).length){
+        ops.push(b=>b.set(configRef,cfgMud,{merge:true}));
+        const ks=Object.keys(cfgMud).filter(k=>!CFG_IGNORAR.includes(k));
+        if(ks.length) registar('alterou','definicoes','v2',Object.fromEntries(ks.map(k=>[k,cfgAntes[k]])),Object.fromEntries(ks.map(k=>[k,cfgMud[k]])));
+    }
+    hist.forEach(h=>ops.push(b=>b.set(doc(colRef('historico'),h.id),h)));
     if(!ops.length) return;
 
     const gravar=async()=>{ for(let i=0;i<ops.length;i+=450){ const b=writeBatch(db2); ops.slice(i,i+450).forEach(f=>f(b)); await b.commit(); } };
@@ -1217,11 +1260,188 @@ window.addEventListener('offline',()=>mostrarToast('Sem rede — podes continuar
 window.addEventListener('online',()=>mostrarToast('Ligação recuperada — a sincronizar','ok'));
 window.addEventListener('online',()=>setTimeout(()=>window.calcularDistancias&&window.calcularDistancias(),3000));
 
+// ── HISTÓRICO: descrição legível de cada mudança ──
+const IGNORAR=['criadoPor','criadoEm','alteradoPor','alteradoEm','lat','lon','km','kmMin','kmAprox','kmEnd','kmErro'];
+const CFG_IGNORAR=['base','_migradoEm'];
+const semIgnorados=o=>{ const r={}; Object.keys(o||{}).sort().forEach(k=>{ if(!IGNORAR.includes(k)) r[k]=o[k]; }); return r; };
+const mudouAlgo=(a,b)=>JSON.stringify(semIgnorados(a))!==JSON.stringify(semIgnorados(b));
+const limparHist=o=>JSON.parse(JSON.stringify(o));
+const NOMES_COL={clientes:'Cliente',encomendas:'Encomenda',despesas:'Gasto',lotes:'Carga',dividendos:'Dividendo',horas:'Horas',definicoes:'Definições'};
+const nomeCliente=id=>{ const c=(window.db.clientes||[]).find(x=>x.id==id); return c?c.nome:'(cliente apagado)'; };
+const fmtV=(k,v)=>{ if(v==null||v==='') return '—'; if(Array.isArray(v)) return v.length+' itens'; if(typeof v==='object') return '…';
+    if(/valor|preco|custo|acrescimo|saldo/i.test(k)&&!isNaN(v)) return toN(v).toFixed(2).replace('.',',')+'€';
+    if(/^data/.test(k)) return fmtData(v); if(typeof v==='boolean') return v?'sim':'não'; return String(v); };
+const CAMPOS={nome:'nome',contacto:'telefone',morada:'morada',zona:'zona',obs:'notas',tipoLenha:'tipo',dataEnc:'data',metrosTotal:'m³',precoM3:'€/m³',valorTotal:'total',
+    clienteId:'cliente',desc:'descrição',categoria:'categoria',valor:'valor',data:'data',custoCompra:'valor de compra',m3Comprados:'m³ comprados',horas:'horas',valorHora:'€/h',pago:'pago',loteId:'carga',
+    saldoInicial:'saldo inicial da caixa',precosMemoria:'preços base',faixasKm:'preços por distância',carrinhas:'carrinhas',trabalhadores:'trabalhadores',precoCombustivel:'preço do combustível',
+    tiposLenha:'tipos de lenha',categoriasGasto:'categorias de gastos',tiposTrabalho:'tipos de trabalho',ultimoBackup:'cópia de segurança',valorHoraSocios:'€/h sócios'};
+const rotulo=(col,o)=>{ if(!o) return '';
+    switch(col){
+        case 'clientes': return o.nome||'';
+        case 'encomendas': return `${nomeCliente(o.clienteId)} · ${toN(o.metrosTotal)} m³ ${o.tipoLenha||''} · ${r2(o.valorTotal).toFixed(2).replace('.',',')}€`;
+        case 'despesas': return `${o.categoria||catDe(o)} ${o.desc||''} · ${fmtV('valor',o.valor)}`.trim();
+        case 'lotes': return `${o.nome||''} · ${fmtV('custo',o.custoCompra)}`;
+        case 'dividendos': return `${o.desc||''} · ${fmtV('valor',o.valor)}`;
+        case 'horas': return `${o.nome||''} ${toN(o.horas)}h ${fmtData(o.data)}${o.pago?' (paga)':''}`;
+        default: return '';
+    } };
+function difSub(lista1,lista2,campo,nome,un){
+    const a=new Map((lista1||[]).map(x=>[String(x.id),x])), b=new Map((lista2||[]).map(x=>[String(x.id),x])), out=[];
+    b.forEach((x,id)=>{ const y=a.get(id); const v=un==='€'?fmtV('valor',x[campo]):toN(x[campo])+' '+un;
+        if(!y) out.push(`+ ${nome} ${v} (${fmtData(x.data)})`);
+        else if(toN(y[campo])!==toN(x[campo])||y.data!==x.data) out.push(`✎ ${nome} ${un==='€'?fmtV('valor',y[campo]):toN(y[campo])+' '+un} (${fmtData(y.data)}) → ${v} (${fmtData(x.data)})`); });
+    a.forEach((y,id)=>{ if(!b.has(id)) out.push(`− ${nome} ${un==='€'?fmtV('valor',y[campo]):toN(y[campo])+' '+un} (${fmtData(y.data)}) apagado`); });
+    return out;
+}
+function descreverMudanca(acao,col,a,b){
+    const N=NOMES_COL[col]||col;
+    if(acao==='criou') return [`Criou ${N.toLowerCase()}: ${rotulo(col,b)}`];
+    if(acao==='apagou') return [`Apagou ${N.toLowerCase()}: ${rotulo(col,a)}`];
+    if(col==='definicoes') return Object.keys(b).map(k=>k==='ultimoBackup'?'Fez cópia de segurança':
+        (typeof b[k]==='object'&&b[k]!==null?`Alterou ${CAMPOS[k]||k}`:`Alterou ${CAMPOS[k]||k}: ${fmtV(k,a[k])} → ${fmtV(k,b[k])}`));
+    const out=[];
+    if(col==='encomendas'){ out.push(...difSub(a.entregas,b.entregas,'m3','Entrega','m³')); out.push(...difSub(a.pagamentos,b.pagamentos,'valor','Pagamento','€')); }
+    if(col==='lotes'){ out.push(...difSub(a.saidasLenha,b.saidasLenha,'valor','Recebido','€')); out.push(...difSub(a.gastosExtras,b.gastosExtras,'valor','Gasto extra','€')); }
+    const sa=semIgnorados(a), sb=semIgnorados(b);
+    new Set([...Object.keys(sa),...Object.keys(sb)]).forEach(k=>{
+        if(['entregas','pagamentos','saidasLenha','gastosExtras','id','trabalho'].includes(k)) return;
+        if(JSON.stringify(sa[k])===JSON.stringify(sb[k])) return;
+        if(k==='clienteId') out.push(`cliente: ${nomeCliente(sa[k])} → ${nomeCliente(sb[k])}`);
+        else if(k==='loteId'){ const l=id=>((window.db.lotes||[]).find(x=>String(x.id)===String(id))||{}).nome||'—'; out.push(`carga: ${l(sa[k])} → ${l(sb[k])}`); }
+        else out.push(`${CAMPOS[k]||k}: ${fmtV(k,sa[k])} → ${fmtV(k,sb[k])}`);
+    });
+    return out.length?[`${N} ${rotulo(col,b)}`,...out]:[];
+}
+
+// ── SEPARADOR HISTÓRICO ──────────────────
+let _hist=[], _histUltimo=null, _histFim=false, _histACarregar=false;
+window.carregarHistorico=async(reset=true)=>{
+    if(_histACarregar) return; _histACarregar=true;
+    try{
+        if(reset){ _hist=[]; _histUltimo=null; _histFim=false; }
+        const q=_histUltimo?query(colRef('historico'),orderBy('em','desc'),startAfter(_histUltimo),limit(100)):query(colRef('historico'),orderBy('em','desc'),limit(100));
+        const snap=await getDocs(q);
+        snap.docs.forEach(d=>_hist.push(d.data()));
+        _histUltimo=snap.docs.length?snap.docs[snap.docs.length-1]:_histUltimo;
+        _histFim=snap.docs.length<100;
+    }catch(e){ console.error(e); document.getElementById('histLista').innerHTML='<div class="alert alert-warning small">Não consegui carregar o histórico.</div>'; }
+    finally{ _histACarregar=false; window.renderHistorico(); }
+};
+const ICONE_ACAO={criou:'🟢',alterou:'✏️',apagou:'🗑️','repôs':'↩️'};
+window.renderHistorico=()=>{
+    const p=document.getElementById('histPessoa'), cp=p.value, pessoas=[...new Set(_hist.map(h=>h.por))].sort();
+    p.innerHTML='<option value="">Todos</option>'+pessoas.map(x=>`<option ${x===cp?'selected':''}>${esc(x)}</option>`).join('');
+    const tipo=document.getElementById('histTipo').value, txt=document.getElementById('histTexto').value.toLowerCase();
+    const lista=_hist.filter(h=>(!cp||h.por===cp)&&(!tipo||(tipo==='apagou'?h.acao==='apagou':h.col===tipo))&&(!txt||(h.texto||[]).join(' ').toLowerCase().includes(txt)));
+    let dia='', html='';
+    lista.forEach(h=>{
+        const d=(h.em||'').slice(0,10);
+        if(d!==dia){ dia=d; html+=`<div class="hist-dia">${d===hoje()?'Hoje':fmtData(d)}</div>`; }
+        const existe=h.acao==='apagou'&&(window.db[h.col]||[]).some(x=>docId(x.id)===h.docId);
+        const hora=new Date(h.em).toTimeString().slice(0,5);
+        html+=`<div class="hist-item"><div class="d-flex justify-content-between gap-2"><span>${ICONE_ACAO[h.acao]||'•'} <b>${esc((h.texto||[])[0]||'')}</b></span><span class="text-nowrap small text-muted">${hora} · <b>${esc(h.por)}</b></span></div>
+            ${(h.texto||[]).length>1?`<div class="linhas">${h.texto.slice(1).map(esc).join('<br>')}</div>`:''}
+            ${h.acao==='apagou'&&h.antes&&COLS.includes(h.col)?(existe?'<div class="small text-success mt-1">✓ já foi reposto</div>':`<button class="btn btn-outline-primary btn-sm py-0 mt-1" onclick="window.reporApagado('${escJs(h.id)}')">↩️ Repor</button>`):''}
+        </div>`;
+    });
+    document.getElementById('histLista').innerHTML=html||`<p class="text-muted text-center my-3">${_hist.length?'Nada com estes filtros.':'Ainda não há movimentos registados. A partir de agora, tudo o que fizerem fica aqui.'}</p>`;
+    document.getElementById('histMais').style.display=_histFim?'none':'';
+};
+window.reporApagado=hid=>{
+    const h=_hist.find(x=>x.id===hid); if(!h||!h.antes) return;
+    window.confirmar(`Repor: ${(h.texto||[])[0].replace(/^Apagou /,'')}?`,()=>{
+        const o=JSON.parse(JSON.stringify(h.antes)); delete o.alteradoPor; delete o.alteradoEm; window._repor={col:h.col,id:h.docId};
+        window.db[h.col]=[...(window.db[h.col]||[]),o]; window.atualizarBD();
+        setTimeout(()=>window.carregarHistorico(true),800);
+    });
+};
+window.exportarHistorico=()=>{
+    const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
+    const linhas=_hist.map(h=>[h.em.slice(0,10),new Date(h.em).toTimeString().slice(0,5),q(h.por),h.acao,q(NOMES_COL[h.col]||h.col),q((h.texto||[]).join(' | '))].join(','));
+    const blob=new Blob(['﻿'+['Data,Hora,Quem,Ação,Tipo,Detalhe',...linhas].join('\n')],{type:'text/csv;charset=utf-8;'});
+    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`historico_${hoje()}.csv`}).click();
+};
+document.addEventListener('shown.bs.tab',e=>{ if(e.target.getAttribute('data-bs-target')==='#tabHist') window.carregarHistorico(true); });
+
+// ── VERIFICAR DADOS ──────────────────────
+window.verificarDados=()=>{
+    const P=[], add=(nivel,texto,acao)=>P.push({nivel,texto,acao});
+    const hj=hoje(), amanha=(()=>{ const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+    const dataOk=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'');
+    const abrirEnc=id=>`window.abrirEditarEncomenda('${escJs(id)}')`;
+    (window.db.encomendas||[]).forEach(e=>{
+        const cli=(window.db.clientes||[]).find(c=>c.id==e.clienteId), nome=cli?cli.nome:'(cliente apagado)';
+        const lbl=`${esc(nome)} · enc. ${fmtData(e.dataEnc)||'sem data'}`;
+        const mT=r3(e.metrosTotal), vT=r2(e.valorTotal), mE=somaM3(e.entregas), vP=somaEur(e.pagamentos);
+        if(!cli) add('aviso',`${lbl}: o cliente foi apagado (os valores continuam a contar).`,abrirEnc(e.id));
+        if(!dataOk(e.dataEnc)) add('erro',`${lbl}: encomenda sem data.`,abrirEnc(e.id));
+        if(mT<=0) add('erro',`${lbl}: encomenda com 0 m³.`,abrirEnc(e.id));
+        if(vT<=0) add('aviso',`${lbl}: total da encomenda é 0€.`,abrirEnc(e.id));
+        if(mT>0&&toN(e.precoM3)>0&&Math.abs(r2(mT*toN(e.precoM3))-vT)>0.05) add('erro',`${lbl}: total ${vT.toFixed(2)}€ não bate com ${mT} m³ × ${toN(e.precoM3)}€ = ${r2(mT*toN(e.precoM3)).toFixed(2)}€.`,abrirEnc(e.id));
+        if(mE>mT+0.001) add('erro',`${lbl}: entregues ${mE} m³, mais do que os ${mT} m³ encomendados.`,`window.abrirEntrega('${escJs(e.id)}')`);
+        if(vP>vT+0.01) add('aviso',`${lbl}: pago ${vP.toFixed(2)}€, mais do que o total de ${vT.toFixed(2)}€ (+${(vP-vT).toFixed(2)}€).`,`window.abrirPagamento('${escJs(e.id)}')`);
+        (e.entregas||[]).forEach(x=>{ if(toN(x.m3)<=0) add('erro',`${lbl}: entrega com 0 m³.`,`window.abrirEntrega('${escJs(e.id)}')`);
+            if(!dataOk(x.data)) add('erro',`${lbl}: entrega sem data.`,`window.abrirEntrega('${escJs(e.id)}')`);
+            else if(x.data>amanha) add('aviso',`${lbl}: entrega com data no futuro (${fmtData(x.data)}).`,`window.abrirEntrega('${escJs(e.id)}')`);
+            else if(dataOk(e.dataEnc)&&x.data<e.dataEnc) add('info',`${lbl}: entrega (${fmtData(x.data)}) antes da data da encomenda.`,`window.abrirEntrega('${escJs(e.id)}')`); });
+        (e.pagamentos||[]).forEach(x=>{ if(toN(x.valor)<=0) add('erro',`${lbl}: pagamento de 0€.`,`window.abrirPagamento('${escJs(e.id)}')`);
+            if(!dataOk(x.data)) add('erro',`${lbl}: pagamento sem data.`,`window.abrirPagamento('${escJs(e.id)}')`);
+            else if(x.data>amanha) add('aviso',`${lbl}: pagamento com data no futuro (${fmtData(x.data)}).`,`window.abrirPagamento('${escJs(e.id)}')`); });
+        const pagIg={}; (e.pagamentos||[]).forEach(x=>{ const k=x.data+'|'+r2(x.valor); pagIg[k]=(pagIg[k]||0)+1; });
+        Object.entries(pagIg).forEach(([k,n])=>{ if(n>1) add('aviso',`${lbl}: ${n} pagamentos iguais de ${k.split('|')[1]}€ no mesmo dia (${fmtData(k.split('|')[0])}) — repetido?`,`window.abrirPagamento('${escJs(e.id)}')`); });
+        if(mE>=mT&&vP<vT-0.01&&dataOk(e.dataEnc)){ const d=diasDesde((e.entregas||[]).reduce((m,x)=>x.data>m?x.data:m,'')||e.dataEnc); if(d>180) add('info',`${lbl}: dívida de ${(vT-vP).toFixed(2)}€ com ${d} dias.`,`window.abrirPagamento('${escJs(e.id)}')`); }
+    });
+    // gastos
+    const vistos={};
+    (window.db.despesas||[]).forEach(d=>{
+        const lbl=`Gasto ${esc(catDe(d))} ${esc(d.desc||'')} ${fmtV('valor',d.valor)}`;
+        if(toN(d.valor)<=0) add('erro',`${lbl}: valor 0€.`,`window.abrirEditarDespesa('${escJs(d.id)}')`);
+        if(!dataOk(d.data)) add('erro',`${lbl}: sem data (não entra no Dashboard).`,`window.abrirEditarDespesa('${escJs(d.id)}')`);
+        else if(d.data>amanha) add('aviso',`${lbl}: data no futuro (${fmtData(d.data)}).`,`window.abrirEditarDespesa('${escJs(d.id)}')`);
+        const k=[d.data,r2(d.valor),(d.categoria||'')+(d.desc||'').toLowerCase()].join('|');
+        if(vistos[k]) add('aviso',`${lbl} em ${fmtData(d.data)}: há outro gasto igual no mesmo dia — repetido?`,`window.abrirEditarDespesa('${escJs(d.id)}')`); vistos[k]=1;
+    });
+    // mão de obra a dobrar: gasto "Mão de obra" no mesmo dia de horas pagas
+    (window.db.horas||[]).filter(h=>h.pago).forEach(h=>{
+        const dup=(window.db.despesas||[]).find(d=>d.data===h.data&&(d.categoria==='Mão de obra'||(d.desc||'').toLowerCase().includes((h.nome||'').toLowerCase())));
+        if(dup) add('erro',`${esc(h.nome)} ${fmtData(h.data)}: tem horas pagas e também um gasto "${esc(dup.categoria||dup.desc)}" de ${fmtV('valor',dup.valor)} no mesmo dia — conta a dobrar?`,`window.abrirEditarDespesa('${escJs(dup.id)}')`);
+    });
+    // horas
+    const porDia={};
+    (window.db.horas||[]).forEach(h=>{ const lbl=`Horas ${esc(h.nome)} ${fmtData(h.data)}`;
+        if(toN(h.horas)<=0) add('erro',`${lbl}: 0 horas.`,`window.abrirEditarHora('${escJs(h.id)}')`);
+        if(!dataOk(h.data)) add('erro',`${lbl}: sem data.`,`window.abrirEditarHora('${escJs(h.id)}')`);
+        if(taxaDe(h)<=0) add('aviso',`${lbl}: sem preço por hora.`,`window.irPara('tabHoras')`);
+        const k=h.nome+'|'+h.data; porDia[k]=(porDia[k]||0)+toN(h.horas); });
+    Object.entries(porDia).forEach(([k,n])=>{ if(n>14) add('aviso',`${esc(k.split('|')[0])} tem ${n}h registadas em ${fmtData(k.split('|')[1])} — registado duas vezes?`,`window.irPara('tabHoras')`); });
+    // cargas
+    (window.db.lotes||[]).forEach(l=>{ const lbl=`Carga ${esc(l.nome)}`;
+        if(toN(l.custoCompra)<=0) add('erro',`${lbl}: sem valor de compra.`,`window.abrirEditarLote('${escJs(l.id)}')`);
+        if(!dataOk(l.data)) add('erro',`${lbl}: sem data.`,`window.abrirEditarLote('${escJs(l.id)}')`);
+        const m3V=(l.saidasLenha||[]).reduce((a,x)=>a+toN(x.m3),0);
+        if(toN(l.m3Comprados)>0&&m3V>toN(l.m3Comprados)*1.15) add('info',`${lbl}: recebido ${m3V.toFixed(1)} m³ mas só tem ≈ ${toN(l.m3Comprados)} m³ comprados — corrigir os m³?`,`window.abrirEditarLote('${escJs(l.id)}')`);
+        (l.gastosExtras||[]).forEach(g=>{ if(toN(g.valor)<=0) add('erro',`${lbl}: gasto extra de 0€.`,`window.irPara('tabLotes')`); }); });
+    // dividendos
+    (window.db.dividendos||[]).forEach(d=>{ if(toN(d.valor)<=0) add('erro',`Dividendo ${esc(d.desc||'')}: valor 0€.`,`window.irPara('tabFin')`); if(!dataOk(d.data)) add('aviso',`Dividendo ${esc(d.desc||'')}: sem data.`,`window.irPara('tabFin')`); });
+    // clientes repetidos
+    const norm=n=>String(n||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(), nomes={};
+    (window.db.clientes||[]).forEach(c=>{ const k=norm(c.nome); if(nomes[k]) add('aviso',`Cliente "${esc(c.nome)}" aparece mais do que uma vez.`,`window.irPara('tabCli')`); nomes[k]=1; });
+    if(toN(window.db.saldoInicial)===0) add('info','Saldo inicial da caixa está a 0€ — confirma no botão CAIXA.',"document.querySelector('[onclick*=modalSaldoInicial]').click()");
+
+    const ordem={erro:0,aviso:1,info:2}; P.sort((a,b)=>ordem[a.nivel]-ordem[b.nivel]);
+    const n=k=>P.filter(p=>p.nivel===k).length;
+    const tit={erro:'🔴 Erro',aviso:'🟡 A verificar',info:'🔵 Informação'};
+    document.getElementById('verifResultado').innerHTML=`<div class="alert ${n('erro')?'alert-danger':n('aviso')?'alert-warning':'alert-success'} py-2 small mb-2">
+        ${P.length?`Encontrei <b>${n('erro')}</b> erro(s), <b>${n('aviso')}</b> coisa(s) a verificar e <b>${n('info')}</b> nota(s).`:'✅ Não encontrei nada de errado nos dados.'}
+        <span class="text-muted">· ${(window.db.encomendas||[]).length} encomendas, ${(window.db.despesas||[]).length} gastos, ${(window.db.lotes||[]).length} cargas, ${(window.db.horas||[]).length} registos de horas verificados</span></div>`+
+        P.map(p=>`<div class="verif-item verif-${p.nivel}"><span><small class="fw-bold">${tit[p.nivel]}</small><br>${p.texto}</span>${p.acao?`<button class="btn btn-sm btn-outline-primary py-0 text-nowrap" onclick="${p.acao}">Abrir</button>`:''}</div>`).join('');
+};
+
 // ── MIGRAÇÃO LEGACY ──────────────────────
 function migrarLegacy(){ let alt=false; (window.db.encomendas||[]).forEach(e=>{ if(!e.entregas&&toN(e.metrosEntregues)>0){e.entregas=[{id:'leg-e-'+e.id,data:e.dataEnc,m3:toN(e.metrosEntregues)}];alt=true;} if(!e.pagamentos&&toN(e.valorPago)>0){e.pagamentos=[{id:'leg-p-'+e.id,data:e.dataEnc,valor:toN(e.valorPago)}];alt=true;} if(!e.entregas)e.entregas=[]; if(!e.pagamentos)e.pagamentos=[]; }); if(alt)window.atualizarBD(); }
 
 // ── FILTROS ANO ──────────────────────────
-function popularFiltrosAnos(){ const anos=new Set([new Date().getFullYear().toString()]); (window.db.encomendas||[]).forEach(e=>e.dataEnc&&anos.add(e.dataEnc.split('-')[0])); const lista=Array.from(anos).sort().reverse(); const fill=(id,comTodos)=>{ const s=document.getElementById(id),cur=s.value; s.innerHTML=(comTodos?'<option value="">Todos os anos</option>':'')+lista.map(a=>`<option value="${a}" ${a==cur?'selected':''}>${a}</option>`).join(''); }; fill('dashFiltroAno'); ['filtroEncAno','filtroDivAno','filtroVenAno'].forEach(id=>fill(id,true)); }
+function popularFiltrosAnos(){ const anos=new Set([new Date().getFullYear().toString()]); (window.db.encomendas||[]).forEach(e=>e.dataEnc&&anos.add(e.dataEnc.split('-')[0])); [...(window.db.despesas||[]),...(window.db.lotes||[])].forEach(x=>x.data&&anos.add(x.data.split('-')[0])); const lista=Array.from(anos).sort().reverse(); const fill=(id,comTodos)=>{ const s=document.getElementById(id),cur=s.value; s.innerHTML=(comTodos?'<option value="">Todos os anos</option>':'')+lista.map(a=>`<option value="${a}" ${a==cur?'selected':''}>${a}</option>`).join(''); }; fill('dashFiltroAno'); ['filtroEncAno','filtroDivAno','filtroVenAno'].forEach(id=>fill(id,true)); }
 
 // ── MODAIS ───────────────────────────────
 window.limparResiduos=()=>{ document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); document.body.classList.remove('modal-open'); document.body.style.overflow=''; };
@@ -1530,7 +1750,7 @@ document.addEventListener('shown.bs.tab',e=>{
     document.querySelectorAll('#navFundo button').forEach(b=>b.classList.toggle('ativo',b.dataset.tab===id||(b.dataset.tab==='mais'&&!fundo.includes(id))));
 });
 window.abrirMais=()=>{
-    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço']];
+    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabHist','📜','Histórico']];
     document.getElementById('maisBotoes').innerHTML=itens.map(([id,ic,t])=>`<div class="col-4"><button class="btn btn-outline-secondary w-100 btn-mais" onclick="window.irPara('${id}')"><span>${ic}</span>${t}</button></div>`).join('')+
         `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.exportarBackup()">💾 Cópia de segurança</button></div>`;
     window.abrirModal('modalMais');

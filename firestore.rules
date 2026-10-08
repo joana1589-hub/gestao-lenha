@@ -14,13 +14,19 @@ service cloud.firestore {
     // Dados atuais: definições em producao/v2 e cada registo em producao/v2/<coleção>/<id>
     match /producao/v2 {
       allow read, write: if autorizado();
+
+      // Histórico de movimentos: só se pode acrescentar — ninguém altera nem apaga
+      match /historico/{id} {
+        allow read, create: if autorizado();
+        allow update, delete: if false;
+      }
+
       match /{colecao}/{id} {
-        allow read, write: if autorizado();
+        allow read, write: if autorizado() && colecao != 'historico';
       }
     }
 
-    // Documento antigo: só leitura (fica como cópia de segurança).
-    // Se alguém ainda tiver a versão antiga aberta, vê "Erro ao guardar" em vez de gravar num sítio que já não é usado.
+    // Documento antigo: só leitura (cópia de segurança)
     match /producao/dados_mestre {
       allow read: if autorizado();
       allow write: if false;
