@@ -552,11 +552,14 @@
 
             <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
                 <div class="fw-bold mb-1">📏 Preços por distância</div>
-                <div class="small text-muted mb-2">Acréscimo por m³ conforme os km (só ida) desde a partida. Soma-se ao preço base de cada tipo.</div>
+                <div class="small text-muted mb-2">Quanto se soma <b>por m³</b> ao preço base, conforme os km (só ida) desde a partida.</div>
                 <div id="simFaixas"></div>
-                <div class="d-flex gap-1 mt-1">
-                    <div class="input-group input-group-sm"><span class="input-group-text">até</span><input type="number" id="novaFaixaKm" class="form-control" step="1" min="1" inputmode="numeric"><span class="input-group-text">km</span></div>
-                    <div class="input-group input-group-sm"><span class="input-group-text">+</span><input type="number" id="novaFaixaAcr" class="form-control" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">€/m³</span></div>
+                <div class="d-flex gap-1 mt-2 align-items-center flex-wrap p-1 rounded" style="background:var(--surface2)">
+                    <span class="small fw-bold">Nova faixa:</span>
+                    <span class="small" id="novaFaixaDe">de 0 a</span>
+                    <div class="input-group input-group-sm" style="max-width:100px"><input type="number" id="novaFaixaKm" class="form-control" step="1" min="1" inputmode="numeric" placeholder="5"><span class="input-group-text">km</span></div>
+                    <span class="small">→ +</span>
+                    <div class="input-group input-group-sm" style="max-width:130px"><input type="number" id="novaFaixaAcr" class="form-control" step="0.5" min="0" inputmode="decimal" placeholder="0"><span class="input-group-text">€ por m³</span></div>
                     <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarFaixa()">+</button>
                 </div>
             </div>
@@ -1886,18 +1889,20 @@ const fmtE=v=>v.toFixed(2).replace('.',',')+'€';
 window.adicionarFaixa=()=>{ const km=toN(document.getElementById('novaFaixaKm').value), a=toN(document.getElementById('novaFaixaAcr').value);
     if(km<=0){ mostrarToast('Indica até quantos km','erro'); return; }
     window.db.faixasKm=[...getFaixas().filter(f=>toN(f.ate)!==km),{ate:km,acrescimo:a}]; window.atualizarBD();
-    document.getElementById('novaFaixaKm').value=''; document.getElementById('novaFaixaAcr').value=''; };
+    document.getElementById('novaFaixaKm').value=''; document.getElementById('novaFaixaAcr').value=''; document.activeElement&&document.activeElement.blur(); renderSimulador(); };
 window.alterarFaixa=(ate,campo,v)=>{ window.db.faixasKm=getFaixas().map(f=>toN(f.ate)===toN(ate)?{...f,[campo]:toN(v)}:f); window.atualizarBD(); };
-window.removerFaixa=ate=>{ window.db.faixasKm=getFaixas().filter(f=>toN(f.ate)!==toN(ate)); window.atualizarBD(); };
+window.removerFaixa=ate=>{ window.db.faixasKm=getFaixas().filter(f=>toN(f.ate)!==toN(ate)); window.atualizarBD(); renderSimulador(); };
 window.alterarPrecoBase=(t,v)=>{ window.db.precosMemoria={...(window.db.precosMemoria||{}),[t]:toN(v)}; window.atualizarBD(); };
 
 function renderSimulador(){
     const f=getFaixas();
-    document.getElementById('simFaixas').innerHTML=f.map((x,i)=>`<div class="d-flex gap-1 align-items-center mb-1">
-        <span class="small flex-grow-1">${i>0?toN(f[i-1].ate):0}–</span>
-        <div class="input-group input-group-sm" style="max-width:110px"><input type="number" class="form-control text-end" value="${toN(x.ate)}" step="1" inputmode="numeric" onchange="window.alterarFaixa(${toN(x.ate)},'ate',this.value)"><span class="input-group-text">km</span></div>
-        <div class="input-group input-group-sm" style="max-width:130px"><span class="input-group-text">+</span><input type="number" class="form-control text-end" value="${toN(x.acrescimo)}" step="0.5" inputmode="decimal" onchange="window.alterarFaixa(${toN(x.ate)},'acrescimo',this.value)"><span class="input-group-text">€</span></div>
-        <i class="bi bi-trash text-danger" onclick="window.removerFaixa(${toN(x.ate)})"></i></div>`).join('')+(f.length?`<div class="small text-muted mb-1">Acima de ${toN(f[f.length-1].ate)} km: +${toN(f[f.length-1].acrescimo)}€/m³</div>`:'<div class="small text-danger mb-1">Ainda sem faixas — acrescenta abaixo (ex: até 10 km +0€; até 20 km +5€).</div>');
+    document.getElementById('simFaixas').innerHTML=f.map((x,i)=>`<div class="d-flex gap-1 align-items-center mb-1 flex-nowrap">
+        <span class="small text-nowrap" style="min-width:46px">de ${i>0?toN(f[i-1].ate):0} a</span>
+        <div class="input-group input-group-sm" style="max-width:88px"><input type="number" class="form-control text-end" value="${toN(x.ate)}" step="1" inputmode="numeric" onchange="window.alterarFaixa(${toN(x.ate)},'ate',this.value)"><span class="input-group-text">km</span></div>
+        <span class="small text-nowrap">→ +</span>
+        <div class="input-group input-group-sm" style="max-width:112px"><input type="number" class="form-control text-end" value="${toN(x.acrescimo)}" step="0.5" inputmode="decimal" onchange="window.alterarFaixa(${toN(x.ate)},'acrescimo',this.value)"><span class="input-group-text">€/m³</span></div>
+        <i class="bi bi-trash text-danger" onclick="window.removerFaixa(${toN(x.ate)})"></i></div>`).join('')+(f.length?`<div class="small text-muted mb-1">Acima de ${toN(f[f.length-1].ate)} km: +${toN(f[f.length-1].acrescimo)} € por m³ (o da última faixa). Para outro valor, acrescenta mais uma faixa.</div>`:'<div class="small text-danger mb-1">Ainda sem faixas — acrescenta abaixo (ex: de 0 a 5 km → +0 €; de 5 a 20 km → +5 €).</div>');
+    document.getElementById('novaFaixaDe').textContent=`de ${f.length?toN(f[f.length-1].ate):0} a`;
     const tipos=window.db.tiposLenha||[];
     document.getElementById('simPrecosBase').innerHTML=tipos.map(t=>{ const c=custoLenhaM3(t); return `<div class="d-flex gap-1 align-items-center mb-1">
         <span class="flex-grow-1">${esc(t)}${c!=null?` <small class="text-muted">custo ≈ ${c.toFixed(0)}€/m³</small>`:''}</span>
