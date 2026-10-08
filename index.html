@@ -260,6 +260,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabFin">📊 Finanças</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHoras">⏱️ Horas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSim">🧮 Simular</button></li>
     </ul>
 
     <div class="tab-content shadow-sm mb-5">
@@ -483,6 +484,48 @@
             <div id="horasResumoPessoa"></div>
         </div>
 
+        <!-- SIMULAR PREÇO -->
+        <div id="tabSim" class="tab-pane fade">
+            <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
+                <div class="fw-bold mb-2">🧮 Simular preço para uma morada</div>
+                <input type="text" id="simEndereco" class="form-control mb-2" placeholder="Localidade ou morada (ou nome de cliente)" list="simClientes" autocomplete="off">
+                <datalist id="simClientes"></datalist>
+                <div class="row g-2 mb-2">
+                    <div class="col-7"><select id="simTipo" class="form-select"></select></div>
+                    <div class="col-5"><div class="input-group"><input type="number" id="simM3" class="form-control" placeholder="m³" step="0.5" min="0" inputmode="decimal" value="3"><span class="input-group-text">m³</span></div></div>
+                </div>
+                <button class="btn btn-primary w-100 fw-bold" onclick="window.simular()">Calcular</button>
+                <div id="simResultado" class="mt-3"></div>
+            </div>
+
+            <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
+                <div class="fw-bold mb-1">📏 Preços por distância</div>
+                <div class="small text-muted mb-2">Acréscimo por m³ conforme os km (só ida) desde a partida. Soma-se ao preço base de cada tipo.</div>
+                <div id="simFaixas"></div>
+                <div class="d-flex gap-1 mt-1">
+                    <div class="input-group input-group-sm"><span class="input-group-text">até</span><input type="number" id="novaFaixaKm" class="form-control" step="1" min="1" inputmode="numeric"><span class="input-group-text">km</span></div>
+                    <div class="input-group input-group-sm"><span class="input-group-text">+</span><input type="number" id="novaFaixaAcr" class="form-control" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">€/m³</span></div>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarFaixa()">+</button>
+                </div>
+            </div>
+
+            <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
+                <div class="fw-bold mb-2">🪵 Preço base por tipo <span class="small text-muted fw-normal">(até à 1ª faixa)</span></div>
+                <div id="simPrecosBase"></div>
+            </div>
+
+            <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
+                <div class="fw-bold mb-2">📋 Tabela de preços (€/m³)</div>
+                <div id="simTabela" class="table-responsive"></div>
+                <button class="btn btn-outline-success btn-sm w-100 mt-1" onclick="window.partilharTabela()">💬 Enviar tabela por WhatsApp</button>
+            </div>
+
+            <div class="p-2 mb-3 rounded d-flex justify-content-between align-items-center" style="border:1px solid var(--border)">
+                <span class="small" id="simCombResumo"></span>
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.abrirCarrinhas()">⚙️ Carrinhas e combustível</button>
+            </div>
+        </div>
+
         <!-- CLIENTES -->
         <div id="tabCli" class="tab-pane fade">
             <div class="row g-2 mb-3">
@@ -532,7 +575,7 @@
             <div class="col-6"><label class="small">m³:</label><input type="number" id="encMetros" class="form-control" step="0.1" oninput="window.atualizarTotalEnc()"></div>
             <div class="col-6"><label class="small">€/m³: <span id="precoSugeridoHint" class="text-muted" style="font-size:.7rem"></span></label><input type="number" id="encPreco" class="form-control" value="75" oninput="window.atualizarTotalEnc()"></div>
         </div>
-        <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="encTotalPreview">0€</b></div>
+        <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="encTotalPreview">0€</b><div id="encSimInfo" class="mt-1"></div></div>
         <input type="date" id="encDataC" class="form-control mb-2">
         <textarea id="encObs" class="form-control mb-2" placeholder="Notas..."></textarea>
         <div id="encAuditoria" class="text-muted mb-2" style="font-size:.7rem"></div>
@@ -726,13 +769,15 @@
 <div class="modal fade" id="modalCarrinhas" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">🚚 Carrinhas</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCarrinhas')"></button></div>
+        <div class="input-group input-group-sm mb-3"><span class="input-group-text">⛽ Preço do combustível</span><input type="number" id="precoCombustivel" class="form-control text-end fw-bold" step="0.01" min="0" inputmode="decimal" onchange="window.guardarPrecoCombustivel(this.value)"><span class="input-group-text">€/L</span></div>
         <div id="listaCarrinhas"></div>
-        <div class="d-flex gap-1 mt-2">
-            <input type="text" id="novaCarrinhaNome" class="form-control form-control-sm" placeholder="Nome (ex: Carrinha grande)">
-            <div class="input-group input-group-sm" style="max-width:110px"><input type="number" id="novaCarrinhaCap" class="form-control" placeholder="m³" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">m³</span></div>
+        <div class="d-flex gap-1 mt-2 flex-wrap">
+            <input type="text" id="novaCarrinhaNome" class="form-control form-control-sm" style="min-width:140px;flex:1" placeholder="Nome (ex: Carrinha grande)">
+            <div class="input-group input-group-sm" style="max-width:100px"><input type="number" id="novaCarrinhaCap" class="form-control" placeholder="m³" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">m³</span></div>
+            <div class="input-group input-group-sm" style="max-width:135px"><input type="number" id="novaCarrinhaCons" class="form-control" placeholder="consumo" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">L/100km</span></div>
             <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarCarrinha()">+</button>
         </div>
-        <div class="small text-muted mt-2">Capacidade = quantos m³ leva numa viagem.</div>
+        <div class="small text-muted mt-2">Capacidade = quantos m³ leva numa viagem. Consumo = litros aos 100 km (carregada).</div>
     </div></div>
 </div>
 
@@ -1442,6 +1487,7 @@ window.render=function(){
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
 
     { const bt=document.getElementById('baseTexto'); if(document.activeElement!==bt) bt.value=baseTexto(); }
+    if(!document.querySelector('#tabSim input:focus')) renderSimulador();
     // ── 8. CLIENTES
     document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{
         const dv=(dividasPorCliente[c.id]||[]);
@@ -1479,7 +1525,7 @@ document.addEventListener('shown.bs.tab',e=>{
     document.querySelectorAll('#navFundo button').forEach(b=>b.classList.toggle('ativo',b.dataset.tab===id||(b.dataset.tab==='mais'&&!fundo.includes(id))));
 });
 window.abrirMais=()=>{
-    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes']];
+    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço']];
     document.getElementById('maisBotoes').innerHTML=itens.map(([id,ic,t])=>`<div class="col-4"><button class="btn btn-outline-secondary w-100 btn-mais" onclick="window.irPara('${id}')"><span>${ic}</span>${t}</button></div>`).join('')+
         `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.exportarBackup()">💾 Cópia de segurança</button></div>`;
     window.abrirModal('modalMais');
@@ -1503,19 +1549,125 @@ window.renderEscolher=()=>{
         ||`<p class="text-muted text-center my-3">${_modoEscolher==='entregar'?'Nada por entregar 🎉':'Ninguém em dívida 🎉'}</p>`;
 };
 
+// ── PREÇOS POR DISTÂNCIA E COMBUSTÍVEL ───
+// Faixas: [{ate:km, acrescimo:€/m³}] ordenadas; acima da última faixa usa o acréscimo da última.
+const getFaixas=()=>(Array.isArray(window.db.faixasKm)?window.db.faixasKm:[]).slice().sort((a,b)=>toN(a.ate)-toN(b.ate));
+const faixaDe=km=>{ const f=getFaixas(); if(km==null||!f.length) return null; return f.find(x=>km<=toN(x.ate)+0.001)||{...f[f.length-1],acima:true}; };
+const nomeFaixa=(f,i,lista)=>f.acima?`acima de ${toN(f.ate)} km`:`${i>0?toN(lista[i-1].ate):0}–${toN(f.ate)} km`;
+const precoBase=t=>toN((window.db.precosMemoria||{})[t]);
+// combustível de uma entrega: escolhe a carrinha mais pequena que leva tudo numa viagem (ou a maior, várias viagens)
+const combustivelEntrega=(kmIda,m3)=>{
+    const c=getCarrinhas().filter(v=>toN(v.capacidade)>0); const preco=toN(window.db.precoCombustivel);
+    if(!c.length||kmIda==null) return null;
+    const umaViagem=c.filter(v=>toN(v.capacidade)+0.001>=m3).sort((a,b)=>toN(a.capacidade)-toN(b.capacidade))[0];
+    const v=umaViagem||c.slice().sort((a,b)=>toN(b.capacidade)-toN(a.capacidade))[0];
+    const viagens=Math.max(1,Math.ceil(m3/toN(v.capacidade)-0.001));
+    const kmTotal=kmIda*2*viagens, litros=toN(v.consumo)?kmTotal*toN(v.consumo)/100:null;
+    return {carrinha:v,viagens,kmTotal,litros,custo:litros!=null&&preco?litros*preco:null};
+};
+// custo da lenha por m³ (média das cargas desse tipo com m³ registados, com as vossas horas)
+const custoLenhaM3=t=>{
+    let c=0,m=0; (window.db.lotes||[]).filter(l=>l.tipoLenha===t&&toN(l.m3Comprados)>0).forEach(l=>{
+        const hl=(window.db.horas||[]).filter(h=>String(h.loteId)===String(l.id));
+        c+=toN(l.custoCompra)+(l.gastosExtras||[]).reduce((a,g)=>a+toN(g.valor),0)+hl.reduce((a,h)=>a+valorDeHora(h),0); m+=toN(l.m3Comprados); });
+    return m>0?c/m:null;
+};
+const fmtE=v=>v.toFixed(2).replace('.',',')+'€';
+
+window.adicionarFaixa=()=>{ const km=toN(document.getElementById('novaFaixaKm').value), a=toN(document.getElementById('novaFaixaAcr').value);
+    if(km<=0){ mostrarToast('Indica até quantos km','erro'); return; }
+    window.db.faixasKm=[...getFaixas().filter(f=>toN(f.ate)!==km),{ate:km,acrescimo:a}]; window.atualizarBD();
+    document.getElementById('novaFaixaKm').value=''; document.getElementById('novaFaixaAcr').value=''; };
+window.alterarFaixa=(ate,campo,v)=>{ window.db.faixasKm=getFaixas().map(f=>toN(f.ate)===toN(ate)?{...f,[campo]:toN(v)}:f); window.atualizarBD(); };
+window.removerFaixa=ate=>{ window.db.faixasKm=getFaixas().filter(f=>toN(f.ate)!==toN(ate)); window.atualizarBD(); };
+window.alterarPrecoBase=(t,v)=>{ window.db.precosMemoria={...(window.db.precosMemoria||{}),[t]:toN(v)}; window.atualizarBD(); };
+
+function renderSimulador(){
+    const f=getFaixas();
+    document.getElementById('simFaixas').innerHTML=f.map((x,i)=>`<div class="d-flex gap-1 align-items-center mb-1">
+        <span class="small flex-grow-1">${i>0?toN(f[i-1].ate):0}–</span>
+        <div class="input-group input-group-sm" style="max-width:110px"><input type="number" class="form-control text-end" value="${toN(x.ate)}" step="1" inputmode="numeric" onchange="window.alterarFaixa(${toN(x.ate)},'ate',this.value)"><span class="input-group-text">km</span></div>
+        <div class="input-group input-group-sm" style="max-width:130px"><span class="input-group-text">+</span><input type="number" class="form-control text-end" value="${toN(x.acrescimo)}" step="0.5" inputmode="decimal" onchange="window.alterarFaixa(${toN(x.ate)},'acrescimo',this.value)"><span class="input-group-text">€</span></div>
+        <i class="bi bi-trash text-danger" onclick="window.removerFaixa(${toN(x.ate)})"></i></div>`).join('')+(f.length?`<div class="small text-muted mb-1">Acima de ${toN(f[f.length-1].ate)} km: +${toN(f[f.length-1].acrescimo)}€/m³</div>`:'<div class="small text-danger mb-1">Ainda sem faixas — acrescenta abaixo (ex: até 10 km +0€; até 20 km +5€).</div>');
+    const tipos=window.db.tiposLenha||[];
+    document.getElementById('simPrecosBase').innerHTML=tipos.map(t=>{ const c=custoLenhaM3(t); return `<div class="d-flex gap-1 align-items-center mb-1">
+        <span class="flex-grow-1">${esc(t)}${c!=null?` <small class="text-muted">custo ≈ ${c.toFixed(0)}€/m³</small>`:''}</span>
+        <div class="input-group input-group-sm" style="max-width:120px"><input type="number" class="form-control text-end" value="${precoBase(t)||''}" step="1" inputmode="decimal" onchange="window.alterarPrecoBase('${escJs(t)}',this.value)"><span class="input-group-text">€/m³</span></div></div>`; }).join('');
+    const cols=f.length?f.map((x,i)=>({lbl:i===0?`até ${toN(x.ate)} km`:`${toN(f[i-1].ate)}–${toN(x.ate)} km`,a:toN(x.acrescimo)})).concat([{lbl:`+${toN(f[f.length-1].ate)} km`,a:toN(f[f.length-1].acrescimo)}]):[{lbl:'qualquer',a:0}];
+    document.getElementById('simTabela').innerHTML=`<table class="table table-sm mb-0 text-center" style="font-size:.75rem"><thead><tr><th class="text-start">Tipo</th>${cols.map(c=>`<th>${c.lbl}</th>`).join('')}</tr></thead><tbody>${tipos.filter(t=>precoBase(t)).map(t=>`<tr><td class="text-start fw-bold">${esc(t)}</td>${cols.map(c=>`<td>${(precoBase(t)+c.a).toFixed(0)}€</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length+1}" class="text-muted">Põe os preços base acima</td></tr>`}</tbody></table>`;
+    window._tabelaPrecos={cols,tipos:tipos.filter(t=>precoBase(t))};
+    const pc=toN(window.db.precoCombustivel), semCons=getCarrinhas().filter(v=>!toN(v.consumo));
+    document.getElementById('simCombResumo').innerHTML=`⛽ ${pc?fmtE(pc)+'/L':'<span class="text-danger">sem preço</span>'} · ${getCarrinhas().length?getCarrinhas().map(v=>`${esc(v.nome)} ${toN(v.consumo)?toN(v.consumo)+' L/100':'<span class="text-danger">sem consumo</span>'}`).join(' · '):'<span class="text-danger">sem carrinhas</span>'}`;
+    const ts=document.getElementById('simTipo'), cur=ts.value; ts.innerHTML=tipos.map(t=>`<option ${t===cur?'selected':''}>${esc(t)}</option>`).join('');
+    document.getElementById('simClientes').innerHTML=(window.db.clientes||[]).map(c=>`<option value="${esc(c.nome)}">`).join('');
+}
+window.partilharTabela=()=>{ const t=window._tabelaPrecos; if(!t||!t.tipos.length){ mostrarToast('Põe primeiro os preços base','erro'); return; }
+    const txt='🪵 Preços da lenha (€/m³, com entrega)\n'+t.tipos.map(x=>`\n${x}: `+t.cols.map(c=>`${c.lbl} ${(precoBase(x)+c.a).toFixed(0)}€`).join(' · ')).join('');
+    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank'); };
+
+// rota de ida desde a partida até uma morada qualquer (para o simulador)
+async function kmAte(endereco){
+    let base=window.db.base;
+    if(!base||base.lat==null||base.texto!==baseTexto()){ const g=await geocodificar(baseTexto()+', Portugal'); if(!g) throw new Error('base'); window.db.base={texto:baseTexto(),...g}; base=window.db.base; await espera(1100); }
+    const g=await geocodificar(/portugal/i.test(endereco)?endereco:endereco+', Portugal'); if(!g) return null;
+    try{ const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${base.lon},${base.lat};${g.lon},${g.lat}?overview=false`); const j=await r.json();
+        if(j.code!=='Ok') throw 0; return {km:j.routes[0].distance/1000,min:Math.round(j.routes[0].duration/60),aprox:false}; }
+    catch(e){ return {km:haversineKm(base,g)*1.3,min:null,aprox:true}; }
+}
+window.simular=async()=>{
+    const res=document.getElementById('simResultado'), txt=document.getElementById('simEndereco').value.trim(), tipo=document.getElementById('simTipo').value, m3=toN(document.getElementById('simM3').value);
+    if(!txt||m3<=0){ mostrarToast('Indica a localidade e os m³','erro'); return; }
+    const cli=(window.db.clientes||[]).find(c=>c.nome.toLowerCase()===txt.toLowerCase());
+    let d;
+    if(cli&&cli.km!=null&&cli.kmEnd===enderecoMaps(cli)) d={km:cli.km,min:cli.kmMin,aprox:cli.kmAprox};
+    else {
+        if(!navigator.onLine){ res.innerHTML='<div class="alert alert-warning small">Sem rede — não consigo calcular os km.</div>'; return; }
+        res.innerHTML='<div class="text-center text-muted">⏳ A calcular os km…</div>';
+        try{ d=await kmAte(cli?enderecoMaps(cli):txt); }catch(e){ d=null; }
+        if(!d){ res.innerHTML=`<div class="alert alert-warning small">Não encontrei "${esc(cli?enderecoMaps(cli):txt)}" no mapa. Experimenta só a localidade.</div>`; return; }
+    }
+    res.innerHTML=htmlSimulacao(d,tipo,m3,cli);
+};
+function htmlSimulacao(d,tipo,m3,cli){
+    const f=faixaDe(d.km), lista=getFaixas(), acr=f?toN(f.acrescimo):0, base=precoBase(tipo), preco=base+acr, total=preco*m3;
+    const comb=combustivelEntrega(d.km,m3), cL=custoLenhaM3(tipo);
+    const lucro=cL!=null?total-cL*m3-(comb&&comb.custo||0):null;
+    const linha=(a,b,cls='')=>`<div class="d-flex justify-content-between ${cls}"><span>${a}</span><span>${b}</span></div>`;
+    return `<div class="p-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
+        ${linha('🚗 Distância',`<b>${d.aprox?'≈ ':''}${d.km.toFixed(1)} km</b>${d.min?` · ${d.min} min`:''}`)}
+        ${f?linha('📏 Faixa',`${nomeFaixa(f,lista.indexOf(lista.find(x=>toN(x.ate)===toN(f.ate))),lista)} · <b>+${acr}€/m³</b>`):linha('📏 Faixa','<span class="text-danger">sem faixas definidas</span>')}
+        ${comb?linha(`⛽ Combustível (${comb.viagens} viagem${comb.viagens>1?'ens':''} · ${esc(comb.carrinha.nome)} · ${comb.kmTotal.toFixed(0)} km)`,comb.custo!=null?`<b>${fmtE(comb.custo)}</b> <span class="text-muted">(${comb.litros.toFixed(1)} L)</span>`:'<span class="text-danger">falta consumo/preço</span>'):linha('⛽ Combustível','<span class="text-danger">define as carrinhas</span>')}
+        ${comb&&comb.custo!=null?linha('',`<span class="text-muted">${fmtE(comb.custo/m3)} por m³</span>`):''}
+        <hr class="my-1">
+        ${linha(`🪵 ${esc(tipo)} base`,base?`${base}€/m³`:'<span class="text-danger">sem preço base</span>')}
+        ${linha('<b>Preço sugerido</b>',`<b class="fs-6">${preco.toFixed(0)}€/m³</b>`)}
+        ${linha(`<b>Total ${m3} m³</b>`,`<b class="fs-6 text-success">${total.toFixed(0)}€</b>`)}
+        ${cL!=null?`<hr class="my-1">${linha('Custo da lenha',`≈ ${(cL*m3).toFixed(0)}€ <span class="text-muted">(${cL.toFixed(0)}€/m³)</span>`)}${linha('<b>Lucro estimado</b>',`<b class="${lucro>=0?'text-success':'text-danger'}">${lucro.toFixed(0)}€</b> <span class="text-muted">(${total?(lucro/total*100).toFixed(0):0}%)</span>`)}`:'<div class="text-muted mt-1">Para ver o lucro, põe os m³ e o tipo nas cargas desta lenha.</div>'}
+        ${cli?`<button class="btn btn-success btn-sm w-100 fw-bold mt-2" onclick="window.encomendaDaSimulacao('${escJs(cli.id)}','${escJs(tipo)}',${m3},${preco})">🛒 Criar encomenda para ${esc(cli.nome)}</button>`:''}
+    </div>`;
+}
+window.encomendaDaSimulacao=(cliId,tipo,m3,preco)=>{
+    window.abrirModalEncomenda(); const c=window.db.clientes.find(x=>x.id===cliId);
+    window.selecionarCliente(cliId,c.nome);
+    document.getElementById('encTipoLenha').value=tipo; document.getElementById('encMetros').value=m3; document.getElementById('encPreco').value=preco; window.atualizarTotalEnc();
+};
+
 // ── CARRINHAS ────────────────────────────
 const getCarrinhas=()=>Array.isArray(window.db.carrinhas)?window.db.carrinhas:[];
-const renderCarrinhasResumo=()=>{ const c=getCarrinhas(); document.getElementById('carrinhasResumo').innerHTML=c.length?'🚚 '+c.map(v=>`${esc(v.nome)} <b>${toN(v.capacidade)} m³</b>`).join(' · '):'<span class="text-danger">🚚 Ainda não definiste as carrinhas</span>'; };
-const renderListaCarrinhas=()=>{ document.getElementById('listaCarrinhas').innerHTML=getCarrinhas().map(v=>`<div class="d-flex gap-1 align-items-center mb-1">
+const renderCarrinhasResumo=()=>{ const c=getCarrinhas(); document.getElementById('carrinhasResumo').innerHTML=c.length?'🚚 '+c.map(v=>`${esc(v.nome)} <b>${toN(v.capacidade)} m³</b>${toN(v.consumo)?` · ${toN(v.consumo)} L`:''}`).join(' · '):'<span class="text-danger">🚚 Ainda não definiste as carrinhas</span>'; };
+const renderListaCarrinhas=()=>{ document.getElementById('listaCarrinhas').innerHTML=getCarrinhas().map(v=>`<div class="d-flex gap-1 align-items-center mb-1 flex-wrap">
     <span class="fw-bold flex-grow-1">${esc(v.nome)}</span>
-    <div class="input-group input-group-sm" style="max-width:110px"><input type="number" class="form-control text-end" value="${toN(v.capacidade)}" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}',this.value)"><span class="input-group-text">m³</span></div>
-    <i class="bi bi-trash text-danger" onclick="window.removerCarrinha('${escJs(v.id)}')"></i></div>`).join('')||'<small class="text-muted">Sem carrinhas — acrescenta abaixo.</small>'; };
+    <div class="input-group input-group-sm" style="max-width:100px"><input type="number" class="form-control text-end" value="${toN(v.capacidade)}" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}','capacidade',this.value)"><span class="input-group-text">m³</span></div>
+    <div class="input-group input-group-sm" style="max-width:135px"><input type="number" class="form-control text-end ${toN(v.consumo)>0?'':'is-invalid'}" value="${toN(v.consumo)||''}" placeholder="?" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}','consumo',this.value)"><span class="input-group-text">L/100km</span></div>
+    <i class="bi bi-trash text-danger" onclick="window.removerCarrinha('${escJs(v.id)}')"></i></div>`).join('')||'<small class="text-muted">Sem carrinhas — acrescenta abaixo.</small>';
+    const pc=document.getElementById('precoCombustivel'); if(pc&&document.activeElement!==pc) pc.value=toN(window.db.precoCombustivel)||''; };
 window.abrirCarrinhas=()=>{ renderListaCarrinhas(); window.abrirModal('modalCarrinhas'); };
-window.adicionarCarrinha=()=>{ const n=document.getElementById('novaCarrinhaNome').value.trim(), c=toN(document.getElementById('novaCarrinhaCap').value);
+window.adicionarCarrinha=()=>{ const n=document.getElementById('novaCarrinhaNome').value.trim(), c=toN(document.getElementById('novaCarrinhaCap').value), l=toN(document.getElementById('novaCarrinhaCons').value);
     if(!n||c<=0){ mostrarToast('Indica o nome e a capacidade em m³','erro'); return; }
-    window.db.carrinhas=[...getCarrinhas(),{id:uid(),nome:n,capacidade:c}]; window.atualizarBD();
-    document.getElementById('novaCarrinhaNome').value=''; document.getElementById('novaCarrinhaCap').value=''; renderListaCarrinhas(); };
-window.alterarCarrinha=(id,v)=>{ window.db.carrinhas=getCarrinhas().map(x=>x.id===id?{...x,capacidade:toN(v)}:x); window.atualizarBD(); };
+    window.db.carrinhas=[...getCarrinhas(),{id:uid(),nome:n,capacidade:c,consumo:l||null}]; window.atualizarBD();
+    ['novaCarrinhaNome','novaCarrinhaCap','novaCarrinhaCons'].forEach(i=>document.getElementById(i).value=''); renderListaCarrinhas(); };
+window.guardarPrecoCombustivel=v=>{ window.db.precoCombustivel=toN(v); window.atualizarBD(); };
+window.alterarCarrinha=(id,campo,v)=>{ window.db.carrinhas=getCarrinhas().map(x=>x.id===id?{...x,[campo]:toN(v)}:x); window.atualizarBD(); };
 window.removerCarrinha=id=>{ window.db.carrinhas=getCarrinhas().filter(x=>x.id!==id); window.atualizarBD(); renderListaCarrinhas(); };
 
 // ── SELEÇÃO DE ENTREGAS ──────────────────
@@ -1767,17 +1919,26 @@ window.tentarApagarCliente=id=>{
 };
 
 // ── PREÇO MEMÓRIA POR TIPO ───────────────
+const cliEnc=()=>(window.db.clientes||[]).find(c=>c.id==document.getElementById('encCliente').value);
+const kmCli=c=>c&&c.km!=null&&c.kmEnd===enderecoMaps(c)?c.km:null;
 window.sugerirPreco=()=>{
+    if(window.encIdEdicao){ window.atualizarTotalEnc(); return; }   // a editar: não mexe no preço
     const tipo=document.getElementById('encTipoLenha').value;
-    const mem=window.db.precosMemoria||{};
+    const base=precoBase(tipo), f=faixaDe(kmCli(cliEnc())), acr=f?toN(f.acrescimo):0;
     const hint=document.getElementById('precoSugeridoHint');
-    if(mem[tipo]){ document.getElementById('encPreco').value=mem[tipo]; hint.textContent=`(último: ${mem[tipo]}€/m³)`; }
+    if(base){ document.getElementById('encPreco').value=base+acr; hint.textContent=acr?`(base ${base}€ + ${acr}€ distância)`:`(base ${base}€)`; }
     else { hint.textContent=''; }
     window.atualizarTotalEnc();
 };
 window.atualizarTotalEnc=()=>{
     const m=toN(document.getElementById('encMetros').value),p=toN(document.getElementById('encPreco').value);
     document.getElementById('encTotalPreview').textContent=(m*p).toFixed(2)+'€';
+    const c=cliEnc(), km=kmCli(c), info=document.getElementById('encSimInfo');
+    if(!c||km==null){ info.innerHTML=c&&!enderecoMaps(c)?'<span class="text-muted">Sem morada/localidade — sem km</span>':''; return; }
+    const comb=m>0?combustivelEntrega(km,m):null, f=faixaDe(km), lista=getFaixas();
+    info.innerHTML=`🚗 ${km.toFixed(0)} km${f?` · ${nomeFaixa(f,lista.indexOf(lista.find(x=>toN(x.ate)===toN(f.ate))),lista)}`:''}`+
+        (comb&&comb.custo!=null?` · ⛽ <b>${fmtE(comb.custo)}</b> (${comb.viagens} viagem${comb.viagens>1?'ens':''})`:'')+
+        (comb&&comb.custo!=null&&m*p?` <span class="text-muted">= ${(comb.custo/(m*p)*100).toFixed(1)}% do valor</span>`:'');
 };
 
 // ── ENCOMENDAS ───────────────────────────
@@ -1801,7 +1962,7 @@ window.salvarEncomenda=()=>{
         } else { window.db.encomendas.push({id:uid(),entregas:[],pagamentos:[],...d}); }
         // guardar preço em memória
         if(!window.db.precosMemoria)window.db.precosMemoria={};
-        window.db.precosMemoria[tipo]=p;
+        { const f=faixaDe(kmCli(cliEnc())); window.db.precosMemoria[tipo]=Math.max(0,p-(f?toN(f.acrescimo):0)); }
         window.fecharModal('modalEnc');
     };
 
@@ -1822,7 +1983,7 @@ window.puxarObsCliente=id=>{ const c=window.db.clientes.find(x=>x.id==id);if(c&&
 
 // ── PESQUISA CLIENTE ─────────────────────
 window.filtrarClientes=()=>{ const q=document.getElementById('encClienteSearch').value.toLowerCase();const dd=document.getElementById('encClienteDropdown');const m=(window.db.clientes||[]).filter(c=>c.nome.toLowerCase().includes(q));if(!m.length){dd.style.display='none';return;}dd.innerHTML=m.map(c=>`<button type="button" class="list-group-item list-group-item-action py-1 px-2" style="font-size:.82rem" onclick="window.selecionarCliente('${escJs(c.id)}','${escJs(c.nome)}')">${esc(c.nome)}</button>`).join('');dd.style.display='block'; };
-window.selecionarCliente=(id,nome)=>{ document.getElementById('encCliente').value=id;document.getElementById('encClienteSearch').value=nome;document.getElementById('encClienteDropdown').style.display='none';window.puxarObsCliente(id); };
+window.selecionarCliente=(id,nome)=>{ document.getElementById('encCliente').value=id;document.getElementById('encClienteSearch').value=nome;document.getElementById('encClienteDropdown').style.display='none';window.puxarObsCliente(id);window.sugerirPreco(); };
 document.addEventListener('click',e=>{ if(!document.getElementById('encClienteWrapper')?.contains(e.target))document.getElementById('encClienteDropdown').style.display='none'; });
 
 // ── HELPER HISTORIAL ─────────────────────
