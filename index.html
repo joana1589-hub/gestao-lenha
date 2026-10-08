@@ -381,16 +381,21 @@
         <div id="tabHoras" class="tab-pane fade">
             <div class="p-2 mb-3 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
                 <b>⏱️ Horas</b> — nada aqui mexe na caixa.
-                <div class="mt-1"><b>Não pagas</b> (tu e o Toni): contam para o <b>lucro real</b> no Dashboard, ao preço por hora ao lado.</div>
-                <div class="text-muted mt-1"><b>Pagas</b> (ex: André): o dinheiro regista-se nos <b>Gastos</b> (Mão de obra); aqui servem só para a conta de cada carga.</div>
+                <div class="mt-1"><b>Sócios</b> (tu e o Toni): horas não pagas, contam para o <b>lucro real</b> no Dashboard.</div>
+                <div class="text-muted mt-1"><b>Pagos</b> (ex: André): o dinheiro regista-se nos <b>Gastos</b> (Mão de obra); aqui servem só para a conta de cada carga.</div>
             </div>
-            <div class="row g-2 mb-3 align-items-center">
-                <div class="col-7"><button class="btn btn-secondary w-100 fw-bold" onclick="window.abrirModalNovaHora()">+ REGISTAR DIA</button></div>
-                <div class="col-5"><div class="input-group input-group-sm">
-                    <input type="number" id="valorHoraSocios" class="form-control text-end fw-bold" step="0.5" min="0" onchange="window.guardarValorHora()" title="Preço por hora">
-                    <span class="input-group-text">€/h</span>
-                </div></div>
+            <div class="p-2 mb-3 rounded" style="border:1px solid var(--border)">
+                <div class="fw-bold mb-2">👷 Trabalhadores e preço por hora</div>
+                <div id="listaTrabalhadores"></div>
+                <div class="d-flex gap-1 mt-2">
+                    <input type="text" id="novoTrabNome" class="form-control form-control-sm" placeholder="Nome">
+                    <input type="number" id="novoTrabValor" class="form-control form-control-sm" style="max-width:80px" placeholder="€/h" step="0.5" min="0" inputmode="decimal">
+                    <select id="novoTrabTipo" class="form-select form-select-sm" style="max-width:110px"><option value="socio">Sócio</option><option value="pago">Pago</option></select>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarTrabalhador()">+</button>
+                </div>
+                <div class="small text-muted mt-1">Mudar o preço só afeta as horas registadas daqui para a frente.</div>
             </div>
+            <button class="btn btn-secondary w-100 fw-bold mb-3" onclick="window.abrirModalNovaHora()">+ REGISTAR HORAS</button>
             <div class="row g-2 mb-3 text-center">
                 <div class="col-4"><div class="kpi-card border-start border-secondary border-4"><span class="kpi-lbl">Total Horas</span><span id="horasTotalH" class="kpi-val">0h</span></div></div>
                 <div class="col-4"><div class="kpi-card border-start border-warning border-4"><span class="kpi-lbl">Valor não pago</span><span id="horasTotalEur" class="kpi-val text-warning">0€</span></div></div>
@@ -593,21 +598,12 @@
             <button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalHora')"></button>
         </div>
         <input type="date" id="horaData" class="form-control mb-2">
-        <div class="btn-group w-100 mb-2" role="group">
-            <button type="button" class="btn btn-sm fw-bold" id="horaTipoNP" onclick="window.setHoraPaga(false)">Não pagas (vossas)</button>
-            <button type="button" class="btn btn-sm fw-bold" id="horaTipoP" onclick="window.setHoraPaga(true)">Pagas (ex: André)</button>
-        </div>
         <label class="small fw-bold mb-1" id="horaPessoasLbl">Quem trabalhou?</label>
         <div id="horaPessoas" class="d-flex flex-wrap gap-2 mb-1"></div>
-        <input type="text" id="horaNomeOutro" class="form-control form-control-sm mb-2" placeholder="+ outra pessoa (opcional)">
+        <div class="small text-muted mb-2">Para acrescentar alguém, usa a lista de trabalhadores no separador Horas.</div>
         <label class="small fw-bold">Horas</label>
         <div class="d-flex gap-1 mb-1 flex-wrap" id="horaRapidas"></div>
         <input type="number" id="horaQtd" class="form-control mb-2" step="0.5" min="0" inputmode="decimal" oninput="window.atualizarTotalHora()" placeholder="ex: 8">
-        <div id="horaPagaBox" style="display:none">
-            <label class="small fw-bold">€/hora pago</label>
-            <input type="number" id="horaValorPago" class="form-control mb-1" step="0.5" min="0" inputmode="decimal" oninput="window.atualizarTotalHora()">
-            <div class="small text-muted mb-2">Não mexe na caixa — o pagamento regista-se nos Gastos (Mão de obra). Serve para a conta do lote.</div>
-        </div>
         <label class="small fw-bold">Carga / lote (opcional)</label>
         <select id="horaLote" class="form-select mb-2"></select>
         <label class="small fw-bold mb-1">Trabalho (opcional) <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="font-size:.7rem" onclick="window.abrirGerirTiposTrabalho()">⚙️ gerir</button></label>
@@ -1049,11 +1045,11 @@ window.render=function(){
         (l.gastosExtras||[]).forEach(g=>movs+=`<div class="movimento-item"><span class="text-danger"><span class="cat-badge ${g.categoria?'':'cat-auto'}">${esc(catDe(g))}</span> ${esc(g.desc||'')} ${g.data?'<span class="bg-data">'+esc(g.data)+'</span>':''} (${toN(g.valor).toFixed(0)}€)</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarGastoLote('${esc(l.id)}','${esc(g.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarMov('${esc(l.id)}','gastosExtras','${esc(g.id)}'))"></i></div></div>`);
         // horas deste lote
         const hl=(window.db.horas||[]).filter(h=>h.loteId!=null&&String(h.loteId)===String(l.id));
-        const hNP=hl.filter(h=>!h.pago).reduce((a,h)=>a+toN(h.horas),0), vNP=hNP*valorHora();
-        const hP=hl.filter(h=>h.pago).reduce((a,h)=>a+toN(h.horas),0), vP_=hl.filter(h=>h.pago).reduce((a,h)=>a+toN(h.horas)*toN(h.valorHora),0);
+        const hNP=hl.filter(h=>!h.pago).reduce((a,h)=>a+toN(h.horas),0), vNP=hl.filter(h=>!h.pago).reduce((a,h)=>a+valorDeHora(h),0);
+        const hP=hl.filter(h=>h.pago).reduce((a,h)=>a+toN(h.horas),0), vP_=hl.filter(h=>h.pago).reduce((a,h)=>a+valorDeHora(h),0);
         const bal=sV-cT, balReal=bal-vP_-vNP;
         const porHora=hNP>0?(bal-vP_)/hNP:null;
-        hl.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(h=>movs+=`<div class="movimento-item"><span class="${h.pago?'text-primary':'text-secondary'}">⏱️ ${fmtData(h.data)} · ${esc(h.nome)} ${toN(h.horas).toFixed(1)}h ${h.pago?`<span class="cat-badge">paga ${toN(h.valorHora).toFixed(2)}€/h</span>`:'<span class="cat-badge">não paga</span>'}</span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarHora('${escJs(h.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${escJs(h.id)}'))"></i></div></div>`);
+        hl.slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(h=>movs+=`<div class="movimento-item"><span class="${h.pago?'text-primary':'text-secondary'}">⏱️ ${fmtData(h.data)} · ${esc(h.nome)} ${toN(h.horas).toFixed(1)}h <span class="cat-badge">${h.pago?'paga':'não paga'} ${taxaDe(h).toFixed(2)}€/h</span></span><div><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarHora('${escJs(h.id)}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${escJs(h.id)}'))"></i></div></div>`);
         const linha=(lbl,val,cls='')=>`<div class="d-flex justify-content-between ${cls}"><span>${lbl}</span><span>${val}</span></div>`;
         const resumo=`<div class="mt-2 p-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
             ${linha(`Recebido (${m3V.toFixed(1)} m³)`,`${sV.toFixed(0)}€`,'text-success')}
@@ -1061,9 +1057,9 @@ window.render=function(){
             ${gE?linha('− Gastos extra',`${gE.toFixed(0)}€`):''}
             ${linha('<b>Balanço</b>',`<b class="${bal>=0?'text-success':'text-danger'}">${bal.toFixed(0)}€</b>`,'border-top pt-1 mt-1')}
             ${hP?linha(`− Mão de obra paga (${hP.toFixed(1)}h)`,`${vP_.toFixed(0)}€`):''}
-            ${hNP?linha(`− Vossas horas (${hNP.toFixed(1)}h × ${valorHora().toFixed(2)}€)`,`${vNP.toFixed(0)}€`):''}
+            ${hNP?linha(`− Vossas horas (${hNP.toFixed(1)}h)`,`${vNP.toFixed(0)}€`):''}
             ${(hP||hNP)?linha('<b>Balanço real</b>',`<b class="${balReal>=0?'text-success':'text-danger'}">${balReal>=0?'✅':'❌'} ${balReal.toFixed(0)}€</b>`,'border-top pt-1 mt-1'):''}
-            ${porHora!=null?`<div class="text-center mt-1 ${porHora>=valorHora()?'text-success':'text-danger'}">Cada hora vossa rendeu <b>${porHora.toFixed(2)}€</b></div>`:''}
+            ${porHora!=null?`<div class="text-center mt-1 ${porHora>=vNP/hNP?'text-success':'text-danger'}">Cada hora vossa rendeu <b>${porHora.toFixed(2)}€</b></div>`:''}
         </div>`;
         return `<div class="lote-card">
             <div class="d-flex justify-content-between align-items-start"><div><b>${esc(l.nome)}</b> <span class="bg-data">${esc(l.data)}</span></div>
@@ -1167,12 +1163,12 @@ window.render=function(){
     document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
 
     // ── LUCRO REAL: receita − gastos (dinheiro que saiu) − valor das horas não pagas dos sócios
-    const vH=valorHora();
-    const horasPeriodo=(window.db.horas||[]).reduce((a,h)=>!h.pago&&inPeriodo(h.data,dAno,modo==='ano'?'':dMes)?a+toN(h.horas):a,0);
-    const custoMO=horasPeriodo*vH;
+    const hPer=(window.db.horas||[]).filter(h=>!h.pago&&inPeriodo(h.data,dAno,modo==='ano'?'':dMes));
+    const horasPeriodo=hPer.reduce((a,h)=>a+toN(h.horas),0);
+    const custoMO=hPer.reduce((a,h)=>a+valorDeHora(h),0);
     const lucroCaixa=dRec-dGstTotal, lucroReal=lucroCaixa-custoMO;
     const margemReal=dRec>0?(lucroReal/dRec)*100:0;
-    document.getElementById('dashValorHora').textContent=vH?vH.toFixed(2)+'€/h':'define o €/h no separador Horas';
+    document.getElementById('dashValorHora').textContent='ao preço de cada um';
     document.getElementById('dashGastoReal').innerText=lucroReal.toFixed(0)+'€';
     document.getElementById('dashMargemReal').innerText=margemReal.toFixed(0)+'%';
     document.getElementById('dashCustoMO').innerText=custoMO.toFixed(0)+'€';
@@ -1189,8 +1185,8 @@ window.render=function(){
     document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+' m³';
     document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(0)+'€';
     document.getElementById('resumoLucro').innerText=lucT.toFixed(0)+'€';
-    const horasTot=(window.db.horas||[]).reduce((a,h)=>h.pago?a:a+toN(h.horas),0);
-    document.getElementById('resumoLucroReal').textContent=horasTot&&vH?`real: ${(lucT-horasTot*vH).toFixed(0)}€`:'';
+    const valorNP=(window.db.horas||[]).reduce((a,h)=>h.pago?a:a+valorDeHora(h),0);
+    document.getElementById('resumoLucroReal').textContent=valorNP?`real: ${(lucT-valorNP).toFixed(0)}€`:'';
     let pL=""; for(let t in pT)if(pT[t]>0)pL+=`<div class="pendente-item"><span>${esc(t)}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
     document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<small class="text-muted">Nada pendente.</small>';
 
@@ -1520,49 +1516,58 @@ function getTiposSelecionados(){
         .map(el=>el.textContent.trim());
 }
 
-// Horas não pagas dos sócios: um único preço por hora (definições) × horas registadas
+// ── TRABALHADORES ────────────────────────
+// Cada trabalhador tem o seu €/hora. Sócios = horas não pagas (lucro real); pagos = só para a conta das cargas.
+// Cada registo de horas guarda o €/hora do momento, por isso mudar o preço não altera o passado.
 const SOCIOS_DEFAULT=['Joana','Toni'];
-const valorHora=()=>toN(window.db.valorHoraSocios);
-let _horaPaga=false;
-window.setHoraPaga=p=>{
-    _horaPaga=!!p;
-    document.getElementById('horaTipoNP').className='btn btn-sm fw-bold '+(_horaPaga?'btn-outline-secondary':'btn-secondary');
-    document.getElementById('horaTipoP').className='btn btn-sm fw-bold '+(_horaPaga?'btn-primary':'btn-outline-primary');
-    document.getElementById('horaPagaBox').style.display=_horaPaga?'':'none';
-    if(_horaPaga&&!document.getElementById('horaValorPago').value){
-        const ult=(window.db.horas||[]).filter(h=>h.pago).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0];
-        if(ult) document.getElementById('horaValorPago').value=ult.valorHora;
-    }
-    window.atualizarTotalHora();
+const getTrabalhadores=()=>{
+    if(Array.isArray(window.db.trabalhadores)&&window.db.trabalhadores.length) return window.db.trabalhadores;
+    const base=toN(window.db.valorHoraSocios);
+    const lista=SOCIOS_DEFAULT.map(n=>({id:'w-'+n.toLowerCase(),nome:n,valorHora:base,pago:false}));
+    (window.db.horas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(h=>{
+        if(h.nome&&!lista.some(w=>w.nome.toLowerCase()===h.nome.toLowerCase())) lista.push({id:'w-'+h.nome.toLowerCase(),nome:h.nome,valorHora:toN(h.valorHora)||base,pago:!!h.pago});
+    });
+    return lista;
+};
+const trabalhadorDe=nome=>getTrabalhadores().find(w=>w.nome.toLowerCase()===String(nome||'').toLowerCase());
+const taxaDe=h=>{ if(h.valorHora!=null&&toN(h.valorHora)>0) return toN(h.valorHora); const w=trabalhadorDe(h.nome); return w?toN(w.valorHora):toN(window.db.valorHoraSocios); };
+const valorDeHora=h=>toN(h.horas)*taxaDe(h);
+const editarTrabalhadores=fn=>{ window.db.trabalhadores=getTrabalhadores().map(w=>({...w})); fn(window.db.trabalhadores); window.atualizarBD(); };
+window.alterarTrabalhador=(id,campo,valor)=>editarTrabalhadores(l=>{ const w=l.find(x=>x.id===id); if(!w) return; if(campo==='valorHora') w.valorHora=toN(valor); else if(campo==='pago') w.pago=valor==='pago'; });
+window.removerTrabalhador=id=>{ const w=getTrabalhadores().find(x=>x.id===id); if(!w) return; window.confirmar(`Tirar ${w.nome} da lista? As horas já registadas ficam.`,()=>editarTrabalhadores(l=>l.splice(l.findIndex(x=>x.id===id),1))); };
+window.adicionarTrabalhador=()=>{
+    const nome=document.getElementById('novoTrabNome').value.trim(), v=toN(document.getElementById('novoTrabValor').value), pago=document.getElementById('novoTrabTipo').value==='pago';
+    if(!nome||v<=0){ mostrarToast('Indica o nome e o €/hora','erro'); return; }
+    if(trabalhadorDe(nome)){ mostrarToast(`${nome} já está na lista`,'erro'); return; }
+    editarTrabalhadores(l=>l.push({id:uid(),nome,valorHora:v,pago}));
+    document.getElementById('novoTrabNome').value=''; document.getElementById('novoTrabValor').value='';
+};
+const renderTrabalhadores=()=>{
+    document.getElementById('listaTrabalhadores').innerHTML=getTrabalhadores().map(w=>`<div class="d-flex gap-1 align-items-center mb-1">
+        <span class="fw-bold flex-grow-1">${esc(w.nome)}</span>
+        <div class="input-group input-group-sm" style="max-width:110px"><input type="number" class="form-control text-end ${toN(w.valorHora)>0?'':'is-invalid'}" value="${toN(w.valorHora)||''}" step="0.5" min="0" inputmode="decimal" onchange="window.alterarTrabalhador('${escJs(w.id)}','valorHora',this.value)"><span class="input-group-text">€/h</span></div>
+        <select class="form-select form-select-sm" style="max-width:100px" onchange="window.alterarTrabalhador('${escJs(w.id)}','pago',this.value)"><option value="socio" ${w.pago?'':'selected'}>Sócio</option><option value="pago" ${w.pago?'selected':''}>Pago</option></select>
+        <i class="bi bi-trash text-danger" onclick="window.removerTrabalhador('${escJs(w.id)}')"></i></div>`).join('')||'<small class="text-muted">Sem trabalhadores</small>';
 };
 const opcoesLotes=sel=>'<option value="">— nenhuma —</option>'+(window.db.lotes||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(l=>`<option value="${esc(l.id)}" ${String(l.id)===String(sel??'')?'selected':''}>${esc(l.nome)} (${fmtData(l.data)})</option>`).join('');
 window.abrirHorasLote=id=>{ window.abrirModalNovaHora(); document.getElementById('horaLote').innerHTML=opcoesLotes(id); };
-const pessoasConhecidas=()=>{ const n=[...SOCIOS_DEFAULT]; (window.db.horas||[]).forEach(h=>{ if(h.nome&&!n.some(x=>x.toLowerCase()===h.nome.toLowerCase())) n.push(h.nome); }); return n; };
-window.guardarValorHora=()=>{ window.db.valorHoraSocios=toN(document.getElementById('valorHoraSocios').value); window.atualizarBD(); };
-const chip=(txt,on,attr)=>`<button type="button" class="btn btn-sm chip-pessoa ${on?'btn-success':'btn-outline-secondary'} fw-bold px-3" ${attr} onclick="this.classList.toggle('btn-success');this.classList.toggle('btn-outline-secondary');window.atualizarTotalHora()">${esc(txt)}</button>`;
-const pessoasSelecionadas=()=>{
-    const sel=[...document.querySelectorAll('#horaPessoas .btn-success')].map(b=>b.dataset.nome);
-    const outro=document.getElementById('horaNomeOutro').value.trim(); if(outro) sel.push(outro);
-    return [...new Set(sel)];
-};
-const prepararModalHora=(pessoas,horas)=>{
-    const conhecidas=pessoasConhecidas(); pessoas.forEach(p=>{ if(!conhecidas.includes(p)) conhecidas.push(p); });
-    document.getElementById('horaPessoas').innerHTML=conhecidas.map(p=>chip(p,pessoas.includes(p),`data-nome="${esc(p)}"`)).join('');
+const chip=(w,on)=>`<button type="button" class="btn btn-sm chip-pessoa ${on?'btn-success':'btn-outline-secondary'} fw-bold px-3" data-nome="${esc(w.nome)}" onclick="this.classList.toggle('btn-success');this.classList.toggle('btn-outline-secondary');window.atualizarTotalHora()">${esc(w.nome)} <small class="fw-normal opacity-75">${toN(w.valorHora).toFixed(2).replace('.00','')}€${w.pago?' · pago':''}</small></button>`;
+const pessoasSelecionadas=()=>[...document.querySelectorAll('#horaPessoas .btn-success')].map(b=>trabalhadorDe(b.dataset.nome)).filter(Boolean);
+const prepararModalHora=(nomes,horas)=>{
+    document.getElementById('horaPessoas').innerHTML=getTrabalhadores().map(w=>chip(w,nomes.some(n=>n.toLowerCase()===w.nome.toLowerCase()))).join('');
     document.getElementById('horaRapidas').innerHTML=[2,4,6,8,10].map(h=>`<button type="button" class="btn btn-outline-secondary btn-sm py-0" onclick="document.getElementById('horaQtd').value=${h};window.atualizarTotalHora()">${h}h</button>`).join('');
-    document.getElementById('horaNomeOutro').value='';
     document.getElementById('horaQtd').value=horas||'';
 };
 window.abrirModalNovaHora=()=>{
     window.horaIdEdicao=null;
-    document.getElementById('horaValorPago').value='';
     document.getElementById('horaLote').innerHTML=opcoesLotes('');
-    document.getElementById('modalHoraTitulo').textContent='Registar dia de trabalho';
-    document.getElementById('horaPessoasLbl').textContent='Quem trabalhou? (podes escolher os dois)';
+    document.getElementById('modalHoraTitulo').textContent='Registar horas';
+    document.getElementById('horaPessoasLbl').textContent='Quem trabalhou? (podes escolher vários)';
     document.getElementById('horaData').value=hoje();
     document.getElementById('horaObs').value='';
     prepararModalHora([],'');
     renderTiposSeletor([]);
-    window.setHoraPaga(false);
+    window.atualizarTotalHora();
     window.abrirModal('modalHora');
 };
 window.abrirEditarHora=id=>{
@@ -1573,37 +1578,37 @@ window.abrirEditarHora=id=>{
     document.getElementById('horaData').value=h.data;
     document.getElementById('horaObs').value=h.obs||'';
     prepararModalHora([h.nome],h.horas);
-    document.getElementById('horaValorPago').value=h.pago?toN(h.valorHora):'';
     document.getElementById('horaLote').innerHTML=opcoesLotes(h.loteId);
-    window.setHoraPaga(!!h.pago);
     const sel=Array.isArray(h.trabalho)?h.trabalho:(h.trabalho?h.trabalho.split(',').map(s=>s.trim()):[]);
     renderTiposSeletor(sel);
     window.atualizarTotalHora();
     window.abrirModal('modalHora');
 };
 window.atualizarTotalHora=()=>{
-    const h=toN(document.getElementById('horaQtd').value), n=Math.max(1,pessoasSelecionadas().length);
-    const v=_horaPaga?toN(document.getElementById('horaValorPago').value):valorHora();
-    document.getElementById('horaTotalPreview').innerHTML=h>0
-        ? `${n>1?`${n} pessoas × `:''}${h}h × ${v.toFixed(2)}€ = <b>${(n*h*v).toFixed(2)}€</b> <span class="text-muted">(${_horaPaga?'pago — não mexe na caixa':'não pago'})</span>`
-        : (_horaPaga?'Indica o €/hora pago':`Preço das vossas horas: <b>${v.toFixed(2)}€/h</b>`);
+    const h=toN(document.getElementById('horaQtd').value), ws=pessoasSelecionadas();
+    const el=document.getElementById('horaTotalPreview');
+    if(!ws.length||h<=0){ el.innerHTML='Escolhe quem trabalhou e as horas'; return; }
+    const tot=ws.reduce((a,w)=>a+h*toN(w.valorHora),0);
+    el.innerHTML=ws.map(w=>`${esc(w.nome)} ${h}h × ${toN(w.valorHora).toFixed(2)}€`).join(' + ')+` = <b>${tot.toFixed(2)}€</b>`+
+        (ws.some(w=>w.pago)?'<div class="text-muted">horas pagas não mexem na caixa</div>':'');
 };
 window.salvarHora=()=>{
     if(!window.db.horas) window.db.horas=[];
-    const pessoas=pessoasSelecionadas(), horas=toN(document.getElementById('horaQtd').value);
-    if(!pessoas.length||horas<=0){ mostrarToast('Escolhe quem trabalhou e as horas','erro'); return; }
-    const vPago=toN(document.getElementById('horaValorPago').value);
-    if(_horaPaga&&vPago<=0){ mostrarToast('Indica o €/hora pago','erro'); return; }
-    if(!_horaPaga&&valorHora()<=0){ mostrarToast('Define primeiro o preço das vossas horas no separador Horas','erro'); return; }
+    const ws=pessoasSelecionadas(), horas=toN(document.getElementById('horaQtd').value);
+    if(!ws.length||horas<=0){ mostrarToast('Escolhe quem trabalhou e as horas','erro'); return; }
+    const semPreco=ws.find(w=>toN(w.valorHora)<=0);
+    if(semPreco){ mostrarToast(`Define o €/hora de ${semPreco.nome} no separador Horas`,'erro'); return; }
     const lote=document.getElementById('horaLote').value;
-    const base={ data:document.getElementById('horaData').value, trabalho:getTiposSelecionados(), horas, obs:document.getElementById('horaObs').value.trim(),
-        pago:_horaPaga, valorHora:_horaPaga?vPago:null, loteId:lote||null };
+    const base={ data:document.getElementById('horaData').value, trabalho:getTiposSelecionados(), horas, obs:document.getElementById('horaObs').value.trim(), loteId:lote||null };
+    const reg=w=>({...base,nome:w.nome,pago:!!w.pago,valorHora:toN(w.valorHora)});
     if(window.horaIdEdicao){
         const h=window.db.horas.find(x=>x.id==window.horaIdEdicao);
-        Object.assign(h,base,{nome:pessoas[0]});
-        pessoas.slice(1).forEach(p=>window.db.horas.push({id:uid(),...base,nome:p}));
+        // mantém o €/h original se a pessoa não mudou
+        const r=reg(ws[0]); if(h.nome===ws[0].nome&&toN(h.valorHora)>0) r.valorHora=toN(h.valorHora);
+        Object.assign(h,r);
+        ws.slice(1).forEach(w=>window.db.horas.push({id:uid(),...reg(w)}));
     } else {
-        pessoas.forEach(p=>window.db.horas.push({id:uid(),...base,nome:p}));
+        ws.forEach(w=>window.db.horas.push({id:uid(),...reg(w)}));
     }
     window.fecharModal('modalHora');
 };
@@ -1636,23 +1641,22 @@ window.removerTipoTrabalho=t=>{
 };
 window.renderHoras=()=>{
     if(!window.db.horas) window.db.horas=[];
-    const v=valorHora();
-    const inp=document.getElementById('valorHoraSocios'); if(document.activeElement!==inp) inp.value=v||'';
+    renderTrabalhadores();
     const filtroNome=(document.getElementById('filtroHorasNome').value||'').toLowerCase();
     const filtroAno=document.getElementById('filtroHorasAno').value;
     const filtroMes=document.getElementById('filtroHorasMes').value;
     const mesAtual=String(new Date().getMonth()+1).padStart(2,'0');
     const anoAtual=new Date().getFullYear().toString();
-    const valorDe=h=>toN(h.horas)*(h.pago?toN(h.valorHora):v);
-    let totalH=0,totalNP=0,mesH=0,footH=0,footEur=0;
+    const valorDe=valorDeHora;
+    let totalH=0,totalNP=0,mesH=0,footH=0,footEur=0; // totalNP = € não pago
     const porPessoa={};
     window.db.horas.forEach(h=>{
-        totalH+=toN(h.horas); if(!h.pago) totalNP+=toN(h.horas);
+        totalH+=toN(h.horas); if(!h.pago) totalNP+=valorDe(h);
         if(h.data&&h.data.startsWith(anoAtual)&&h.data.split('-')[1]===mesAtual) mesH+=toN(h.horas);
         const p=porPessoa[h.nome]=porPessoa[h.nome]||{h:0,e:0,pago:false}; p.h+=toN(h.horas); p.e+=valorDe(h); if(h.pago)p.pago=true;
     });
     document.getElementById('horasTotalH').textContent=totalH.toFixed(1)+'h';
-    document.getElementById('horasTotalEur').textContent=(totalNP*v).toFixed(0)+'€';
+    document.getElementById('horasTotalEur').textContent=totalNP.toFixed(0)+'€';
     document.getElementById('horasMesH').textContent=mesH.toFixed(1)+'h';
 
     const filtradas=window.db.horas.filter(h=>{
@@ -1682,10 +1686,9 @@ window.renderHoras=()=>{
     selA.innerHTML='<option value="">Todos os anos</option>'+Array.from(anos).sort().reverse().map(a=>`<option value="${a}" ${a==curA?'selected':''}>${a}</option>`).join('');
 };
 window.exportarCSVHoras=()=>{
-    const v=valorHora();
     const cab='Data,Pessoa,Tipo,Lote,Trabalho,Horas,€/h,Valor,Obs';
     const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
-    const rows=(window.db.horas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(h=>{ const vh=h.pago?toN(h.valorHora):v, lt=(window.db.lotes||[]).find(l=>String(l.id)===String(h.loteId)); return [h.data,q(h.nome),h.pago?'paga':'não paga',q(lt?lt.nome:''),q(Array.isArray(h.trabalho)?h.trabalho.join(' | '):(h.trabalho||'')),toN(h.horas).toFixed(1),vh.toFixed(2),(toN(h.horas)*vh).toFixed(2),q(h.obs)].join(','); });
+    const rows=(window.db.horas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(h=>{ const vh=taxaDe(h), lt=(window.db.lotes||[]).find(l=>String(l.id)===String(h.loteId)); return [h.data,q(h.nome),h.pago?'paga':'não paga',q(lt?lt.nome:''),q(Array.isArray(h.trabalho)?h.trabalho.join(' | '):(h.trabalho||'')),toN(h.horas).toFixed(1),vh.toFixed(2),(toN(h.horas)*vh).toFixed(2),q(h.obs)].join(','); });
     const blob=new Blob(['﻿'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
     Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`}).click();
 };
