@@ -105,6 +105,7 @@
         .cat-badge { font-size:.68rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg); color:var(--badge-color); border:1px solid var(--badge-border); white-space:nowrap; }
         .cat-auto { font-style:italic; opacity:.75; }
         .chip-pessoa.btn-success::before { content:'✓ '; }
+        .km-tag { font-size:.7rem; font-weight:600; color:var(--info); text-decoration:none; white-space:nowrap; }
         .por-tag { font-size:.65rem; color:var(--muted); }
 
         .btn-grande { height:92px; font-weight:700; font-size:.95rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:14px; box-shadow:0 3px 8px rgba(0,0,0,.08); }
@@ -471,6 +472,11 @@
             <div class="row g-2 mb-3">
                 <div class="col-8"><button class="btn btn-success btn-sm w-100 fw-bold" onclick="window.abrirModalNovoCliente()">+ NOVO CLIENTE</button></div>
                 <div class="col-4"><button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.abrirGerirTipos()">⚙️ TIPOS</button></div>
+            </div>
+            <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text">🏠 Partida</span>
+                <input type="text" id="baseTexto" class="form-control" onchange="window.mudarBase()" title="Os km são contados a partir daqui">
+                <button class="btn btn-outline-secondary" onclick="window.calcularDistancias(true);mostrarToast('A recalcular os km…','saving')" title="Recalcular os km de todos">↻ km</button>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
                 <thead><tr><th>Nome</th><th>Contacto</th><th>Zona</th><th>Obs</th><th class="text-end">Ações</th></tr></thead>
@@ -870,6 +876,7 @@ async function iniciarApp() {
             // abrir o Dashboard no mês atual (antes abria sempre em Janeiro)
             if (primeira) document.getElementById('dashFiltroMes').value = String(new Date().getMonth()+1).padStart(2,'0');
             window.render();
+            if (primeira) setTimeout(() => window.calcularDistancias(), 3000);
         });
     };
     const erro = err => { console.error(err); mostrarToast(err.code === 'permission-denied' ? 'Sem permissão para ler os dados.' : 'Erro ao carregar dados.', 'erro'); };
@@ -939,6 +946,66 @@ const enderecoMaps = cli => {
     return partes.filter(Boolean).join(', ')+', Portugal';
 };
 const urlMaps = endereco => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+
+// ── KM ATÉ AO CLIENTE ────────────────────
+// Ponto de partida (editável em Clientes). Mapas gratuitos: OpenStreetMap (Nominatim) para encontrar a morada
+// e OSRM para a distância de carro. Cada cliente é calculado uma vez e fica guardado (cli.km, cli.kmMin).
+const BASE_DEFAULT='Casal Comba, Mealhada';
+const baseTexto=()=>(window.db.base&&window.db.base.texto)||BASE_DEFAULT;
+const urlRota = cli => `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(baseTexto()+', Portugal')}&destination=${encodeURIComponent(enderecoMaps(cli))}`;
+const kmTag = cli => cli && cli.km!=null && cli.kmEnd===enderecoMaps(cli)
+    ? `<a class="km-tag" href="${esc(urlRota(cli))}" target="_blank" rel="noopener" title="Ver caminho no Maps" onclick="event.stopPropagation()">🚗 ${cli.km<10?cli.km.toFixed(1):cli.km.toFixed(0)} km${cli.kmMin?` · ${cli.kmMin} min`:''}${cli.kmAprox?' ≈':''}</a>` : '';
+const _geoCache={};
+async function geocodificar(q){
+    if(q in _geoCache) return _geoCache[q];
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pt&accept-language=pt&q=${encodeURIComponent(q)}`);
+    if(!r.ok) throw new Error('geo '+r.status);
+    const j=await r.json(); const res=j[0]?{lat:+j[0].lat,lon:+j[0].lon}:null;
+    _geoCache[q]=res; return res;
+}
+const espera=ms=>new Promise(r=>setTimeout(r,ms));
+const haversineKm=(a,b)=>{ const R=6371,d=x=>x*Math.PI/180; const h=Math.sin(d(b.lat-a.lat)/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(d(b.lon-a.lon)/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+let _kmACorrer=false;
+window.calcularDistancias=async(forcar=false)=>{
+    if(_kmACorrer||!navigator.onLine||!_carregado) return;
+    const falta=(window.db.clientes||[]).filter(c=>{ const e=enderecoMaps(c); return e&&(forcar||c.kmEnd!==e); });
+    if(!falta.length) return;
+    _kmACorrer=true;
+    try{
+        // ponto de partida
+        let base=window.db.base;
+        if(!base||base.lat==null||base.texto!==baseTexto()){
+            const g=await geocodificar(baseTexto()+', Portugal'); await espera(1100);
+            if(!g){ mostrarToast(`Não encontrei "${baseTexto()}" no mapa`,'erro'); return; }
+            window.db.base={texto:baseTexto(),...g}; base=window.db.base;
+        }
+        let feitos=0;
+        for(const c of falta){
+            const e=enderecoMaps(c);
+            let g=await geocodificar(e); await espera(1100);   // o Nominatim pede no máximo 1 pedido por segundo
+            if(!g&&c.zona&&c.morada){ g=await geocodificar(c.zona+', Portugal'); await espera(1100); }
+            const cli=window.db.clientes.find(x=>x.id===c.id); if(!cli) continue;
+            if(!g){ cli.km=null; cli.kmMin=null; cli.kmEnd=e; cli.kmErro=true; continue; }
+            let km,min=null,aprox=false;
+            try{
+                const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${base.lon},${base.lat};${g.lon},${g.lat}?overview=false`);
+                const j=await r.json();
+                if(j.code!=='Ok'||!j.routes||!j.routes[0]) throw new Error('rota');
+                km=j.routes[0].distance/1000; min=Math.round(j.routes[0].duration/60);
+            }catch(err){ km=haversineKm(base,g)*1.3; aprox=true; }   // sem rota: linha reta × 1,3
+            Object.assign(cli,{lat:g.lat,lon:g.lon,km:Math.round(km*10)/10,kmMin:min,kmAprox:aprox,kmEnd:e,kmErro:false});
+            feitos++;
+            if(feitos%5===0){ window.atualizarBD(); }
+        }
+        window.atualizarBD();
+    }catch(err){ console.warn('km:',err); }
+    finally{ _kmACorrer=false; }
+};
+window.mudarBase=()=>{
+    const v=document.getElementById('baseTexto').value.trim(); if(!v||v===baseTexto()) return;
+    window.db.base={texto:v}; window.atualizarBD(); window.calcularDistancias(true);
+    mostrarToast('A recalcular os km de todos os clientes…','saving');
+};
 // Botões Ligar / WhatsApp / Maps. msg = texto já escrito no WhatsApp (opcional)
 const botoesContacto = (cli, msg) => {
     const t=telLimpo(cli&&cli.contacto), m=enderecoMaps(cli);
@@ -1046,6 +1113,7 @@ window.atualizarBD=async()=>{
 };
 window.addEventListener('offline',()=>mostrarToast('Sem rede — podes continuar a trabalhar','saving'));
 window.addEventListener('online',()=>mostrarToast('Ligação recuperada — a sincronizar','ok'));
+window.addEventListener('online',()=>setTimeout(()=>window.calcularDistancias&&window.calcularDistancias(),3000));
 
 // ── MIGRAÇÃO LEGACY ──────────────────────
 function migrarLegacy(){ let alt=false; (window.db.encomendas||[]).forEach(e=>{ if(!e.entregas&&toN(e.metrosEntregues)>0){e.entregas=[{id:'leg-e-'+e.id,data:e.dataEnc,m3:toN(e.metrosEntregues)}];alt=true;} if(!e.pagamentos&&toN(e.valorPago)>0){e.pagamentos=[{id:'leg-p-'+e.id,data:e.dataEnc,valor:toN(e.valorPago)}];alt=true;} if(!e.entregas)e.entregas=[]; if(!e.pagamentos)e.pagamentos=[]; }); if(alt)window.atualizarBD(); }
@@ -1321,11 +1389,12 @@ window.render=function(){
     document.getElementById('avisoCategorizar').innerHTML=semCat?`<div class="alert alert-warning py-2 px-3 small d-flex justify-content-between align-items-center mb-0">Há ${semCat} gasto(s) antigo(s) sem categoria.<button class="btn btn-warning btn-sm fw-bold py-0" onclick="window.abrirCategorizar()">🏷️ Categorizar</button></div>`:'';
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
 
+    { const bt=document.getElementById('baseTexto'); if(document.activeElement!==bt) bt.value=baseTexto(); }
     // ── 8. CLIENTES
     document.getElementById('listaClientesTabela').innerHTML=(window.db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{
         const dv=(dividasPorCliente[c.id]||[]);
         const msg=dv.length?msgDivida(c,dv):'';
-        return `<tr><td><b>${esc(c.nome)}</b>${dv.length?` <span class="badge bg-danger" title="Em dívida">${dv.reduce((a,x)=>a+x.saldo,0).toFixed(0)}€</span>`:''}${c.morada?`<div class="small text-muted">${esc(c.morada)}</div>`:''}</td><td class="text-nowrap"><div class="small">${esc(c.contacto||'')}</div>${botoesContacto(c,msg)}</td><td><small>${esc(c.zona||'')}</small></td><td><div class="obs-container">${esc(c.obs||c.info||'')}</div></td><td class="text-end text-nowrap"><button class="btn btn-outline-info btn-sm py-0 me-1" onclick="window.abrirPainelCliente('${escJs(c.id)}')" title="Painel">📋</button><button class="btn btn-outline-primary btn-sm py-0 me-1" onclick="window.filtrarPorCliente('${escJs(c.id)}')" title="Ver encomendas">🔍</button><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${escJs(c.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.tentarApagarCliente('${escJs(c.id)}')"></i></td></tr>`;
+        return `<tr><td><b>${esc(c.nome)}</b>${dv.length?` <span class="badge bg-danger" title="Em dívida">${dv.reduce((a,x)=>a+x.saldo,0).toFixed(0)}€</span>`:''}${c.morada?`<div class="small text-muted">${esc(c.morada)}</div>`:''}</td><td class="text-nowrap"><div class="small">${esc(c.contacto||'')}</div>${botoesContacto(c,msg)}</td><td><small>${esc(c.zona||'')}</small><div>${kmTag(c)}${c.kmErro&&c.kmEnd===enderecoMaps(c)?'<small class="text-danger" title="Morada não encontrada no mapa">📍?</small>':''}</div></td><td><div class="obs-container">${esc(c.obs||c.info||'')}</div></td><td class="text-end text-nowrap"><button class="btn btn-outline-info btn-sm py-0 me-1" onclick="window.abrirPainelCliente('${escJs(c.id)}')" title="Painel">📋</button><button class="btn btn-outline-primary btn-sm py-0 me-1" onclick="window.filtrarPorCliente('${escJs(c.id)}')" title="Ver encomendas">🔍</button><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarCliente('${escJs(c.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.tentarApagarCliente('${escJs(c.id)}')"></i></td></tr>`;
     }).join('');
 
     // ── 9. CHARTS
@@ -1378,14 +1447,16 @@ window.renderEscolher=()=>{
       .sort((a,b)=>_modoEscolher==='pagar'?(b.entregue-a.entregue)||(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''):(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''));
     document.getElementById('escolherLista').innerHTML=linhas.map(x=>`<button type="button" class="list-group-item list-group-item-action py-2" onclick="window.fecharModalSemSalvar('modalEscolher');setTimeout(()=>window.${_modoEscolher==='entregar'?'abrirEntrega':'abrirPagamento'}('${escJs(x.e.id)}'),250)">
         <div class="d-flex justify-content-between"><b>${esc(x.cli.nome)}</b>${_modoEscolher==='entregar'?`<span class="badge text-bg-warning">${x.fM.toFixed(1)} m³</span>`:`<span class="badge text-bg-danger">${x.sDev.toFixed(0)}€</span>`}</div>
-        <div class="small text-muted">${esc(x.e.tipoLenha)} · enc. ${fmtData(x.e.dataEnc)}${x.cli.zona?' · '+esc(x.cli.zona):''}${_modoEscolher==='pagar'&&!x.entregue?' · <span class="text-warning">ainda não entregue</span>':''}</div></button>`).join('')
+        <div class="small text-muted">${esc(x.e.tipoLenha)} · enc. ${fmtData(x.e.dataEnc)}${x.cli.zona?' · '+esc(x.cli.zona):''}${x.cli.km!=null?` · 🚗 ${x.cli.km.toFixed(0)} km`:''}${_modoEscolher==='pagar'&&!x.entregue?' · <span class="text-warning">ainda não entregue</span>':''}</div></button>`).join('')
         ||`<p class="text-muted text-center my-3">${_modoEscolher==='entregar'?'Nada por entregar 🎉':'Ninguém em dívida 🎉'}</p>`;
 };
 
 // ── ENTREGAS PENDENTES (por zona) ────────
 function renderEntregasPendentes(pend){
     const zonaDe=c=>(c.zona||'').trim()||'Sem zona';
-    const zonas=[...new Set(pend.map(p=>zonaDe(p.cli)))].sort((a,b)=>a==='Sem zona'?1:b==='Sem zona'?-1:a.localeCompare(b,'pt'));
+    const kmZona={}; pend.forEach(p=>{ if(p.cli.km!=null){ const z=zonaDe(p.cli); (kmZona[z]=kmZona[z]||[]).push(p.cli.km); } });
+    const mediaKm=z=>kmZona[z]?kmZona[z].reduce((a,b)=>a+b,0)/kmZona[z].length:null;
+    const zonas=[...new Set(pend.map(p=>zonaDe(p.cli)))].sort((a,b)=>{ if(a==='Sem zona')return 1; if(b==='Sem zona')return -1; const ka=mediaKm(a),kb=mediaKm(b); if(ka!=null&&kb!=null) return ka-kb; if(ka!=null) return -1; if(kb!=null) return 1; return a.localeCompare(b,'pt'); });
     const sel=document.getElementById('filtroEntZona'), cur=sel.value;
     sel.innerHTML='<option value="">Todas as zonas</option>'+zonas.map(z=>`<option value="${esc(z)}" ${z===cur?'selected':''}>${esc(z)}</option>`).join('');
     const lista=cur?pend.filter(p=>zonaDe(p.cli)===cur):pend;
@@ -1401,7 +1472,7 @@ function renderEntregasPendentes(pend){
         const moradas=[...new Set(itens.map(p=>enderecoMaps(p.cli)).filter(Boolean))].slice(0,10);
         const rota=moradas.length?`https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(moradas[moradas.length-1])}`+(moradas.length>1?`&waypoints=${encodeURIComponent(moradas.slice(0,-1).join('|'))}`:''):'';
         return `<div class="zona-card">
-            <div class="zona-head"><div><b>📍 ${esc(z)}</b> <small class="opacity-75">${itens.length} entrega(s) · ${m3.toFixed(1)} m³</small>
+            <div class="zona-head"><div><b>📍 ${esc(z)}</b> <small class="opacity-75">${itens.length} entrega(s) · ${m3.toFixed(1)} m³${mediaKm(z)!=null?` · ≈ ${mediaKm(z).toFixed(0)} km`:''}</small>
                 <div class="small opacity-75">${Object.entries(porTipo).map(([t,v])=>`${esc(t)}: ${v.toFixed(1)} m³`).join(' · ')}</div></div>
                 ${rota?`<a class="btn btn-sm btn-warning fw-bold py-0" href="${esc(rota)}" target="_blank" rel="noopener">🗺️ Rota</a>`:''}</div>
             ${itens.map(p=>`<div class="ent-item">
@@ -1409,6 +1480,7 @@ function renderEntregasPendentes(pend){
                     <div><b>${esc(p.cli.nome)}</b> ${diasTag(p.dias)}
                         <div><span class="badge text-bg-warning">${p.fM.toFixed(1)} m³</span> <span class="small">${esc(p.e.tipoLenha)}</span> <span class="small text-muted">· enc. ${fmtData(p.e.dataEnc)}</span></div>
                         ${p.cli.morada?`<div class="small text-muted">${esc(p.cli.morada)}</div>`:''}
+                        ${kmTag(p.cli)}
                         ${p.e.obs?`<div class="small fst-italic text-muted">${esc(p.e.obs)}</div>`:''}
                     </div>
                     <div class="text-end d-flex flex-column gap-1 align-items-end">
@@ -1489,7 +1561,7 @@ window.abrirPainelCliente=id=>{
     document.getElementById('cliPanelNome').textContent='📋 '+cli.nome;
     const dv=(window._dividasPorCliente||{})[cli.id]||[];
     document.getElementById('cliPanelNome').insertAdjacentHTML('beforeend',
-        `<div class="fw-normal small text-muted mt-1">${[cli.contacto,cli.morada,cli.zona].filter(Boolean).map(esc).join(' · ')}</div>
+        `<div class="fw-normal small text-muted mt-1">${[cli.contacto,cli.morada,cli.zona].filter(Boolean).map(esc).join(' · ')} ${kmTag(cli)}</div>
          <div class="mt-1">${botoesContacto(cli,dv.length?msgDivida(cli,dv):'')}${dv.length?' <small class="text-danger ms-1">💬 mensagem de dívida já escrita</small>':''}</div>`);
     document.getElementById('cliPanelStats').innerHTML=
         `<div class="col-3"><div class="cli-panel-stat"><b>${encs.length}</b><small>Encomendas</small></div></div>`+
@@ -1606,7 +1678,7 @@ window.salvarLote=()=>{ const nome=document.getElementById('loteNome').value.tri
 const preencherZonas=()=>{ document.getElementById('listaZonas').innerHTML=[...new Set((window.db.clientes||[]).map(c=>(c.zona||'').trim()).filter(Boolean))].sort().map(z=>`<option value="${esc(z)}">`).join(''); };
 window.abrirModalNovoCliente=()=>{ window.cliIdEdicao=null;['cliNome','cliContacto','cliMorada','cliZona','cliObs'].forEach(i=>document.getElementById(i).value='');document.getElementById('cliAuditoria').innerHTML='';preencherZonas();window.abrirModal('modalCli'); };
 window.abrirEditarCliente=id=>{ window.cliIdEdicao=id;const c=window.db.clientes.find(x=>x.id==id);document.getElementById('cliNome').value=c.nome;document.getElementById('cliContacto').value=c.contacto||'';document.getElementById('cliMorada').value=c.morada||'';document.getElementById('cliZona').value=c.zona||'';document.getElementById('cliObs').value=c.obs||c.info||'';document.getElementById('cliAuditoria').innerHTML=textoAuditoria(c);preencherZonas();window.abrirModal('modalCli'); };
-window.salvarCliente=()=>{ const n=document.getElementById('cliNome').value.trim();if(!n){mostrarToast('Indica o nome','erro');return;}const d={nome:n,contacto:document.getElementById('cliContacto').value.trim(),morada:document.getElementById('cliMorada').value.trim(),zona:document.getElementById('cliZona').value.trim(),obs:document.getElementById('cliObs').value};if(window.cliIdEdicao){const i=window.db.clientes.findIndex(x=>x.id==window.cliIdEdicao);window.db.clientes[i]={...window.db.clientes[i],...d};}else{window.db.clientes.push({id:uid(),...d});}window.fecharModal('modalCli'); };
+window.salvarCliente=()=>{ const n=document.getElementById('cliNome').value.trim();if(!n){mostrarToast('Indica o nome','erro');return;}const d={nome:n,contacto:document.getElementById('cliContacto').value.trim(),morada:document.getElementById('cliMorada').value.trim(),zona:document.getElementById('cliZona').value.trim(),obs:document.getElementById('cliObs').value};if(window.cliIdEdicao){const i=window.db.clientes.findIndex(x=>x.id==window.cliIdEdicao);window.db.clientes[i]={...window.db.clientes[i],...d};}else{window.db.clientes.push({id:uid(),...d});}window.fecharModal('modalCli'); setTimeout(()=>window.calcularDistancias(),500); };
 
 // ── FINANÇAS ─────────────────────────────
 window.abrirEditarDespesa=id=>{ const d=window.db.despesas.find(x=>x.id==id);if(!d)return;window.despIdEdicao=id;document.getElementById('despCategoria').innerHTML=opcoesCategorias(d.categoria||adivinharCategoria(d.desc)||'');document.getElementById('despDesc').value=d.desc||'';document.getElementById('despValor').value=d.valor;document.getElementById('despData').value=d.data;window.abrirModal('modalDespesa'); };
