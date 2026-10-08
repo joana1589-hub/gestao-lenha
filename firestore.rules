@@ -1,0 +1,33 @@
+rules_version = '2';
+// Copiar para: Firebase Console → Firestore Database → Regras → Publicar
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autorizado() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+             'joana1589@gmail.com',
+             'tonizito.alves92@gmail.com'
+           ];
+    }
+
+    // Dados atuais: definições em producao/v2 e cada registo em producao/v2/<coleção>/<id>
+    match /producao/v2 {
+      allow read, write: if autorizado();
+      match /{colecao}/{id} {
+        allow read, write: if autorizado();
+      }
+    }
+
+    // Documento antigo: só leitura (fica como cópia de segurança).
+    // Se alguém ainda tiver a versão antiga aberta, vê "Erro ao guardar" em vez de gravar num sítio que já não é usado.
+    match /producao/dados_mestre {
+      allow read: if autorizado();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
