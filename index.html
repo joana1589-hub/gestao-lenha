@@ -775,6 +775,7 @@ async function iniciarApp() {
             const novo = { ...(dadosCfg||{}) };
             COLS.forEach(c => novo[c] = dadosCol[c] || []);
             if (!novo.precosMemoria) novo.precosMemoria = {};
+            if (Array.isArray(novo.categoriasGasto) && novo.categoriasGasto.length && !novo.categoriasGasto.includes('Empréstimo')) novo.categoriasGasto.splice(Math.max(0,novo.categoriasGasto.indexOf('Outros')),0,'Empréstimo');
             if (!novo.tiposLenha) novo.tiposLenha = window.db.tiposLenha;
             window.db = novo;
             _base = JSON.parse(JSON.stringify(base));
@@ -871,7 +872,7 @@ const msgDivida = (cli, linhas) => {
 };
 
 // ── CATEGORIAS DE GASTOS ─────────────────
-const CATEGORIAS_DEFAULT = ['Mão de obra','Combustível','Manutenção','Seguro','Impostos e taxas','Portagens','Ferramentas','Transporte','Outros'];
+const CATEGORIAS_DEFAULT = ['Mão de obra','Combustível','Manutenção','Seguro','Empréstimo','Impostos e taxas','Portagens','Ferramentas','Transporte','Outros'];
 const getCategorias = () => (window.db.categoriasGasto && window.db.categoriasGasto.length) ? window.db.categoriasGasto : CATEGORIAS_DEFAULT;
 const adivinharCategoria = desc => {
     const d=String(desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
@@ -880,6 +881,7 @@ const adivinharCategoria = desc => {
         [/manuten|pneu|oficina|revis|oleo|repar|peca|travo|filtro|bateria|mecanic|inspec/,'Manutenção'],
         [/mao de obra|salari|ordenado|jorna|ajudante|andre/,'Mão de obra'],
         [/seguro/,'Seguro'],
+        [/emprest|prestac|credito|leasing/,'Empréstimo'],
         [/portag|via verde|autoestrada/,'Portagens'],
         [/imposto|iuc|iva|financas|taxa|seg.*social|licen/,'Impostos e taxas'],
         [/motosserra|moto-serra|ferrament|corrente|machado|rachador|serra/,'Ferramentas'],
