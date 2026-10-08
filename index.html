@@ -998,7 +998,12 @@ let chCli=null, chTp=null, chGst=null, chEvol=null;
 // paginação
 const PG = { enc:{ pg:0, ppp:20 }, div:{ pg:0, ppp:20 }, ven:{ pg:0, ppp:20 } };
 
-const toN = v => isNaN(parseFloat(v))?0:parseFloat(v);
+// aceita "2,5" (vírgula portuguesa) e evita lixo de arredondamento (0,1+0,2)
+const toN = v => { const n=parseFloat(typeof v==='string'?v.replace(/\s/g,'').replace(',','.'):v); return isNaN(n)?0:n; };
+const r2 = v => Math.round(toN(v)*100)/100;      // euros
+const r3 = v => Math.round(toN(v)*1000)/1000;    // m³
+const somaM3 = arr => r3((arr||[]).reduce((t,x)=>t+toN(x.m3),0));
+const somaEur = arr => r2((arr||[]).reduce((t,x)=>t+toN(x.valor),0));
 window.toNum = toN;
 const uid = () => crypto.randomUUID();
 // data local (toISOString dava o dia anterior depois da meia-noite em horário de verão)
@@ -1337,11 +1342,11 @@ window.render=function(){
     let cntEnc=0,cntDiv=0,cntVen=0;
 
     (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
-        const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return;
+        const cli=window.db.clientes.find(c=>c.id==e.clienteId)||{id:e.clienteId,nome:'(cliente apagado)'};
         const entregas=e.entregas||[], pagamentos=e.pagamentos||[];
-        const mEnt=entregas.reduce((a,x)=>a+toN(x.m3),0);
-        const vP=pagamentos.reduce((a,x)=>a+toN(x.valor),0);
-        const vT=toN(e.valorTotal),mTot=toN(e.metrosTotal);
+        const mEnt=somaM3(entregas);
+        const vP=somaEur(pagamentos);
+        const vT=r2(e.valorTotal),mTot=r3(e.metrosTotal);
         const fM=Math.max(0,mTot-mEnt),sDev=Math.max(0,vT-vP);
 
         sRecE+=vP;
@@ -1537,10 +1542,10 @@ window.escolherEncomenda=modo=>{ _modoEscolher=modo; document.getElementById('es
 window.renderEscolher=()=>{
     const q=document.getElementById('escolherFiltro').value.toLowerCase();
     const linhas=(window.db.encomendas||[]).map(e=>{
-        const cli=window.db.clientes.find(c=>c.id==e.clienteId); if(!cli) return null;
-        const mEnt=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0), vP=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);
-        const fM=Math.max(0,toN(e.metrosTotal)-mEnt), sDev=Math.max(0,toN(e.valorTotal)-vP);
-        return {e,cli,fM,sDev,entregue:mEnt>=toN(e.metrosTotal)};
+        const cli=window.db.clientes.find(c=>c.id==e.clienteId)||{id:e.clienteId,nome:'(cliente apagado)'};
+        const mEnt=somaM3(e.entregas||[]), vP=somaEur(e.pagamentos||[]);
+        const fM=Math.max(0,r3(e.metrosTotal)-mEnt), sDev=Math.max(0,r2(e.valorTotal)-vP);
+        return {e,cli,fM,sDev,entregue:mEnt>=r3(e.metrosTotal)};
     }).filter(x=>x&&(_modoEscolher==='entregar'?x.fM>0:x.sDev>0.005)&&(!q||x.cli.nome.toLowerCase().includes(q)))
       .sort((a,b)=>_modoEscolher==='pagar'?(b.entregue-a.entregue)||(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''):(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''));
     document.getElementById('escolherLista').innerHTML=linhas.map(x=>`<button type="button" class="list-group-item list-group-item-action py-2" onclick="window.fecharModalSemSalvar('modalEscolher');setTimeout(()=>window.${_modoEscolher==='entregar'?'abrirEntrega':'abrirPagamento'}('${escJs(x.e.id)}'),250)">
@@ -1837,9 +1842,9 @@ window.abrirPainelCliente=id=>{
 
     const blocos=encs.map(e=>{
         const entregas=e.entregas||[], pagamentos=e.pagamentos||[];
-        const mEnt=entregas.reduce((a,x)=>a+toN(x.m3),0);
-        const vP=pagamentos.reduce((a,x)=>a+toN(x.valor),0);
-        const vT=toN(e.valorTotal), mTot=toN(e.metrosTotal);
+        const mEnt=somaM3(entregas);
+        const vP=somaEur(pagamentos);
+        const vT=r2(e.valorTotal), mTot=r3(e.metrosTotal);
         const saldo=Math.max(0,vT-vP);
         totalM3+=mEnt; totalRec+=vP; if(mEnt>=mTot) totalDiv+=saldo;
 
@@ -1949,7 +1954,7 @@ window.salvarEncomenda=()=>{
     const clienteId=document.getElementById('encCliente').value;
     if(!clienteId){alert('Seleciona um cliente da lista.');return;}
     const m=toN(document.getElementById('encMetros').value),p=toN(document.getElementById('encPreco').value);
-    const novoTotal=m*p;
+    const novoTotal=r2(m*p);
     const tipo=document.getElementById('encTipoLenha').value;
 
     const gravar=()=>{
@@ -1957,21 +1962,21 @@ window.salvarEncomenda=()=>{
         if(window.encIdEdicao){
             const i=window.db.encomendas.findIndex(x=>x.id==window.encIdEdicao);
             const enc=window.db.encomendas[i];
-            const vPago=(enc.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);
+            const vPago=somaEur(enc.pagamentos||[]);
             window.db.encomendas[i]={...enc,...d};
         } else { window.db.encomendas.push({id:uid(),entregas:[],pagamentos:[],...d}); }
         // guardar preço em memória
         if(!window.db.precosMemoria)window.db.precosMemoria={};
-        { const f=faixaDe(kmCli(cliEnc())); window.db.precosMemoria[tipo]=Math.max(0,p-(f?toN(f.acrescimo):0)); }
+        if(!window.encIdEdicao){ const f=faixaDe(kmCli(cliEnc())); window.db.precosMemoria[tipo]=Math.max(0,p-(f?toN(f.acrescimo):0)); }
         window.fecharModal('modalEnc');
     };
 
     // aviso se edição e valorTotal muda com pagamentos já feitos
     if(window.encIdEdicao){
         const enc=window.db.encomendas.find(x=>x.id==window.encIdEdicao);
-        const vPago=(enc.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);
-        const mEntregue=(enc.entregas||[]).reduce((a,x)=>a+toN(x.m3),0);
-        if((Math.abs(novoTotal-toN(enc.valorTotal))>0.01&&vPago>0)||(Math.abs(m-toN(enc.metrosTotal))>0.01&&mEntregue>0)){
+        const vPago=somaEur(enc.pagamentos||[]);
+        const mEntregue=somaM3(enc.entregas||[]);
+        if((Math.abs(novoTotal-r2(enc.valorTotal))>0.01&&vPago>0)||(Math.abs(m-r3(enc.metrosTotal))>0.01&&mEntregue>0)){
             window.fecharModalSemSalvar('modalEnc');
             window.avisar(`⚠️ Esta encomenda já tem <b>${vPago.toFixed(0)}€ pagos</b> e <b>${mEntregue.toFixed(1)}m³ entregues</b>.<br>Alterar os valores pode criar inconsistências. Continuar?`,gravar);
             return;
@@ -1990,14 +1995,14 @@ document.addEventListener('click',e=>{ if(!document.getElementById('encClienteWr
 const buildHist=(items,tipo,encId)=>{ if(!items.length)return''; const campo=tipo==='entregas'?'m3':'valor',lbl=tipo==='entregas'?'m³':'€'; return `<div class="border-top pt-2 mt-1"><small class="fw-bold text-muted">Histórico</small>`+items.map(x=>`<div class="hist-row"><span>${esc(x.data)}</span><span>${toN(x[campo]).toFixed(tipo==='entregas'?1:0)} ${lbl} ${porTag(x)}</span><div><i class="bi bi-pencil text-primary me-1" onclick="window.abrirEdicaoRegisto('${encId}','${tipo}','${x.id}')"></i><i class="bi bi-x text-danger" onclick="window.confirmarApagar(()=>window.apagarRegisto('${encId}','${tipo}','${x.id}'))"></i></div></div>`).join('')+`</div>`; };
 
 // ── ENTREGAS ─────────────────────────────
-window.abrirEntrega=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const ent=e.entregas||[];const mEnt=ent.reduce((a,x)=>a+toN(x.m3),0);document.getElementById('faltaM3Texto').innerText=Math.max(0,toN(e.metrosTotal)-mEnt).toFixed(1);document.getElementById('entregaData').value=hoje();document.getElementById('qtdParcialM3').value='';document.getElementById('historicoEntregas').innerHTML=buildHist(ent,'entregas',id);window.abrirModal('modalEntrega'); };
-window.executarEntregaTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const resto=Math.max(0,toN(e.metrosTotal)-mEnt);if(resto>0)e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:resto,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
-window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialM3').value);if(!e||v<=0)return;if(!e.entregas)e.entregas=[];const mEnt=e.entregas.reduce((a,x)=>a+toN(x.m3),0);const falta=Math.max(0,toN(e.metrosTotal)-mEnt);if(v>falta+0.001){mostrarToast(`Máximo: ${falta.toFixed(1)} m³`,'erro');return;}e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:v,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
+window.abrirEntrega=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const ent=e.entregas||[];const mEnt=somaM3(ent);document.getElementById('faltaM3Texto').innerText=Math.max(0,r3(e.metrosTotal)-mEnt).toFixed(1);document.getElementById('entregaData').value=hoje();document.getElementById('qtdParcialM3').value='';document.getElementById('historicoEntregas').innerHTML=buildHist(ent,'entregas',id);window.abrirModal('modalEntrega'); };
+window.executarEntregaTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.entregas)e.entregas=[];const mEnt=somaM3(e.entregas);const resto=Math.max(0,r3(e.metrosTotal)-mEnt);if(resto>0)e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:resto,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
+window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialM3').value);if(!e||v<=0)return;if(!e.entregas)e.entregas=[];const mEnt=somaM3(e.entregas);const falta=Math.max(0,r3(e.metrosTotal)-mEnt);if(v>falta+0.001){mostrarToast(`Máximo: ${falta.toFixed(1)} m³`,'erro');return;}e.entregas.push({id:uid(),data:document.getElementById('entregaData').value,m3:v,por:quem(),em:agoraIso()});window.fecharModal('modalEntrega'); };
 
 // ── PAGAMENTOS ───────────────────────────
-window.abrirPagamento=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const pags=e.pagamentos||[];const vP=pags.reduce((a,x)=>a+toN(x.valor),0);document.getElementById('faltaDinheiroTexto').innerText=(toN(e.valorTotal)-vP).toFixed(2)+'€';document.getElementById('pagamentoData').value=hoje();document.getElementById('qtdParcialDinheiro').value='';document.getElementById('historicoPagamentos').innerHTML=buildHist(pags,'pagamentos',id);window.abrirModal('modalPagamento'); };
-window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const resto=Math.max(0,toN(e.valorTotal)-vP);if(resto>0)e.pagamentos.push({id:uid(),data:document.getElementById('pagamentoData').value,valor:resto,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento'); };
-window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=e.pagamentos.reduce((a,x)=>a+toN(x.valor),0);const falta=toN(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const gravar=()=>{e.pagamentos.push({id:uid(),data,valor:v,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
+window.abrirPagamento=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const pags=e.pagamentos||[];const vP=somaEur(pags);document.getElementById('faltaDinheiroTexto').innerText=(r2(e.valorTotal)-vP).toFixed(2)+'€';document.getElementById('pagamentoData').value=hoje();document.getElementById('qtdParcialDinheiro').value='';document.getElementById('historicoPagamentos').innerHTML=buildHist(pags,'pagamentos',id);window.abrirModal('modalPagamento'); };
+window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.pagamentos)e.pagamentos=[];const vP=somaEur(e.pagamentos);const resto=Math.max(0,r2(e.valorTotal)-vP);if(resto>0)e.pagamentos.push({id:uid(),data:document.getElementById('pagamentoData').value,valor:resto,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento'); };
+window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=somaEur(e.pagamentos);const falta=r2(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const gravar=()=>{e.pagamentos.push({id:uid(),data,valor:v,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
 
 // ── EDITAR REGISTO ───────────────────────
 window.abrirEdicaoRegisto=(encId,tipo,itemId)=>{ const e=window.db.encomendas.find(x=>x.id==encId);const item=e[tipo].find(x=>x.id==itemId);window.editRegistoCtx={encId,tipo,itemId};document.getElementById('editRegistoTitulo').textContent=tipo==='entregas'?'Editar Entrega':'Editar Pagamento';document.getElementById('editRegistoData').value=item.data;document.getElementById('editRegistoValor').value=tipo==='entregas'?item.m3:item.valor;window.fecharModalSemSalvar(tipo==='entregas'?'modalEntrega':'modalPagamento');window.abrirModal('modalEditarRegisto'); };
@@ -2276,7 +2281,7 @@ window.exportarCSVHoras=()=>{
 };
 
 // ── CSV ──────────────────────────────────
-window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=(window.db.encomendas||[]).filter(e=>{ const en=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0),pa=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0); return isDiv?(en>=toN(e.metrosTotal)&&pa<toN(e.valorTotal)):(en>=toN(e.metrosTotal)&&pa>=toN(e.valorTotal)); }).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=(e.entregas||[]).reduce((a,x)=>a+toN(x.m3),0),pa=(e.pagamentos||[]).reduce((a,x)=>a+toN(x.valor),0);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';return [e.dataEnc,cli?.nome||'',e.tipoLenha,en.toFixed(1),toN(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(toN(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob([[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
+window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=(window.db.encomendas||[]).filter(e=>{ const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]); return isDiv?(en>=r3(e.metrosTotal)&&pa<r2(e.valorTotal)):(en>=r3(e.metrosTotal)&&pa>=r2(e.valorTotal)); }).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;return [e.dataEnc,q(cli?.nome||''),q(e.tipoLenha),r3(e.metrosTotal),r2(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(r2(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob(['\ufeff'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
 
 // ── BACKUP JSON ──────────────────────────
 window.exportarBackup=()=>{ window.db.ultimoBackup=hoje(); window.atualizarBD(); const blob=new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenhapro_backup_${hoje()}.json`});a.click(); mostrarToast('Backup descarregado','ok'); };
