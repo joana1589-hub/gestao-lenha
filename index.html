@@ -1031,6 +1031,7 @@ const toN = v => { const n=parseFloat(typeof v==='string'?v.replace(/\s/g,'').re
 const r2 = v => Math.round(toN(v)*100)/100;      // euros
 const r3 = v => Math.round(toN(v)*1000)/1000;    // m³
 const somaM3 = arr => r3((arr||[]).reduce((t,x)=>t+toN(x.m3),0));
+const encVazia = e => !e.clienteId && r3(e.metrosTotal)===0 && !(e.entregas||[]).length && !(e.pagamentos||[]).length;
 const somaEur = arr => r2((arr||[]).reduce((t,x)=>t+toN(x.valor),0));
 window.toNum = toN;
 const uid = () => crypto.randomUUID();
@@ -1370,6 +1371,7 @@ window.verificarDados=()=>{
     const dataOk=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'');
     const abrirEnc=id=>`window.abrirEditarEncomenda('${escJs(id)}')`;
     (window.db.encomendas||[]).forEach(e=>{
+        if(encVazia(e)){ add('aviso','Encomenda vazia (sem cliente, sem data, 0 m³) — resto de um teste antigo. Pode ser apagada.',`window.confirmarApagar(()=>window.apagar('encomendas','${escJs(e.id)}'))`); return; }
         const cli=(window.db.clientes||[]).find(c=>c.id==e.clienteId), nome=cli?cli.nome:'(cliente apagado)';
         const lbl=`${esc(nome)} · enc. ${fmtData(e.dataEnc)||'sem data'}`;
         const mT=r3(e.metrosTotal), vT=r2(e.valorTotal), mE=somaM3(e.entregas), vP=somaEur(e.pagamentos);
@@ -1391,6 +1393,11 @@ window.verificarDados=()=>{
         Object.entries(pagIg).forEach(([k,n])=>{ if(n>1) add('aviso',`${lbl}: ${n} pagamentos iguais de ${k.split('|')[1]}€ no mesmo dia (${fmtData(k.split('|')[0])}) — repetido?`,`window.abrirPagamento('${escJs(e.id)}')`); });
         if(mE>=mT&&vP<vT-0.01&&dataOk(e.dataEnc)){ const d=diasDesde((e.entregas||[]).reduce((m,x)=>x.data>m?x.data:m,'')||e.dataEnc); if(d>180) add('info',`${lbl}: dívida de ${(vT-vP).toFixed(2)}€ com ${d} dias.`,`window.abrirPagamento('${escJs(e.id)}')`); }
     });
+    // encomendas repetidas: mesmo cliente, data, m³ e tipo
+    const encVistas={};
+    (window.db.encomendas||[]).filter(e=>!encVazia(e)).forEach(e=>{ const k=[e.clienteId,e.dataEnc,r3(e.metrosTotal),e.tipoLenha].join('|');
+        if(encVistas[k]){ const n=((window.db.clientes||[]).find(c=>c.id==e.clienteId)||{}).nome||'?'; add('aviso',`${esc(n)}: duas encomendas iguais no mesmo dia (${fmtData(e.dataEnc)}, ${r3(e.metrosTotal)} m³ ${esc(e.tipoLenha)}) — repetida?`,`window.abrirEditarEncomenda('${escJs(e.id)}')`); }
+        encVistas[k]=1; });
     // gastos
     const vistos={};
     (window.db.despesas||[]).forEach(d=>{
@@ -1562,6 +1569,7 @@ window.render=function(){
     let cntEnc=0,cntDiv=0,cntVen=0;
 
     (window.db.encomendas||[]).sort((a,b)=>new Date(a.dataEnc)-new Date(b.dataEnc)).forEach(e=>{
+        if(encVazia(e)) return;   // restos sem cliente, sem m³ e sem movimentos
         const cli=window.db.clientes.find(c=>c.id==e.clienteId)||{id:e.clienteId,nome:'(cliente apagado)'};
         const entregas=e.entregas||[], pagamentos=e.pagamentos||[];
         const mEnt=somaM3(entregas);
