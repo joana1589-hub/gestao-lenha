@@ -78,6 +78,7 @@
         .kpi-lbl  { font-size:.65rem; color:var(--muted); text-transform:uppercase; font-weight:bold; }
         .row-atrasada { background:rgba(220,53,69,.07)!important; }
         .row-atrasada td:first-child { border-left:3px solid var(--danger); }
+        #modalConfirm,#modalAviso { z-index:1080; }
         #toastGravacao { position:fixed; bottom:20px; right:20px; z-index:9999; min-width:200px; }
         .toast-saving { background:#fff3cd; border-color:#ffc107; color:#856404; }
         .toast-ok     { background:#d1e7dd; border-color:#198754; color:#0f5132; }
@@ -228,7 +229,7 @@
         <span class="navbar-brand fw-bold mb-0">🪵 LenhaPro</span>
         <div class="d-flex gap-2 align-items-center">
             <button class="btn btn-success btn-sm fw-bold" id="btnInstalar" style="display:none" onclick="window.instalarApp()" title="Instalar no telemóvel"><i class="bi bi-phone"></i> Instalar</button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="window.exportarBackup()" title="Backup JSON"><i class="bi bi-cloud-download"></i></button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.abrirCopia()" title="Cópia de segurança"><i class="bi bi-cloud-download"></i></button>
             <button class="btn btn-outline-light btn-sm" id="btnTema" onclick="window.toggleTema()" title="Tema">🌙</button>
             <button class="btn btn-warning btn-sm fw-bold" onclick="document.getElementById('inputSaldoInicial').value=window.toNum(window.db.saldoInicial);window.abrirModal('modalSaldoInicial')">💰 CAIXA</button>
             <img id="userAvatar" src="" style="width:28px;height:28px;border-radius:50%;display:none;cursor:pointer;border:2px solid #e67e22" title="Clica para sair" onclick="window.logout()">
@@ -517,7 +518,7 @@
         <div id="tabHist" class="tab-pane fade">
             <div class="d-flex gap-2 mb-2">
                 <button class="btn btn-warning fw-bold flex-fill" onclick="window.verificarDados()">🔍 Verificar dados</button>
-                <button class="btn btn-outline-secondary" onclick="window.exportarBackup()" title="Cópia de segurança completa">💾 Cópia</button>
+                <button class="btn btn-outline-secondary" onclick="window.abrirCopia()" title="Cópia de segurança">💾 Cópia</button>
             </div>
             <div id="verifResultado"></div>
             <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
@@ -845,6 +846,23 @@
     </div></div>
 </div>
 
+<!-- Cópia de segurança -->
+<div class="modal fade" id="modalCopia" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">💾 Cópia de segurança</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCopia')"></button></div>
+        <div id="copiaInfo" class="small text-muted mb-2"></div>
+        <button class="btn btn-primary w-100 fw-bold mb-1" onclick="window.exportarBackup()">⬇️ Descarregar cópia (JSON)</button>
+        <div class="small text-muted mb-3">Cópia completa de tudo. É esta que serve para <b>repor</b>. Guarda-a no Drive ou no computador.</div>
+        <button class="btn btn-success w-100 fw-bold mb-1" onclick="window.exportarBackupExcel()"><i class="bi bi-file-earmark-excel"></i> Descarregar em Excel</button>
+        <div class="small text-muted mb-3">Uma folha por tipo (clientes, encomendas, entregas, pagamentos, gastos, cargas, horas…). Para ler e consultar — <b>não serve para repor</b>.</div>
+        <hr class="my-2">
+        <div class="fw-bold mb-1">⬆️ Repor uma cópia</div>
+        <div class="small text-muted mb-2">Escolhe um ficheiro <b>lenhapro_backup_….json</b>. Antes de repor, a app mostra o que tem a cópia e descarrega uma cópia do estado atual, para poderes voltar atrás.</div>
+        <input type="file" id="ficheiroRepor" class="form-control form-control-sm mb-2" accept=".json,application/json" onchange="window.lerCopia(this)">
+        <div id="reporResumo"></div>
+    </div></div>
+</div>
+
 <!-- Mais (menu do fundo) -->
 <div class="modal fade" id="modalMais" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
@@ -931,7 +949,7 @@ window.loginGoogle = async () => {
     }
 };
 getRedirectResult(auth).catch(e => mostrarToast('Erro ao fazer login: ' + e.message, 'erro'));
-window.logout = () => window.confirmar('Terminar sessão?', () => signOut(auth));
+window.logout = () => window.confirmar('Terminar sessão?', () => signOut(auth), 'Sair');
 window.instalarApp = async () => {
     if (!window._installPrompt) return;
     window._installPrompt.prompt();
@@ -1219,8 +1237,8 @@ let _toast=null;
 const mostrarToast=(msg,tipo)=>{ const el=document.getElementById('toastGravacao'),me=document.getElementById('toastMsg'); el.className=`toast align-items-center border ${tipo==='saving'?'toast-saving':tipo==='ok'?'toast-ok':'toast-erro'}`; me.textContent=`${tipo==='saving'?'⏳':tipo==='ok'?'✅':'❌'} ${msg}`; if(_toast)_toast.hide(); _toast=new bootstrap.Toast(el,{delay:tipo==='ok'?2000:4000}); _toast.show(); };
 
 // ── MODAL CONFIRM ────────────────────────
-window.confirmar=(msg,fn)=>{ document.getElementById('confirmMsg').textContent=msg; const b=document.getElementById('confirmOk'),nb=b.cloneNode(true); b.parentNode.replaceChild(nb,b); nb.addEventListener('click',()=>{ bootstrap.Modal.getInstance(document.getElementById('modalConfirm'))?.hide(); fn(); }); window.abrirModal('modalConfirm'); };
-window.confirmarApagar=fn=>window.confirmar('Tens a certeza que queres apagar?',fn);
+window.confirmar=(msg,fn,rotulo='Confirmar')=>{ document.getElementById('confirmMsg').textContent=msg; const b=document.getElementById('confirmOk'),nb=b.cloneNode(true); nb.textContent=rotulo; b.parentNode.replaceChild(nb,b); nb.addEventListener('click',()=>{ bootstrap.Modal.getInstance(document.getElementById('modalConfirm'))?.hide(); fn(); }); window.abrirModal('modalConfirm'); };
+window.confirmarApagar=fn=>window.confirmar('Tens a certeza que queres apagar?',fn,'Apagar');
 
 // ── MODAL AVISO ──────────────────────────
 window.avisar=(msg,fn)=>{ document.getElementById('avisoMsg').innerHTML=msg; const b=document.getElementById('avisoOk'),nb=b.cloneNode(true); b.parentNode.replaceChild(nb,b); nb.addEventListener('click',()=>{ bootstrap.Modal.getInstance(document.getElementById('modalAviso'))?.hide(); fn(); }); window.abrirModal('modalAviso'); };
@@ -1234,6 +1252,7 @@ window.atualizarBD=async()=>{
     if(!_carregado||!_base){ mostrarToast('Ainda a carregar dados — tenta daqui a pouco','erro'); return; }
     const ops=[], hist=[], t=agoraIso();
     const registar=(acao,col,id,antesObj,depoisObj)=>{
+        if(window._restauro){ window._restauro.n=(window._restauro.n||0)+1; return; }
         if(acao==='criou'&&window._repor&&window._repor.col===col&&window._repor.id===id){ acao='repôs'; window._repor=null; }
         const texto=acao==='repôs'?[`Repôs ${(NOMES_COL[col]||col).toLowerCase()} apagado: ${rotulo(col,depoisObj)}`]:descreverMudanca(acao,col,antesObj,depoisObj); if(!texto.length) return;
         const h={id:uid(),em:t,por:quem(),porEmail:(window._utilizador&&window._utilizador.email)||'',acao,col,docId:id,texto,
@@ -1271,6 +1290,9 @@ window.atualizarBD=async()=>{
         const ks=Object.keys(cfgMud).filter(k=>!CFG_IGNORAR.includes(k));
         if(ks.length) registar('alterou','definicoes','v2',Object.fromEntries(ks.map(k=>[k,cfgAntes[k]])),Object.fromEntries(ks.map(k=>[k,cfgMud[k]])));
     }
+    if(window._restauro){ const r=window._restauro; window._restauro=null;
+        hist.push({id:uid(),em:t,por:quem(),porEmail:(window._utilizador&&window._utilizador.email)||'',acao:'repôs',col:'definicoes',docId:'v2',
+            texto:[`Repôs a cópia de segurança${r.data?' de '+fmtData(r.data):''}`,`${r.n||0} registo(s) alterados, criados ou apagados`],antes:null,depois:null}); }
     hist.forEach(h=>ops.push(b=>b.set(doc(colRef('historico'),h.id),h)));
     if(!ops.length) return;
 
@@ -1381,7 +1403,7 @@ window.reporApagado=hid=>{
         const o=JSON.parse(JSON.stringify(h.antes)); delete o.alteradoPor; delete o.alteradoEm; window._repor={col:h.col,id:h.docId};
         window.db[h.col]=[...(window.db[h.col]||[]),o]; window.atualizarBD();
         setTimeout(()=>window.carregarHistorico(true),800);
-    });
+    },'Repor');
 };
 window.exportarHistorico=()=>{
     exportarExcel(`historico_${hoje()}.xlsx`,'Histórico',
@@ -1814,7 +1836,7 @@ document.addEventListener('shown.bs.tab',e=>{
 window.abrirMais=()=>{
     const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabHist','📜','Histórico']];
     document.getElementById('maisBotoes').innerHTML=itens.map(([id,ic,t])=>`<div class="col-4"><button class="btn btn-outline-secondary w-100 btn-mais" onclick="window.irPara('${id}')"><span>${ic}</span>${t}</button></div>`).join('')+
-        `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.exportarBackup()">💾 Cópia de segurança</button></div>`;
+        `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.abrirCopia()">💾 Cópia de segurança</button></div>`;
     window.abrirModal('modalMais');
 };
 
@@ -2575,16 +2597,20 @@ const carregarXLSX=()=>_xlsx||(_xlsx=new Promise((res,rej)=>{ if(window.XLSX) re
 const serieXL=(y,m,d,h=0,mi=0)=>(Date.UTC(y,m-1,d,h,mi)-Date.UTC(1899,11,30))/864e5;
 const dataXL=t=>{ if(!t||!/^\d{4}-\d{2}-\d{2}/.test(t)) return ''; const [y,m,d]=t.slice(0,10).split('-').map(Number); return serieXL(y,m,d); };
 const dataHoraXL=iso=>{ const x=new Date(iso); return isNaN(x)?'':serieXL(x.getFullYear(),x.getMonth()+1,x.getDate(),x.getHours(),x.getMinutes()); };
+function folhaXL(XLSX,colunas,linhas,totais){
+    const aoa=[colunas.map(c=>c.t),...linhas]; if(totais&&linhas.length) aoa.push(totais);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    const fmt={data:'dd/mm/yyyy',dh:'dd/mm/yyyy hh:mm',eur:'#,##0.00 "€"',num:'0.0##'};
+    for(let r=1;r<aoa.length;r++) colunas.forEach((c,ci)=>{ const cel=ws[XLSX.utils.encode_cell({r,c:ci})]; if(cel&&fmt[c.tipo]&&(cel.t==='n'||cel.t==='d')) cel.z=fmt[c.tipo]; });
+    ws['!cols']=colunas.map(c=>({wch:c.w||14}));
+    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,linhas.length),c:colunas.length-1}})};
+    return ws;
+}
 async function exportarExcel(ficheiro,folha,colunas,linhas,totais){
     try{
         mostrarToast('A preparar o Excel…','saving');
         const XLSX=await carregarXLSX();
-        const aoa=[colunas.map(c=>c.t),...linhas]; if(totais&&linhas.length) aoa.push(totais);
-        const ws=XLSX.utils.aoa_to_sheet(aoa);
-        const fmt={data:'dd/mm/yyyy',dh:'dd/mm/yyyy hh:mm',eur:'#,##0.00 "€"',num:'0.0##'};
-        for(let r=1;r<aoa.length;r++) colunas.forEach((c,ci)=>{ const cel=ws[XLSX.utils.encode_cell({r,c:ci})]; if(cel&&fmt[c.tipo]&&(cel.t==='n'||cel.t==='d')) cel.z=fmt[c.tipo]; });
-        ws['!cols']=colunas.map(c=>({wch:c.w||14}));
-        ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,linhas.length),c:colunas.length-1}})};
+        const ws=folhaXL(XLSX,colunas,linhas,totais);
         const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,folha.slice(0,31));
         XLSX.writeFile(wb,ficheiro,{compression:true});
         mostrarToast('Excel descarregado','ok');
@@ -2617,7 +2643,109 @@ window.exportarCSV=tipo=>{
 };
 
 // ── BACKUP JSON ──────────────────────────
-window.exportarBackup=()=>{ window.db.ultimoBackup=hoje(); window.atualizarBD(); const blob=new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenhapro_backup_${hoje()}.json`});a.click(); mostrarToast('Backup descarregado','ok'); };
+window.exportarBackup=(nome)=>{
+    if(!nome){ window.db.ultimoBackup=hoje(); window.atualizarBD(); }
+    const blob=new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'});
+    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:nome||`lenhapro_backup_${hoje()}.json`}).click();
+    mostrarToast(nome?'Cópia do estado atual descarregada':'Cópia descarregada','ok');
+};
+window.abrirCopia=()=>{
+    const d=window.db.ultimoBackup?diasDesde(window.db.ultimoBackup):null;
+    document.getElementById('copiaInfo').innerHTML=d==null?'Ainda não fizeram nenhuma cópia.':`Última cópia: ${fmtData(window.db.ultimoBackup)} (há ${d} dia${d===1?'':'s'}).`;
+    document.getElementById('ficheiroRepor').value=''; document.getElementById('reporResumo').innerHTML='';
+    window.abrirModal('modalCopia');
+};
+
+// ── CÓPIA EM EXCEL (várias folhas) ───────
+window.exportarBackupExcel=async()=>{
+    try{
+        mostrarToast('A preparar o Excel…','saving');
+        const XLSX=await carregarXLSX(), wb=XLSX.utils.book_new(), db=window.db;
+        const add=(nome,cols,linhas,tot)=>XLSX.utils.book_append_sheet(wb,folhaXL(XLSX,cols,linhas,tot),nome);
+        const nomeCli=id=>((db.clientes||[]).find(c=>c.id==id)||{}).nome||'(cliente apagado)';
+        const encs=(db.encomendas||[]).filter(e=>!encVazia(e)).slice().sort((a,b)=>(a.dataEnc||'').localeCompare(b.dataEnc||''));
+        const C=(t,tipo,w)=>({t,tipo,w}); const soma=(L,k)=>r2(L.reduce((a,l)=>a+(+l[k]||0),0));
+        // Resumo
+        add('Resumo',[C('Indicador',null,28),C('Valor',null,16)],[
+            ['Data da cópia',dataXL(hoje())],['Saldo inicial da caixa',r2(db.saldoInicial)],
+            ['Dinheiro em mão (caixa)',document.getElementById('resumoCaixaTotal').innerText],['Lucro acumulado',document.getElementById('resumoLucro').innerText],
+            ['Dívida de clientes',document.getElementById('resumoDividaEntregue').innerText],['Por entregar',document.getElementById('resumoPendentesGlobal').innerText],
+            ['Clientes',(db.clientes||[]).length],['Encomendas',encs.length],['Gastos',(db.despesas||[]).length],['Cargas',(db.lotes||[]).length],['Registos de horas',(db.horas||[]).length]]);
+        { const ws=wb.Sheets['Resumo']; ws['B2'].z='dd/mm/yyyy'; ws['B3'].z='#,##0.00 "€"'; }
+        // Clientes
+        const cl=(db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{ const es=encs.filter(e=>e.clienteId==c.id);
+            const div=es.filter(e=>somaM3(e.entregas)>=r3(e.metrosTotal)).reduce((a,e)=>a+Math.max(0,r2(e.valorTotal)-somaEur(e.pagamentos)),0);
+            return [c.nome,c.contacto||'',c.morada||'',c.zona||'',c.km!=null?c.km:'',c.obs||c.info||'',es.length,r2(es.reduce((a,e)=>a+r2(e.valorTotal),0)),r2(div)]; });
+        add('Clientes',[C('Nome',null,26),C('Telefone',null,13),C('Morada',null,26),C('Zona',null,14),C('Km',null,6),C('Notas',null,24),C('Encomendas',null,10),C('Total comprado','eur',13),C('Em dívida','eur',11)],cl,['TOTAL','','','','','',soma(cl,6),soma(cl,7),soma(cl,8)]);
+        // Encomendas
+        const en=encs.map(e=>{ const m=somaM3(e.entregas),p=somaEur(e.pagamentos),t=r2(e.valorTotal);
+            return [dataXL(e.dataEnc),nomeCli(e.clienteId),e.tipoLenha||'',r3(e.metrosTotal),r2(e.precoM3),t,m,p,r2(Math.max(0,t-p)),m<r3(e.metrosTotal)?'Por entregar':p<t?'Por pagar':'Paga',e.obs||'',e.criadoPor||'']; });
+        add('Encomendas',[C('Data','data',11),C('Cliente',null,26),C('Tipo',null,12),C('m³','num',7),C('€/m³','eur',9),C('Total','eur',10),C('Entregue m³','num',10),C('Pago','eur',10),C('Falta pagar','eur',11),C('Estado',null,12),C('Notas',null,28),C('Criado por',null,11)],
+            en,['TOTAL','','',soma(en,3),'',soma(en,5),soma(en,6),soma(en,7),soma(en,8),'','','']);
+        // Entregas e pagamentos
+        const ent=[],pag=[];
+        encs.forEach(e=>{ (e.entregas||[]).forEach(x=>ent.push([dataXL(x.data),nomeCli(e.clienteId),dataXL(e.dataEnc),e.tipoLenha||'',r3(x.m3),x.por||''])); (e.pagamentos||[]).forEach(x=>pag.push([dataXL(x.data),nomeCli(e.clienteId),dataXL(e.dataEnc),r2(x.valor),x.por||''])); });
+        ent.sort((a,b)=>(a[0]||0)-(b[0]||0)); pag.sort((a,b)=>(a[0]||0)-(b[0]||0));
+        add('Entregas',[C('Data','data',11),C('Cliente',null,26),C('Encomenda de','data',12),C('Tipo',null,12),C('m³','num',7),C('Registado por',null,13)],ent,['TOTAL','','','',soma(ent,4),'']);
+        add('Pagamentos',[C('Data','data',11),C('Cliente',null,26),C('Encomenda de','data',12),C('Valor','eur',11),C('Registado por',null,13)],pag,['TOTAL','','',soma(pag,3),'']);
+        // Gastos (incl. horas pagas)
+        const gs=[...(db.despesas||[]).map(d=>[dataXL(d.data),catDe(d),d.desc||'',r2(d.valor),d.alteradoPor||d.criadoPor||'']),
+            ...(db.horas||[]).filter(h=>h.pago).map(h=>[dataXL(h.data),'Mão de obra',`Horas pagas — ${h.nome} (${toN(h.horas)}h × ${taxaDe(h)}€)`,r2(valorDeHora(h)),h.criadoPor||''])].sort((a,b)=>(a[0]||0)-(b[0]||0));
+        add('Gastos',[C('Data','data',11),C('Categoria',null,16),C('Descrição',null,34),C('Valor','eur',11),C('Registado por',null,13)],gs,['TOTAL','','',soma(gs,3),'']);
+        // Cargas
+        const lt=(db.lotes||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')), mov=[];
+        const cg=lt.map(l=>{ const gE=(l.gastosExtras||[]).reduce((a,g)=>a+toN(g.valor),0), sV=(l.saidasLenha||[]).reduce((a,x)=>a+toN(x.valor),0), m3V=(l.saidasLenha||[]).reduce((a,x)=>a+toN(x.m3),0);
+            (l.gastosExtras||[]).forEach(g=>mov.push([l.nome,'Gasto extra',dataXL(g.data||l.data),[g.categoria,g.desc].filter(Boolean).join(' — '),'',-r2(g.valor)]));
+            (l.saidasLenha||[]).forEach(x=>mov.push([l.nome,'Recebido','','',r3(x.m3),r2(x.valor)]));
+            return [dataXL(l.data),l.nome,l.tipoLenha||'',toN(l.m3Comprados)||'',r2(l.custoCompra),r2(gE),r3(m3V),r2(sV),r2(sV-toN(l.custoCompra)-gE)]; });
+        add('Cargas',[C('Data','data',11),C('Carga',null,26),C('Tipo',null,12),C('m³ comprados','num',12),C('Compra','eur',11),C('Gastos extra','eur',11),C('m³ recebidos','num',11),C('Recebido','eur',11),C('Balanço','eur',11)],cg,['TOTAL','','',soma(cg,3),soma(cg,4),soma(cg,5),soma(cg,6),soma(cg,7),soma(cg,8)]);
+        add('Cargas - movimentos',[C('Carga',null,26),C('Movimento',null,12),C('Data','data',11),C('Descrição',null,28),C('m³','num',7),C('Valor','eur',11)],mov);
+        // Horas e dividendos
+        const hs=(db.horas||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(h=>{ const l=(db.lotes||[]).find(x=>String(x.id)===String(h.loteId));
+            return [dataXL(h.data),h.nome,h.pago?'paga':'não paga (sócio)',l?l.nome:'',toN(h.horas),taxaDe(h),r2(valorDeHora(h)),h.obs||'']; });
+        add('Horas',[C('Data','data',11),C('Pessoa',null,14),C('Tipo',null,16),C('Carga',null,20),C('Horas','num',8),C('€/hora','eur',9),C('Valor','eur',10),C('Obs',null,28)],hs,['TOTAL','','','',soma(hs,4),'',soma(hs,6),'']);
+        const dv=(db.dividendos||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(d=>[dataXL(d.data),d.desc||'',r2(d.valor)]);
+        add('Dividendos',[C('Data','data',11),C('Descrição',null,30),C('Valor','eur',11)],dv,['TOTAL','',soma(dv,2)]);
+        XLSX.writeFile(wb,`lenhapro_copia_${hoje()}.xlsx`,{compression:true});
+        mostrarToast('Excel descarregado','ok');
+    }catch(e){ console.error(e); mostrarToast('Não consegui criar o Excel — verifica a ligação à internet','erro'); }
+};
+
+// ── REPOR UMA CÓPIA ──────────────────────
+let _copiaLida=null;
+window.lerCopia=input=>{
+    const f=input.files&&input.files[0], out=document.getElementById('reporResumo'); _copiaLida=null; out.innerHTML='';
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+        let c; try{ c=JSON.parse(rd.result); }catch(e){ out.innerHTML='<div class="alert alert-danger small py-2">Este ficheiro não é uma cópia válida (não consegui ler o JSON).</div>'; return; }
+        if(!c||!Array.isArray(c.encomendas)||!Array.isArray(c.clientes)){ out.innerHTML='<div class="alert alert-danger small py-2">Este ficheiro não parece uma cópia do LenhaPro.</div>'; return; }
+        _copiaLida=c;
+        const n=(o,k)=>(o[k]||[]).length;
+        const linhas=[['Clientes','clientes'],['Encomendas','encomendas'],['Gastos','despesas'],['Cargas','lotes'],['Horas','horas'],['Dividendos','dividendos']]
+            .map(([t,k])=>`<tr><td>${t}</td><td class="text-end">${n(c,k)}</td><td class="text-end">${n(window.db,k)}</td></tr>`).join('');
+        out.innerHTML=`<div class="p-2 rounded small mb-2" style="border:1px solid var(--border)">
+            <div class="mb-1">Cópia de <b>${c.ultimoBackup?fmtData(c.ultimoBackup):'data desconhecida'}</b> · saldo inicial ${r2(c.saldoInicial).toFixed(2)}€</div>
+            <table class="table table-sm mb-1"><thead><tr><th></th><th class="text-end">Na cópia</th><th class="text-end">Agora</th></tr></thead><tbody>${linhas}</tbody></table>
+            <div class="text-danger">Repor substitui os registos atuais pelos da cópia: o que foi criado depois da cópia desaparece e o que foi apagado volta.</div></div>
+            <button class="btn btn-danger w-100 fw-bold" onclick="window.reporCopia()">Repor esta cópia</button>`;
+    };
+    rd.readAsText(f);
+};
+window.reporCopia=()=>{
+    const c=_copiaLida; if(!c) return;
+    window.confirmar('Tens a certeza? Os dados atuais vão ser substituídos pelos da cópia (fica descarregada uma cópia do estado atual).',()=>{
+        window.exportarBackup(`lenhapro_antes_de_repor_${hoje()}.json`);   // rede de segurança
+        const novo={...window.db};
+        Object.keys(c).forEach(k=>{ if(!COLS.includes(k)) novo[k]=c[k]; });
+        COLS.forEach(k=>novo[k]=Array.isArray(c[k])?JSON.parse(JSON.stringify(c[k])):[]);
+        window.db=novo; window._restauro={data:c.ultimoBackup||''};
+        window.atualizarBD();
+        window.fecharModalSemSalvar('modalCopia');
+        setTimeout(()=>mostrarToast('Cópia reposta','ok'),900);
+    },'Repor');
+};
+
 
 // ── ATALHOS DE TECLADO ───────────────────
 document.addEventListener('keydown',e=>{
