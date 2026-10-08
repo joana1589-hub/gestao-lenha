@@ -931,10 +931,17 @@ const telLimpo = t => {
     if(d.length===9 && /^[29]/.test(d)) d='351'+d;   // número português sem indicativo
     return d.length>=9 ? d : '';
 };
-const urlMaps = morada => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(morada)}`;
+// Endereço para o Maps: morada + localidade (zona); só a localidade se não houver morada
+const enderecoMaps = cli => {
+    const m=(cli&&cli.morada||'').trim(), z=(cli&&cli.zona||'').trim();
+    if(!m&&!z) return '';
+    const partes=[m]; if(z&&!m.toLowerCase().includes(z.toLowerCase())) partes.push(z);
+    return partes.filter(Boolean).join(', ')+', Portugal';
+};
+const urlMaps = endereco => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
 // Botões Ligar / WhatsApp / Maps. msg = texto já escrito no WhatsApp (opcional)
 const botoesContacto = (cli, msg) => {
-    const t=telLimpo(cli&&cli.contacto), m=(cli&&cli.morada||'').trim();
+    const t=telLimpo(cli&&cli.contacto), m=enderecoMaps(cli);
     const b=[];
     if(t){
         b.push(`<a class="btn btn-outline-primary btn-contacto" href="tel:+${t}" title="Ligar" onclick="event.stopPropagation()">📞</a>`);
@@ -1391,7 +1398,7 @@ function renderEntregasPendentes(pend){
         const itens=grupos[z].sort((a,b)=>(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''));
         const m3=itens.reduce((a,p)=>a+p.fM,0);
         const porTipo={}; itens.forEach(p=>porTipo[p.e.tipoLenha]=(porTipo[p.e.tipoLenha]||0)+p.fM);
-        const moradas=[...new Set(itens.map(p=>(p.cli.morada||'').trim()).filter(Boolean))].slice(0,10);
+        const moradas=[...new Set(itens.map(p=>enderecoMaps(p.cli)).filter(Boolean))].slice(0,10);
         const rota=moradas.length?`https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(moradas[moradas.length-1])}`+(moradas.length>1?`&waypoints=${encodeURIComponent(moradas.slice(0,-1).join('|'))}`:''):'';
         return `<div class="zona-card">
             <div class="zona-head"><div><b>📍 ${esc(z)}</b> <small class="opacity-75">${itens.length} entrega(s) · ${m3.toFixed(1)} m³</small>
