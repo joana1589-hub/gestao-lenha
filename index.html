@@ -104,6 +104,7 @@
         .row-div-antiga td:first-child { border-left:4px solid var(--danger); }
         .cat-badge { font-size:.68rem; padding:2px 7px; border-radius:10px; background:var(--badge-bg); color:var(--badge-color); border:1px solid var(--badge-border); white-space:nowrap; }
         .cat-auto { font-style:italic; opacity:.75; }
+        .chip-pessoa.btn-success::before { content:'✓ '; }
         .por-tag { font-size:.65rem; color:var(--muted); }
 
         /* ── TELEMÓVEL ── */
@@ -214,7 +215,7 @@
             <div class="row g-2">
                 <div class="col-4"><div class="kpi-card border-start border-primary border-4"><span class="kpi-lbl">Dinheiro em Mão</span><span id="resumoCaixaTotal" class="kpi-val text-primary">0€</span></div></div>
                 <div class="col-4"><div class="kpi-card border-start border-danger border-4"><span class="kpi-lbl">Dívida Clientes</span><span id="resumoDividaEntregue" class="kpi-val text-danger">0€</span></div></div>
-                <div class="col-4"><div class="kpi-card border-start border-success border-4"><span class="kpi-lbl">Lucro Acumulado</span><span id="resumoLucro" class="kpi-val text-success">0€</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-success border-4"><span class="kpi-lbl">Lucro Acumulado</span><span id="resumoLucro" class="kpi-val text-success">0€</span><small id="resumoLucroReal" class="text-muted" style="font-size:.65rem"></small></div></div>
             </div>
         </div>
     </div>
@@ -251,12 +252,12 @@
                 <div class="col-3"><div class="card p-2 bg-primary text-white"><small class="fw-bold">m³ VENDIDO</small><b id="dashMetrosMes" class="h5 mb-0">0</b></div></div>
             </div>
             <!-- KPIs Reais (inclui mão de obra) -->
-            <div class="mb-1 mt-1"><small class="text-muted fw-bold"><i class="bi bi-person-fill-gear"></i> VISÃO REAL — inclui mão de obra</small></div>
+            <div class="mb-1 mt-1"><small class="text-muted fw-bold"><i class="bi bi-person-fill-gear"></i> LUCRO REAL — conta as vossas horas não pagas (<span id="dashValorHora">0€/h</span>)</small></div>
             <div class="row g-2 mb-3 text-center">
-                <div class="col-3"><div class="card p-2 text-white" style="background:#5a3e8a"><small class="fw-bold">GASTOS REAIS</small><b id="dashGastoReal" class="h5 mb-0">0€</b></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#5a3e8a"><small class="fw-bold">LUCRO REAL</small><b id="dashGastoReal" class="h5 mb-0">0€</b></div></div>
                 <div class="col-3"><div class="card p-2 text-white" style="background:#2c6b8a"><small class="fw-bold">MARGEM REAL</small><b id="dashMargemReal" class="h5 mb-0">0%</b></div></div>
-                <div class="col-3"><div class="card p-2 text-white" style="background:#7a4a1e"><small class="fw-bold">CUSTO M.O.</small><b id="dashCustoMO" class="h5 mb-0">0€</b></div></div>
-                <div class="col-3"><div class="card p-2 text-white" style="background:#1e6b4a"><small class="fw-bold">HORAS PERÍODO</small><b id="dashHorasPeriodo" class="h5 mb-0">0h</b></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#7a4a1e"><small class="fw-bold">HORAS NÃO PAGAS</small><b id="dashCustoMO" class="h5 mb-0">0€</b><small id="dashHorasPeriodo" style="font-size:.65rem">0h</small></div></div>
+                <div class="col-3"><div class="card p-2 text-white" style="background:#1e6b4a"><small class="fw-bold">GANHO / HORA</small><b id="dashGanhoHora" class="h5 mb-0">—</b></div></div>
             </div>
             <!-- Gráfico evolução mensal (novo) -->
             <div class="mb-3">
@@ -378,16 +379,22 @@
 
         <!-- HORAS -->
         <div id="tabHoras" class="tab-pane fade">
-            <div class="row g-2 mb-3">
-                <div class="col-12"><button class="btn btn-secondary btn-sm w-100 fw-bold" onclick="window.abrirModalNovaHora()">+ REGISTAR HORAS</button></div>
+            <div class="p-2 mb-3 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
+                <b>⏱️ Horas não pagas</b> — o trabalho que tu e o Toni fazem sem receber. Não mexe na caixa; serve só para calcular o <b>lucro real</b> no Dashboard.
+                <div class="text-muted mt-1">Mão de obra paga (ex: André) regista-se nos <b>Gastos</b>, categoria "Mão de obra".</div>
             </div>
-            <!-- Resumo -->
+            <div class="row g-2 mb-3 align-items-center">
+                <div class="col-7"><button class="btn btn-secondary w-100 fw-bold" onclick="window.abrirModalNovaHora()">+ REGISTAR DIA</button></div>
+                <div class="col-5"><div class="input-group input-group-sm">
+                    <input type="number" id="valorHoraSocios" class="form-control text-end fw-bold" step="0.5" min="0" onchange="window.guardarValorHora()" title="Preço por hora">
+                    <span class="input-group-text">€/h</span>
+                </div></div>
+            </div>
             <div class="row g-2 mb-3 text-center">
                 <div class="col-4"><div class="kpi-card border-start border-secondary border-4"><span class="kpi-lbl">Total Horas</span><span id="horasTotalH" class="kpi-val">0h</span></div></div>
-                <div class="col-4"><div class="kpi-card border-start border-warning border-4"><span class="kpi-lbl">Custo Total</span><span id="horasTotalEur" class="kpi-val text-warning">0€</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-warning border-4"><span class="kpi-lbl">Valor não pago</span><span id="horasTotalEur" class="kpi-val text-warning">0€</span></div></div>
                 <div class="col-4"><div class="kpi-card border-start border-info border-4"><span class="kpi-lbl">Este Mês</span><span id="horasMesH" class="kpi-val text-info">0h</span></div></div>
             </div>
-            <!-- Filtros -->
             <div class="row g-2 mb-2 align-items-end">
                 <div class="col"><input type="text" id="filtroHorasNome" class="form-control form-control-sm" placeholder="🔍 Nome..." onkeyup="window.renderHoras()"></div>
                 <div class="col-auto"><select id="filtroHorasAno" class="form-select form-select-sm" onchange="window.renderHoras()"><option value="">Todos os anos</option></select></div>
@@ -399,17 +406,15 @@
                 </select></div>
                 <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVHoras()"><i class="bi bi-download"></i> CSV</button></div>
             </div>
-            <!-- Tabela -->
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle">
-                    <thead><tr><th>Data</th><th>Pessoa</th><th>Trabalho</th><th class="text-end">Horas</th><th class="text-end">€/h</th><th class="text-end">Total</th><th>Obs</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Data</th><th>Pessoa</th><th>Trabalho</th><th class="text-end">Horas</th><th class="text-end">Valor</th><th>Obs</th><th>Ações</th></tr></thead>
                     <tbody id="corpoHoras"></tbody>
                     <tfoot class="table-light fw-bold">
-                        <tr><td colspan="3">TOTAL FILTRADO</td><td id="footHorasH" class="text-end">0h</td><td></td><td id="footHorasEur" class="text-end text-warning">0€</td><td colspan="2"></td></tr>
+                        <tr><td colspan="3">TOTAL FILTRADO</td><td id="footHorasH" class="text-end">0h</td><td id="footHorasEur" class="text-end text-warning">0€</td><td colspan="2"></td></tr>
                     </tfoot>
                 </table>
             </div>
-            <!-- Resumo por pessoa -->
             <h6 class="fw-bold mt-3 text-muted small">RESUMO POR PESSOA</h6>
             <div id="horasResumoPessoa"></div>
         </div>
@@ -579,19 +584,19 @@
 <div class="modal fade" id="modalHora" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0 fw-bold" id="modalHoraTitulo">Registar Horas</h6>
+            <h6 class="mb-0 fw-bold" id="modalHoraTitulo">Registar dia de trabalho</h6>
             <button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalHora')"></button>
         </div>
         <input type="date" id="horaData" class="form-control mb-2">
-        <input type="text" id="horaNome" class="form-control mb-2" placeholder="Nome da pessoa" list="listaPessoasHoras" oninput="window.sugerirValorHora()"><datalist id="listaPessoasHoras"></datalist>
-        <!-- Tipos de trabalho: multi-select em badges -->
-        <label class="small fw-bold mb-1">Tipo de trabalho <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="font-size:.7rem" onclick="window.abrirGerirTiposTrabalho()">⚙️ gerir</button></label>
+        <label class="small fw-bold mb-1" id="horaPessoasLbl">Quem trabalhou?</label>
+        <div id="horaPessoas" class="d-flex flex-wrap gap-2 mb-1"></div>
+        <input type="text" id="horaNomeOutro" class="form-control form-control-sm mb-2" placeholder="+ outra pessoa (opcional)">
+        <label class="small fw-bold">Horas</label>
+        <div class="d-flex gap-1 mb-1 flex-wrap" id="horaRapidas"></div>
+        <input type="number" id="horaQtd" class="form-control mb-2" step="0.5" min="0" inputmode="decimal" oninput="window.atualizarTotalHora()" placeholder="ex: 8">
+        <label class="small fw-bold mb-1">Trabalho (opcional) <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="font-size:.7rem" onclick="window.abrirGerirTiposTrabalho()">⚙️ gerir</button></label>
         <div id="tiposTrabalhoSelector" class="d-flex flex-wrap gap-1 mb-2 p-2 rounded" style="background:var(--surface2);border:1px solid var(--border);min-height:38px"></div>
-        <div class="row g-2 mb-2">
-            <div class="col-6"><label class="small">Horas:</label><input type="number" id="horaQtd" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
-            <div class="col-6"><label class="small">€/hora:</label><input type="number" id="horaValor" class="form-control" step="0.5" min="0" oninput="window.atualizarTotalHora()"></div>
-        </div>
-        <div class="mb-2 p-2 bg-light rounded text-center small">Total: <b id="horaTotalPreview">0€</b></div>
+        <div class="mb-2 p-2 bg-light rounded text-center small" id="horaTotalPreview">—</div>
         <textarea id="horaObs" class="form-control mb-3" rows="2" placeholder="Observações..."></textarea>
         <button class="btn btn-secondary w-100 fw-bold" onclick="window.salvarHora()">GUARDAR</button>
     </div></div>
@@ -866,13 +871,14 @@ const msgDivida = (cli, linhas) => {
 };
 
 // ── CATEGORIAS DE GASTOS ─────────────────
-const CATEGORIAS_DEFAULT = ['Combustível','Manutenção','Seguro','Impostos e taxas','Portagens','Ferramentas','Transporte','Outros'];
+const CATEGORIAS_DEFAULT = ['Mão de obra','Combustível','Manutenção','Seguro','Impostos e taxas','Portagens','Ferramentas','Transporte','Outros'];
 const getCategorias = () => (window.db.categoriasGasto && window.db.categoriasGasto.length) ? window.db.categoriasGasto : CATEGORIAS_DEFAULT;
 const adivinharCategoria = desc => {
     const d=String(desc||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
     const regras=[
         [/gasol|gasoleo|combust|diesel|abastec|galp|repsol|bp\b|cepsa|prio/,'Combustível'],
         [/manuten|pneu|oficina|revis|oleo|repar|peca|travo|filtro|bateria|mecanic|inspec/,'Manutenção'],
+        [/mao de obra|salari|ordenado|jorna|ajudante|andre/,'Mão de obra'],
         [/seguro/,'Seguro'],
         [/portag|via verde|autoestrada/,'Portagens'],
         [/imposto|iuc|iva|financas|taxa|seg.*social|licen/,'Impostos e taxas'],
@@ -1114,21 +1120,19 @@ window.render=function(){
     document.getElementById('dashGastoMes').innerText=dGstTotal.toFixed(0)+'€';
     document.getElementById('dashMetrosMes').innerText=dM3.toFixed(1);
 
-    // ── KPIs REAIS (inclui custo de mão de obra do período)
-    const custoMO=(window.db.horas||[]).reduce((a,h)=>{
-        if(inPeriodo(h.data,dAno,modo==='ano'?'':dMes)) return a+toN(h.horas)*toN(h.valorHora);
-        return a;
-    },0);
-    const horasPeriodo=(window.db.horas||[]).reduce((a,h)=>{
-        if(inPeriodo(h.data,dAno,modo==='ano'?'':dMes)) return a+toN(h.horas);
-        return a;
-    },0);
-    const dGstReal=dGstTotal+custoMO;
-    const margemReal=dRec>0?(((dRec-dGstReal)/dRec)*100):0;
-    document.getElementById('dashGastoReal').innerText=dGstReal.toFixed(0)+'€';
+    // ── LUCRO REAL: receita − gastos (dinheiro que saiu) − valor das horas não pagas dos sócios
+    const vH=valorHora();
+    const horasPeriodo=(window.db.horas||[]).reduce((a,h)=>inPeriodo(h.data,dAno,modo==='ano'?'':dMes)?a+toN(h.horas):a,0);
+    const custoMO=horasPeriodo*vH;
+    const lucroCaixa=dRec-dGstTotal, lucroReal=lucroCaixa-custoMO;
+    const margemReal=dRec>0?(lucroReal/dRec)*100:0;
+    document.getElementById('dashValorHora').textContent=vH?vH.toFixed(2)+'€/h':'define o €/h no separador Horas';
+    document.getElementById('dashGastoReal').innerText=lucroReal.toFixed(0)+'€';
     document.getElementById('dashMargemReal').innerText=margemReal.toFixed(0)+'%';
     document.getElementById('dashCustoMO').innerText=custoMO.toFixed(0)+'€';
     document.getElementById('dashHorasPeriodo').innerText=horasPeriodo.toFixed(1)+'h';
+    // quanto rendeu cada hora vossa (lucro de caixa a dividir pelas horas trabalhadas)
+    document.getElementById('dashGanhoHora').innerText=horasPeriodo>0?(lucroCaixa/horasPeriodo).toFixed(2)+'€':'—';
 
     // ── 6. RESUMO GLOBAL (usa totais históricos, não filtrados por período)
     const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0);
@@ -1139,6 +1143,8 @@ window.render=function(){
     document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+' m³';
     document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(0)+'€';
     document.getElementById('resumoLucro').innerText=lucT.toFixed(0)+'€';
+    const horasTot=(window.db.horas||[]).reduce((a,h)=>a+toN(h.horas),0);
+    document.getElementById('resumoLucroReal').textContent=horasTot&&vH?`real: ${(lucT-horasTot*vH).toFixed(0)}€`:'';
     let pL=""; for(let t in pT)if(pT[t]>0)pL+=`<div class="pendente-item"><span>${esc(t)}:</span> <b>${pT[t].toFixed(1)} m³</b></div>`;
     document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<small class="text-muted">Nada pendente.</small>';
 
@@ -1462,58 +1468,66 @@ function getTiposSelecionados(){
         .map(el=>el.textContent.trim());
 }
 
+// Horas não pagas dos sócios: um único preço por hora (definições) × horas registadas
+const SOCIOS_DEFAULT=['Joana','Toni'];
+const valorHora=()=>toN(window.db.valorHoraSocios);
+const pessoasConhecidas=()=>{ const n=[...SOCIOS_DEFAULT]; (window.db.horas||[]).forEach(h=>{ if(h.nome&&!n.some(x=>x.toLowerCase()===h.nome.toLowerCase())) n.push(h.nome); }); return n; };
+window.guardarValorHora=()=>{ window.db.valorHoraSocios=toN(document.getElementById('valorHoraSocios').value); window.atualizarBD(); };
+const chip=(txt,on,attr)=>`<button type="button" class="btn btn-sm chip-pessoa ${on?'btn-success':'btn-outline-secondary'} fw-bold px-3" ${attr} onclick="this.classList.toggle('btn-success');this.classList.toggle('btn-outline-secondary');window.atualizarTotalHora()">${esc(txt)}</button>`;
+const pessoasSelecionadas=()=>{
+    const sel=[...document.querySelectorAll('#horaPessoas .btn-success')].map(b=>b.dataset.nome);
+    const outro=document.getElementById('horaNomeOutro').value.trim(); if(outro) sel.push(outro);
+    return [...new Set(sel)];
+};
+const prepararModalHora=(pessoas,horas)=>{
+    const conhecidas=pessoasConhecidas(); pessoas.forEach(p=>{ if(!conhecidas.includes(p)) conhecidas.push(p); });
+    document.getElementById('horaPessoas').innerHTML=conhecidas.map(p=>chip(p,pessoas.includes(p),`data-nome="${esc(p)}"`)).join('');
+    document.getElementById('horaRapidas').innerHTML=[2,4,6,8,10].map(h=>`<button type="button" class="btn btn-outline-secondary btn-sm py-0" onclick="document.getElementById('horaQtd').value=${h};window.atualizarTotalHora()">${h}h</button>`).join('');
+    document.getElementById('horaNomeOutro').value='';
+    document.getElementById('horaQtd').value=horas||'';
+};
 window.abrirModalNovaHora=()=>{
+    if(valorHora()<=0){ mostrarToast('Define primeiro o preço por hora (€/h)','erro'); document.getElementById('valorHoraSocios').focus(); return; }
     window.horaIdEdicao=null;
-    document.getElementById('modalHoraTitulo').textContent='Registar Horas';
+    document.getElementById('modalHoraTitulo').textContent='Registar dia de trabalho';
+    document.getElementById('horaPessoasLbl').textContent='Quem trabalhou? (podes escolher os dois)';
     document.getElementById('horaData').value=hoje();
-    document.getElementById('horaNome').value='';
-    document.getElementById('horaQtd').value='';
-    document.getElementById('horaValor').value='';
     document.getElementById('horaObs').value='';
-    document.getElementById('horaTotalPreview').textContent='0€';
+    prepararModalHora([],'');
     renderTiposSeletor([]);
-    preencherPessoas();
+    window.atualizarTotalHora();
     window.abrirModal('modalHora');
 };
 window.abrirEditarHora=id=>{
     window.horaIdEdicao=id;
     const h=window.db.horas.find(x=>x.id==id);
-    document.getElementById('modalHoraTitulo').textContent='Editar Registo';
+    document.getElementById('modalHoraTitulo').textContent='Editar registo';
+    document.getElementById('horaPessoasLbl').textContent='Quem trabalhou?';
     document.getElementById('horaData').value=h.data;
-    document.getElementById('horaNome').value=h.nome;
-    document.getElementById('horaQtd').value=h.horas;
-    document.getElementById('horaValor').value=h.valorHora;
     document.getElementById('horaObs').value=h.obs||'';
-    // suporte retrocompatível: trabalho pode ser string ou array
+    prepararModalHora([h.nome],h.horas);
     const sel=Array.isArray(h.trabalho)?h.trabalho:(h.trabalho?h.trabalho.split(',').map(s=>s.trim()):[]);
     renderTiposSeletor(sel);
     window.atualizarTotalHora();
     window.abrirModal('modalHora');
 };
-const preencherPessoas=()=>{ const nomes=[...new Set((window.db.horas||[]).map(h=>h.nome).filter(Boolean))].sort(); document.getElementById('listaPessoasHoras').innerHTML=nomes.map(n=>`<option value="${esc(n)}">`).join(''); };
-window.sugerirValorHora=()=>{ if(window.horaIdEdicao)return; const n=document.getElementById('horaNome').value.trim().toLowerCase(); const ult=(window.db.horas||[]).filter(h=>(h.nome||'').toLowerCase()===n).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; if(ult){ document.getElementById('horaValor').value=ult.valorHora; window.atualizarTotalHora(); } };
 window.atualizarTotalHora=()=>{
-    const h=toN(document.getElementById('horaQtd').value);
-    const v=toN(document.getElementById('horaValor').value);
-    document.getElementById('horaTotalPreview').textContent=(h*v).toFixed(2)+'€';
+    const h=toN(document.getElementById('horaQtd').value), n=Math.max(1,pessoasSelecionadas().length), v=valorHora();
+    document.getElementById('horaTotalPreview').innerHTML=h>0
+        ? `${n>1?`${n} pessoas × `:''}${h}h × ${v.toFixed(2)}€ = <b>${(n*h*v).toFixed(2)}€</b> <span class="text-muted">(não pago)</span>`
+        : `Preço atual: <b>${v.toFixed(2)}€/h</b>`;
 };
 window.salvarHora=()=>{
     if(!window.db.horas) window.db.horas=[];
-    const tipos=getTiposSelecionados();
-    const d={
-        data:document.getElementById('horaData').value,
-        nome:document.getElementById('horaNome').value.trim(),
-        trabalho:tipos, // array
-        horas:toN(document.getElementById('horaQtd').value),
-        valorHora:toN(document.getElementById('horaValor').value),
-        obs:document.getElementById('horaObs').value.trim()
-    };
-    if(!d.nome||!d.horas){alert('Preenche o nome e as horas.');return;}
+    const pessoas=pessoasSelecionadas(), horas=toN(document.getElementById('horaQtd').value);
+    if(!pessoas.length||horas<=0){ mostrarToast('Escolhe quem trabalhou e as horas','erro'); return; }
+    const base={ data:document.getElementById('horaData').value, trabalho:getTiposSelecionados(), horas, obs:document.getElementById('horaObs').value.trim() };
     if(window.horaIdEdicao){
-        const i=window.db.horas.findIndex(x=>x.id==window.horaIdEdicao);
-        window.db.horas[i]={...window.db.horas[i],...d};
+        const h=window.db.horas.find(x=>x.id==window.horaIdEdicao);
+        Object.assign(h,base,{nome:pessoas[0]});
+        pessoas.slice(1).forEach(p=>window.db.horas.push({id:uid(),...base,nome:p}));
     } else {
-        window.db.horas.push({id:uid(),...d});
+        pessoas.forEach(p=>window.db.horas.push({id:uid(),...base,nome:p}));
     }
     window.fecharModal('modalHora');
 };
@@ -1546,82 +1560,56 @@ window.removerTipoTrabalho=t=>{
 };
 window.renderHoras=()=>{
     if(!window.db.horas) window.db.horas=[];
+    const v=valorHora();
+    const inp=document.getElementById('valorHoraSocios'); if(document.activeElement!==inp) inp.value=v||'';
     const filtroNome=(document.getElementById('filtroHorasNome').value||'').toLowerCase();
     const filtroAno=document.getElementById('filtroHorasAno').value;
     const filtroMes=document.getElementById('filtroHorasMes').value;
     const mesAtual=String(new Date().getMonth()+1).padStart(2,'0');
     const anoAtual=new Date().getFullYear().toString();
-
-    let totalH=0,totalEur=0,mesH=0,footH=0,footEur=0;
+    let totalH=0,mesH=0,footH=0;
     const porPessoa={};
-    let rows='';
-
-    // totais globais
     window.db.horas.forEach(h=>{
-        const custo=toN(h.horas)*toN(h.valorHora);
-        totalH+=toN(h.horas); totalEur+=custo;
+        totalH+=toN(h.horas);
         if(h.data&&h.data.startsWith(anoAtual)&&h.data.split('-')[1]===mesAtual) mesH+=toN(h.horas);
-        porPessoa[h.nome]=porPessoa[h.nome]||{horas:0,custo:0};
-        porPessoa[h.nome].horas+=toN(h.horas);
-        porPessoa[h.nome].custo+=custo;
+        porPessoa[h.nome]=(porPessoa[h.nome]||0)+toN(h.horas);
     });
-
     document.getElementById('horasTotalH').textContent=totalH.toFixed(1)+'h';
-    document.getElementById('horasTotalEur').textContent=totalEur.toFixed(0)+'€';
+    document.getElementById('horasTotalEur').textContent=(totalH*v).toFixed(0)+'€';
     document.getElementById('horasMesH').textContent=mesH.toFixed(1)+'h';
 
-    // filtradas
     const filtradas=window.db.horas.filter(h=>{
-        if(filtroNome&&!h.nome.toLowerCase().includes(filtroNome)) return false;
+        if(filtroNome&&!(h.nome||'').toLowerCase().includes(filtroNome)) return false;
         if(filtroAno&&!(h.data||'').startsWith(filtroAno)) return false;
         if(filtroMes&&(h.data||'').split('-')[1]!==filtroMes) return false;
         return true;
-    }).sort((a,b)=>new Date(b.data)-new Date(a.data));
-
-    filtradas.forEach(h=>{
-        const custo=toN(h.horas)*toN(h.valorHora);
+    }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+    const rows=filtradas.map(h=>{
+        footH+=toN(h.horas);
         const tipos=Array.isArray(h.trabalho)?h.trabalho:(h.trabalho?[h.trabalho]:[]);
-        const tiposBadges=tipos.length?tipos.map(t=>`<span class="badge rounded-pill me-1" style="background:#1a252f;font-size:.7rem">${esc(t)}</span>`).join(''):'<small class="text-muted">—</small>';
-        footH+=toN(h.horas); footEur+=custo;
-        rows+=`<tr>
-            <td><span class="bg-data">${esc(h.data)}</span></td>
-            <td><b>${esc(h.nome)}</b></td>
-            <td>${tiposBadges}</td>
-            <td class="text-end fw-bold">${toN(h.horas).toFixed(1)}h</td>
-            <td class="text-end">${toN(h.valorHora).toFixed(2)}€</td>
-            <td class="text-end fw-bold text-warning">${custo.toFixed(2)}€</td>
+        const tb=tipos.length?tipos.map(t=>`<span class="badge rounded-pill me-1" style="background:#1a252f;font-size:.7rem">${esc(t)}</span>`).join(''):'<small class="text-muted">—</small>';
+        return `<tr><td><span class="bg-data">${esc(h.data)}</span></td><td><b>${esc(h.nome)}</b> ${porTag(h)}</td><td>${tb}</td>
+            <td class="text-end fw-bold">${toN(h.horas).toFixed(1)}h</td><td class="text-end text-warning fw-bold">${(toN(h.horas)*v).toFixed(0)}€</td>
             <td><div class="obs-container">${esc(h.obs||'')}</div></td>
-            <td><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarHora('${esc(h.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${esc(h.id)}'))"></i></td>
-        </tr>`;
-    });
-
-    document.getElementById('corpoHoras').innerHTML=rows||'<tr><td colspan="8" class="text-center text-muted">Sem registos</td></tr>';
+            <td class="text-nowrap"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirEditarHora('${escJs(h.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('horas','${escJs(h.id)}'))"></i></td></tr>`;
+    }).join('');
+    document.getElementById('corpoHoras').innerHTML=rows||'<tr><td colspan="7" class="text-center text-muted">Sem registos</td></tr>';
     document.getElementById('footHorasH').textContent=footH.toFixed(1)+'h';
-    document.getElementById('footHorasEur').textContent=footEur.toFixed(2)+'€';
-
-    // resumo por pessoa
-    document.getElementById('horasResumoPessoa').innerHTML=Object.entries(porPessoa)
-        .sort((a,b)=>b[1].horas-a[1].horas)
-        .map(([nome,v])=>`<div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded" style="background:var(--surface2);border:1px solid var(--border)">
-            <span class="fw-bold">${esc(nome)}</span>
-            <span>${v.horas.toFixed(1)}h &nbsp;·&nbsp; <b class="text-warning">${v.custo.toFixed(0)}€</b></span>
-        </div>`).join('')||'<small class="text-muted">Sem dados</small>';
-
-    // popular filtro de anos
+    document.getElementById('footHorasEur').textContent=(footH*v).toFixed(0)+'€';
+    document.getElementById('horasResumoPessoa').innerHTML=Object.entries(porPessoa).sort((a,b)=>b[1]-a[1])
+        .map(([nome,h])=>`<div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded" style="background:var(--surface2);border:1px solid var(--border)">
+            <span class="fw-bold">${esc(nome)}</span><span>${h.toFixed(1)}h &nbsp;·&nbsp; <b class="text-warning">${(h*v).toFixed(0)}€</b></span></div>`).join('')||'<small class="text-muted">Sem dados</small>';
     const anos=new Set(window.db.horas.map(h=>(h.data||'').split('-')[0]).filter(Boolean));
-    const selA=document.getElementById('filtroHorasAno');
-    const curA=selA.value;
+    const selA=document.getElementById('filtroHorasAno'), curA=selA.value;
     selA.innerHTML='<option value="">Todos os anos</option>'+Array.from(anos).sort().reverse().map(a=>`<option value="${a}" ${a==curA?'selected':''}>${a}</option>`).join('');
 };
 window.exportarCSVHoras=()=>{
-    const cab='Data,Pessoa,Trabalho,Horas,€/hora,Total€,Obs';
-    const rows=(window.db.horas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(h=>{
-        const tipos=Array.isArray(h.trabalho)?h.trabalho.join('|'):(h.trabalho||'');
-        return [h.data,h.nome,tipos,toN(h.horas).toFixed(1),toN(h.valorHora).toFixed(2),(toN(h.horas)*toN(h.valorHora)).toFixed(2),h.obs||''].join(',');
-    });
-    const blob=new Blob([[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
-    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`});
-    a.click();
+    const v=valorHora();
+    const cab=`Data,Pessoa,Trabalho,Horas,Valor (${v}€/h),Obs`;
+    const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
+    const rows=(window.db.horas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')).map(h=>[h.data,q(h.nome),q(Array.isArray(h.trabalho)?h.trabalho.join(' | '):(h.trabalho||'')),toN(h.horas).toFixed(1),(toN(h.horas)*v).toFixed(2),q(h.obs)].join(','));
+    const blob=new Blob(['﻿'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`horas_${hoje()}.csv`}).click();
 };
 
 // ── CSV ──────────────────────────────────
