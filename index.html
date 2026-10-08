@@ -384,14 +384,16 @@
         <!-- DÍVIDAS -->
         <div id="tabDiv" class="tab-pane fade">
             <div class="row g-2 mb-2 align-items-end">
-                <div class="col-auto"><select id="filtroDivAno" class="form-select form-select-sm" onchange="window.render()"><option value="">Todos os anos</option></select></div>
-                <div class="col-auto"><select id="filtroDivMes" class="form-select form-select-sm" onchange="window.render()">
+                <div class="col-12 col-md"><input type="text" id="filtroDivTxt" class="form-control form-control-sm" placeholder="🔍 Cliente..." oninput="window.filtroMudou('div')"></div>
+                <div class="col-6 col-md-auto"><select id="ordemDiv" class="form-select form-select-sm" onchange="window.filtroMudou('div')"><option value="dias">Mais antigas primeiro</option><option value="cliente">Cliente A→Z</option><option value="valor_desc">Valor: maior primeiro</option><option value="data_desc">Data: recentes primeiro</option></select></div>
+                <div class="col-auto"><select id="filtroDivAno" class="form-select form-select-sm" onchange="window.filtroMudou('div')"><option value="">Todos os anos</option></select></div>
+                <div class="col-auto"><select id="filtroDivMes" class="form-select form-select-sm" onchange="window.filtroMudou('div')">
                     <option value="">Todos os meses</option>
                     <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option><option value="04">Abr</option>
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
                     <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
                 </select></div>
-                <div class="col-auto"><small class="text-muted">Mais antigas primeiro · <span class="text-danger fw-bold">vermelho</span> = mais de 60 dias</small></div>
+                <div class="col-auto"><small class="text-muted"><span class="text-danger fw-bold">vermelho</span> = mais de 60 dias</small></div>
                 <div class="col-auto ms-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSV('div')"><i class="bi bi-download"></i> CSV</button></div>
             </div>
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
@@ -405,8 +407,11 @@
         <!-- VENDAS -->
         <div id="tabVen" class="tab-pane fade">
             <div class="row g-2 mb-2 align-items-end">
-                <div class="col-auto"><select id="filtroVenAno" class="form-select form-select-sm" onchange="window.render()"><option value="">Todos os anos</option></select></div>
-                <div class="col-auto"><select id="filtroVenMes" class="form-select form-select-sm" onchange="window.render()">
+                <div class="col-12 col-md"><input type="text" id="filtroVenTxt" class="form-control form-control-sm" placeholder="🔍 Cliente..." oninput="window.filtroMudou('ven')"></div>
+                <div class="col-6 col-md-auto"><select id="filtroVenTipo" class="form-select form-select-sm" onchange="window.filtroMudou('ven')"><option value="">Todos os tipos</option></select></div>
+                <div class="col-6 col-md-auto"><select id="ordemVen" class="form-select form-select-sm" onchange="window.filtroMudou('ven')"><option value="data_desc">Data: recentes primeiro</option><option value="data_asc">Data: antigas primeiro</option><option value="cliente">Cliente A→Z</option><option value="valor_desc">Valor: maior primeiro</option><option value="valor_asc">Valor: menor primeiro</option></select></div>
+                <div class="col-auto"><select id="filtroVenAno" class="form-select form-select-sm" onchange="window.filtroMudou('ven')"><option value="">Todos os anos</option></select></div>
+                <div class="col-auto"><select id="filtroVenMes" class="form-select form-select-sm" onchange="window.filtroMudou('ven')">
                     <option value="">Todos os meses</option>
                     <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option><option value="04">Abr</option>
                     <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
@@ -417,7 +422,7 @@
             <div class="table-responsive"><table class="table table-sm table-hover align-middle">
                 <thead><tr><th>Enc.</th><th>Cliente</th><th>Tipo</th><th>m³</th><th>Total €</th><th>Data Entrega</th><th>Entregue</th><th>Data Pgto</th><th>Pago €</th><th>Estado</th><th>Obs</th><th>Ações</th></tr></thead>
                 <tbody id="corpoVendas"></tbody>
-                <tfoot class="table-light fw-bold"><tr><td colspan="6"></td><td id="footVenM3">0 m³</td><td></td><td id="footVenPago">0€</td><td colspan="3"></td></tr></tfoot>
+                <tfoot class="table-light fw-bold"><tr><td colspan="6" id="footVenN" class="small text-muted"></td><td id="footVenM3">0 m³</td><td></td><td id="footVenPago">0€</td><td colspan="3"></td></tr></tfoot>
             </table></div>
             <div id="pagVen" class="d-flex justify-content-between align-items-center mt-2"></div>
         </div>
@@ -437,7 +442,25 @@
             </div>
             <div id="avisoCategorizar"></div>
             <div class="d-flex justify-content-between align-items-center mt-3"><h6 class="fw-bold mb-0">Gastos Gerais</h6><button class="btn btn-outline-secondary btn-sm py-0" onclick="window.abrirGerirCategorias()">⚙️ Categorias</button></div>
-            <table class="table table-sm mb-4"><tbody id="corpoDespesas"></tbody></table>
+            <div class="row g-2 my-2 align-items-end">
+                <div class="col-12 col-md"><input type="text" id="filtroGstTxt" class="form-control form-control-sm" placeholder="🔍 Descrição..." oninput="window.render()"></div>
+                <div class="col-6 col-md-auto"><select id="filtroGstCat" class="form-select form-select-sm" onchange="window.render()"><option value="">Todas as categorias</option></select></div>
+                <div class="col-6 col-md-auto"><select id="ordemGst" class="form-select form-select-sm" onchange="window.render()"><option value="data_desc">Data: recentes primeiro</option><option value="data_asc">Data: antigas primeiro</option><option value="valor_desc">Valor: maior primeiro</option><option value="valor_asc">Valor: menor primeiro</option><option value="categoria">Categoria A→Z</option><option value="desc">Descrição A→Z</option></select></div>
+                <div class="col-auto"><select id="filtroGstAno" class="form-select form-select-sm" onchange="window.render()"><option value="">Todos os anos</option></select></div>
+                <div class="col-auto"><select id="filtroGstMes" class="form-select form-select-sm" onchange="window.render()">
+                    <option value="">Todos os meses</option>
+                    <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option><option value="04">Abr</option>
+                    <option value="05">Mai</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Ago</option>
+                    <option value="09">Set</option><option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+                </select></div>
+                <div class="col-auto"><button class="btn btn-outline-success btn-sm" onclick="window.exportarCSVGastos()"><i class="bi bi-download"></i> CSV</button></div>
+            </div>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-1">
+                <thead><tr><th>Data</th><th>Categoria / descrição</th><th class="text-end">Valor</th><th></th></tr></thead>
+                <tbody id="corpoDespesas"></tbody>
+                <tfoot class="table-light fw-bold"><tr><td id="footGstN" class="small text-muted"></td><td id="footGstCats" class="small fw-normal"></td><td id="footGstTotal" class="text-end text-danger">0€</td><td></td></tr></tfoot>
+            </table></div>
+            <div class="mb-4"></div>
             <h6 class="fw-bold mt-3 text-info">Dividendos (Retiradas)</h6>
             <table class="table table-sm"><tbody id="corpoDividendos"></tbody></table>
         </div>
@@ -1031,6 +1054,10 @@ const toN = v => { const n=parseFloat(typeof v==='string'?v.replace(/\s/g,'').re
 const r2 = v => Math.round(toN(v)*100)/100;      // euros
 const r3 = v => Math.round(toN(v)*1000)/1000;    // m³
 const somaM3 = arr => r3((arr||[]).reduce((t,x)=>t+toN(x.m3),0));
+const semAcentos = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+// ordena linhas {d:data, c:nome, v:valor}
+const ordenarLinhas=(arr,o)=>arr.sort((a,b)=>o==='data_asc'?a.d.localeCompare(b.d):o==='cliente'?a.c.localeCompare(b.c,'pt')||b.d.localeCompare(a.d):o==='valor_desc'?b.v-a.v:o==='valor_asc'?a.v-b.v:b.d.localeCompare(a.d));
+window.filtroMudou=k=>{ PG[k].pg=0; window.render(); };
 const encVazia = e => !e.clienteId && r3(e.metrosTotal)===0 && !(e.entregas||[]).length && !(e.pagamentos||[]).length;
 const somaEur = arr => r2((arr||[]).reduce((t,x)=>t+toN(x.valor),0));
 window.toNum = toN;
@@ -1594,6 +1621,9 @@ window.render=function(){
         const base=`<td><span class="bg-data">${esc(e.dataEnc)}</span></td><td><b>${esc(cli.nome)}</b></td><td><small>${esc(e.tipoLenha)}</small></td><td>${mTot}</td><td>${vT.toFixed(0)}€</td>`;
 
         const noTxt=!filtroTxt||cli.nome.toLowerCase().includes(filtroTxt)||(e.tipoLenha||'').toLowerCase().includes(filtroTxt);
+        const temTxt=(t,id)=>{ const q=(document.getElementById(id).value||'').toLowerCase().trim(); return !q||semAcentos(cli.nome).includes(semAcentos(q))||semAcentos(e.obs||'').includes(semAcentos(q)); };
+        const noTxtVen=temTxt(null,'filtroVenTxt')&&(!document.getElementById('filtroVenTipo').value||e.tipoLenha===document.getElementById('filtroVenTipo').value);
+        const noTxtDiv=temTxt(null,'filtroDivTxt');
         const noEnc=!eAno||inPeriodo(e.dataEnc,eAno,eMes);
         const noDiv=!divAno||inPeriodo(e.dataEnc,divAno,divMes);
         const noVen=!venAno||inPeriodo(e.dataEnc,venAno,venMes);
@@ -1602,16 +1632,16 @@ window.render=function(){
 
         if(mEnt>=mTot&&vP>=vT){
             cntVen++;
-            if(noVen&&noTxt){footVenM3+=mEnt;footVenPago+=vP;rowsV.push(`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-success fw-bold">✅ Pago</td>${obsCell}${acts}</tr>`);}
+            if(noVen&&noTxtVen){footVenM3+=mEnt;footVenPago+=vP;rowsV.push({id:e.id,d:e.dataEnc||'',c:cli.nome,v:vT,html:`<tr${rowAttr}>${base}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-success fw-bold">✅ Pago</td>${obsCell}${acts}</tr>`});}
         } else if(mEnt>=mTot&&vP<vT){
             cntDiv++;
             const diasDiv=diasDesde(ultEnt==='—'?e.dataEnc:ultEnt);
             (dividasPorCliente[cli.id]=dividasPorCliente[cli.id]||[]).push({data:ultEnt==='—'?e.dataEnc:ultEnt,m3:mEnt,tipo:e.tipoLenha,saldo:sDev});
-            if(noDiv&&noTxt){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;
+            if(noDiv&&noTxtDiv){footDivM3+=mEnt;footDivPago+=vP;footDivSaldo+=sDev;
                 const msg=msgDivida(cli,[{data:ultEnt==='—'?e.dataEnc:ultEnt,m3:mEnt,tipo:e.tipoLenha,saldo:sDev}]);
                 const baseDiv=base.replace(`<td><b>${esc(cli.nome)}</b></td>`,`<td><b>${esc(cli.nome)}</b><div class="d-flex flex-wrap gap-1 align-items-center mt-1">${diasTag(diasDiv)} ${botoesContacto(cli,msg)}</div></td>`);
                 const actsDiv=`<td class="text-nowrap"><i class="bi bi-pencil-square text-primary ms-1" onclick="window.abrirEditarEncomenda('${escJs(e.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('encomendas','${escJs(e.id)}'))"></i></td>`;
-                rowsD.push({dias:diasDiv,html:`<tr${diasDiv>60?' class="row-div-antiga"':''}>${baseDiv}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${escJs(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${actsDiv}</tr>`});}
+                rowsD.push({id:e.id,d:e.dataEnc||'',c:cli.nome,v:sDev,dias:diasDiv,html:`<tr${diasDiv>60?' class="row-div-antiga"':''}>${baseDiv}<td><span class="bg-data">${esc(ultEnt)}</span></td><td>${mEnt.toFixed(1)}m³</td><td><span class="bg-data">${esc(ultPag)}</span></td><td>${vP.toFixed(0)}€</td><td class="text-danger fw-bold" style="cursor:pointer" onclick="window.abrirPagamento('${escJs(e.id)}')">${sDev.toFixed(0)}€</td>${obsCell}${actsDiv}</tr>`});}
         } else {
             cntEnc++;
             if(noEnc&&noTxt){rowsE.push(`<tr${rowAttr}>${base}<td><span class="bg-data small">${esc(ultEnt)}</span></td><td><span onclick="window.abrirEntrega('${esc(e.id)}')" class="status-badge bg-pendente">${mEnt.toFixed(1)}m³</span></td><td><span class="bg-data small">${esc(ultPag)}</span></td><td onclick="window.abrirPagamento('${esc(e.id)}')" class="${vP>=vT?'text-success':'text-danger fw-bold'}">${vP.toFixed(0)}€</td>${obsCell}${acts}</tr>`);}
@@ -1620,11 +1650,14 @@ window.render=function(){
 
     // paginação
     document.getElementById('corpoEncomendas').innerHTML=paginar(rowsE,'enc').join('');
-    rowsD.sort((a,b)=>b.dias-a.dias);
+    const oD=document.getElementById('ordemDiv').value; if(oD==='dias') rowsD.sort((a,b)=>b.dias-a.dias); else ordenarLinhas(rowsD,oD); window._idsDiv=rowsD.map(r=>r.id);
     document.getElementById('corpoDividas').innerHTML=paginar(rowsD.map(r=>r.html),'div').join('');
     window._dividasPorCliente=dividasPorCliente;
     renderEntregasPendentes(pendentes);
-    document.getElementById('corpoVendas').innerHTML=paginar([...rowsV].reverse(),'ven').join('');
+    ordenarLinhas(rowsV,document.getElementById('ordemVen').value); window._idsVen=rowsV.map(r=>r.id);
+    document.getElementById('corpoVendas').innerHTML=paginar(rowsV.map(r=>r.html),'ven').join('');
+    document.getElementById('footVenN').textContent=`${rowsV.length} venda(s) · total ${rowsV.reduce((a,r)=>a+r.v,0).toFixed(0)}€`;
+    { const sel=document.getElementById('filtroVenTipo'), cur=sel.value; sel.innerHTML='<option value="">Todos os tipos</option>'+(window.db.tiposLenha||[]).map(t=>`<option ${t===cur?'selected':''}>${esc(t)}</option>`).join(''); }
 
     document.getElementById('footDivM3').textContent=footDivM3.toFixed(1)+' m³';
     document.getElementById('footDivPago').textContent=footDivPago.toFixed(0)+'€';
@@ -1714,7 +1747,29 @@ window.render=function(){
     document.getElementById('listaPendentesPorTipo').innerHTML=pL||'<small class="text-muted">Nada pendente.</small>';
 
     // ── 7. FINANÇAS
-    document.getElementById('corpoDespesas').innerHTML=(totalHorasPagas?`<tr style="cursor:pointer" onclick="document.querySelector('[data-bs-target=\\'#tabHoras\\']').click()"><td><span class="bg-data">⏱️</span></td><td><span class="cat-badge">Mão de obra</span> horas pagas (${horasPagas.reduce((a,h)=>a+toN(h.horas),0).toFixed(1)}h) <small class="text-muted">— ver separador Horas</small></td><td class="text-end">${totalHorasPagas.toFixed(2)}€</td><td></td></tr>`:'')+(window.db.despesas||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')||'<tr><td class="text-muted text-center">Sem gastos</td></tr>';
+    { // GASTOS: filtrar e ordenar
+        const gq=semAcentos(document.getElementById('filtroGstTxt').value||'').trim(), gc=document.getElementById('filtroGstCat').value,
+              ga=document.getElementById('filtroGstAno').value, gm=document.getElementById('filtroGstMes').value, go=document.getElementById('ordemGst').value;
+        const noPer=d=>(!ga||(d||'').startsWith(ga))&&(!gm||(d||'').split('-')[1]===gm);
+        const lista=(window.db.despesas||[]).filter(d=>noPer(d.data)&&(!gc||catDe(d)===gc)&&(!gq||semAcentos(`${d.desc||''} ${catDe(d)}`).includes(gq)))
+            .map(d=>({id:d.id,d:d.data||'',c:catDe(d)+' '+(d.desc||''),cat:catDe(d),desc:(d.desc||'').trim().toLowerCase(),v:toN(d.valor),o:d}));
+        const hp=(window.db.horas||[]).filter(h=>h.pago&&noPer(h.data)&&(!gc||gc==='Mão de obra')&&(!gq||semAcentos('mao de obra horas pagas '+(h.nome||'')).includes(gq)));
+        const vhp=hp.reduce((a,h)=>a+valorDeHora(h),0);
+        if(go==='categoria') lista.sort((a,b)=>a.cat.localeCompare(b.cat,'pt')||b.d.localeCompare(a.d)); else if(go==='desc') lista.sort((a,b)=>a.desc.localeCompare(b.desc,'pt')||b.d.localeCompare(a.d)); else ordenarLinhas(lista,go);
+        window._gastosFiltrados=lista.map(x=>x.o);
+        document.getElementById('corpoDespesas').innerHTML=(vhp?`<tr style="cursor:pointer" onclick="window.irPara('tabHoras')"><td><span class="bg-data">⏱️</span></td><td><span class="cat-badge">Mão de obra</span> horas pagas (${hp.reduce((a,h)=>a+toN(h.horas),0).toFixed(1)}h) <small class="text-muted">— ver Horas</small></td><td class="text-end">${vhp.toFixed(2)}€</td><td></td></tr>`:'')+
+            lista.map(({o:d})=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')
+            ||'<tr><td colspan="4" class="text-muted text-center">Sem gastos com estes filtros</td></tr>';
+        const tot=lista.reduce((a,x)=>a+x.v,0)+vhp;
+        document.getElementById('footGstN').textContent=`${lista.length+(vhp?1:0)} registo(s)`;
+        document.getElementById('footGstTotal').textContent=tot.toFixed(2)+'€';
+        const porCat={}; lista.forEach(x=>porCat[x.cat]=(porCat[x.cat]||0)+x.v); if(vhp) porCat['Mão de obra']=(porCat['Mão de obra']||0)+vhp;
+        document.getElementById('footGstCats').innerHTML=gc?'':Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([c,v])=>`${esc(c)} ${v.toFixed(0)}€`).join(' · ');
+        const sc=document.getElementById('filtroGstCat'), cc=sc.value, cats=[...new Set([...getCategorias(),...(window.db.despesas||[]).map(catDe)])];
+        sc.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option ${c===cc?'selected':''}>${esc(c)}</option>`).join('');
+        const sa=document.getElementById('filtroGstAno'), ca=sa.value, anos=[...new Set((window.db.despesas||[]).map(d=>(d.data||'').slice(0,4)).filter(Boolean))].sort().reverse();
+        sa.innerHTML='<option value="">Todos os anos</option>'+anos.map(a=>`<option ${a===ca?'selected':''}>${a}</option>`).join('');
+    }
     const semCat=(window.db.despesas||[]).filter(d=>!d.categoria).length+(window.db.lotes||[]).reduce((a,l)=>a+(l.gastosExtras||[]).filter(g=>!g.categoria).length,0);
     document.getElementById('avisoCategorizar').innerHTML=semCat?`<div class="alert alert-warning py-2 px-3 small d-flex justify-content-between align-items-center mb-0">Há ${semCat} gasto(s) antigo(s) sem categoria.<button class="btn btn-warning btn-sm fw-bold py-0" onclick="window.abrirCategorizar()">🏷️ Categorizar</button></div>`:'';
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
@@ -2509,7 +2564,12 @@ window.exportarCSVHoras=()=>{
 };
 
 // ── CSV ──────────────────────────────────
-window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=(window.db.encomendas||[]).filter(e=>{ const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]); return isDiv?(en>=r3(e.metrosTotal)&&pa<r2(e.valorTotal)):(en>=r3(e.metrosTotal)&&pa>=r2(e.valorTotal)); }).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;return [e.dataEnc,q(cli?.nome||''),q(e.tipoLenha),r3(e.metrosTotal),r2(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(r2(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob(['\ufeff'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
+const ordemCSV=(tipo,lista)=>{ const ids=tipo==='div'?window._idsDiv:window._idsVen; if(!ids) return lista; const m=new Map(lista.map(e=>[e.id,e])); return ids.map(id=>m.get(id)).filter(Boolean); };
+window.exportarCSVGastos=()=>{ const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
+    const rows=(window._gastosFiltrados||[]).map(d=>[d.data,q(catDe(d)),q(d.desc||''),toN(d.valor).toFixed(2),q(d.alteradoPor||d.criadoPor||'')].join(','));
+    const blob=new Blob(['\ufeff'+['Data,Categoria,Descrição,Valor€,Por',...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+    Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`gastos_${hoje()}.csv`}).click(); };
+window.exportarCSV=tipo=>{ let rows=[],cab; const isDiv=tipo==='div'; cab=isDiv?'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Último Pgto,Pago€,Saldo€':'Data Enc,Cliente,Tipo,m³,Total€,Data Entrega,Entregue m³,Data Pgto,Pago€'; rows=ordemCSV(tipo,(window.db.encomendas||[]).filter(e=>{ const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]); return isDiv?(en>=r3(e.metrosTotal)&&pa<r2(e.valorTotal)):(en>=r3(e.metrosTotal)&&pa>=r2(e.valorTotal)); })).map(e=>{ const cli=window.db.clientes.find(c=>c.id==e.clienteId);const en=somaM3(e.entregas||[]),pa=somaEur(e.pagamentos||[]);const ultE=e.entregas?.length?e.entregas[e.entregas.length-1].data:'';const ultP=e.pagamentos?.length?e.pagamentos[e.pagamentos.length-1].data:'';const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;return [e.dataEnc,q(cli?.nome||''),q(e.tipoLenha),r3(e.metrosTotal),r2(e.valorTotal).toFixed(2),ultE,en.toFixed(1),ultP,pa.toFixed(2),...(isDiv?[(r2(e.valorTotal)-pa).toFixed(2)]:[])].join(','); }); const blob=new Blob(['\ufeff'+[cab,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenha_${tipo}_${hoje()}.csv`});a.click(); };
 
 // ── BACKUP JSON ──────────────────────────
 window.exportarBackup=()=>{ window.db.ultimoBackup=hoje(); window.atualizarBD(); const blob=new Blob([JSON.stringify(window.db,null,2)],{type:'application/json'});const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`lenhapro_backup_${hoje()}.json`});a.click(); mostrarToast('Backup descarregado','ok'); };
