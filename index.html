@@ -120,6 +120,15 @@
         .btn-mais { height:64px; font-weight:600; display:flex; flex-direction:column; align-items:center; justify-content:center; }
         .btn-mais span { font-size:1.3rem; }
 
+        #barraRota { position:fixed; left:0; right:0; bottom:0; z-index:1035; background:var(--primary); color:#fff; padding:8px 14px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 -2px 10px rgba(0,0,0,.2); padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+        .ent-check { width:1.4rem; height:1.4rem; margin-top:2px; flex-shrink:0; cursor:pointer; }
+        .ent-item.marcada { background:rgba(243,156,18,.10); }
+        .volta-card { border:1px solid var(--border); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+        .volta-head { background:var(--surface2); padding:8px 10px; border-bottom:1px solid var(--border); }
+        .paragem { display:flex; gap:8px; padding:6px 10px; border-top:1px dashed var(--border); align-items:flex-start; }
+        .paragem:first-child { border-top:none; }
+        .paragem-n { background:var(--accent); color:#fff; border-radius:50%; width:22px; height:22px; font-size:.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
         /* ── TELEMÓVEL ── */
         .navbar { padding-top:calc(.5rem + env(safe-area-inset-top))!important; }
         body { padding-bottom:calc(60px + env(safe-area-inset-bottom)); }
@@ -144,6 +153,7 @@
             .tab-content { border-top:1px solid var(--border); border-radius:15px; }
             body { padding-bottom:calc(80px + env(safe-area-inset-bottom)); }
             #toastGravacao { bottom:calc(72px + env(safe-area-inset-bottom)); right:10px; left:10px; }
+            #barraRota { bottom:calc(58px + env(safe-area-inset-bottom)); padding-bottom:8px; }
         }
     </style>
 </head>
@@ -355,7 +365,13 @@
                 <div id="entregasResumo" class="small"></div>
                 <select id="filtroEntZona" class="form-select form-select-sm w-auto" onchange="window.render()"><option value="">Todas as zonas</option></select>
             </div>
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
+                <span id="carrinhasResumo"></span>
+                <button class="btn btn-outline-secondary btn-sm py-0" onclick="window.abrirCarrinhas()">⚙️ Carrinhas</button>
+            </div>
+            <div class="small text-muted mb-2">Marca ☑️ as entregas que vais fazer e carrega em <b>Planear rota</b>.</div>
             <div id="listaEntregasPendentes"></div>
+            <div style="height:70px"></div>
         </div>
 
         <!-- DÍVIDAS -->
@@ -694,6 +710,42 @@
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold" id="escolherTitulo">Escolhe a encomenda</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalEscolher')"></button></div>
         <input type="text" id="escolherFiltro" class="form-control mb-2" placeholder="🔍 Nome do cliente..." oninput="window.renderEscolher()">
         <div id="escolherLista" class="list-group" style="overflow-y:auto"></div>
+    </div></div>
+</div>
+
+<!-- Barra de seleção de entregas -->
+<div id="barraRota" style="display:none">
+    <div class="small"><b id="barraRotaN">0</b> entrega(s) · <b id="barraRotaM3">0</b> m³</div>
+    <div class="d-flex gap-1">
+        <button class="btn btn-outline-light btn-sm" onclick="window.limparSelecao()">✕</button>
+        <button class="btn btn-warning btn-sm fw-bold" onclick="window.abrirPlanear()">🧭 Planear rota</button>
+    </div>
+</div>
+
+<!-- Carrinhas -->
+<div class="modal fade" id="modalCarrinhas" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">🚚 Carrinhas</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCarrinhas')"></button></div>
+        <div id="listaCarrinhas"></div>
+        <div class="d-flex gap-1 mt-2">
+            <input type="text" id="novaCarrinhaNome" class="form-control form-control-sm" placeholder="Nome (ex: Carrinha grande)">
+            <div class="input-group input-group-sm" style="max-width:110px"><input type="number" id="novaCarrinhaCap" class="form-control" placeholder="m³" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">m³</span></div>
+            <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarCarrinha()">+</button>
+        </div>
+        <div class="small text-muted mt-2">Capacidade = quantos m³ leva numa viagem.</div>
+    </div></div>
+</div>
+
+<!-- Planear rota -->
+<div class="modal fade" id="modalPlanear" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">🧭 Planear rota</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalPlanear')"></button></div>
+        <div id="planearConfig">
+            <label class="small fw-bold mb-1">Que carrinha(s) vão sair?</label>
+            <div id="planearCarrinhas" class="d-flex flex-wrap gap-2 mb-2"></div>
+            <button class="btn btn-warning w-100 fw-bold" onclick="window.calcularPlano()">Calcular</button>
+        </div>
+        <div id="planearResultado" class="mt-2"></div>
     </div></div>
 </div>
 
@@ -1451,6 +1503,136 @@ window.renderEscolher=()=>{
         ||`<p class="text-muted text-center my-3">${_modoEscolher==='entregar'?'Nada por entregar 🎉':'Ninguém em dívida 🎉'}</p>`;
 };
 
+// ── CARRINHAS ────────────────────────────
+const getCarrinhas=()=>Array.isArray(window.db.carrinhas)?window.db.carrinhas:[];
+const renderCarrinhasResumo=()=>{ const c=getCarrinhas(); document.getElementById('carrinhasResumo').innerHTML=c.length?'🚚 '+c.map(v=>`${esc(v.nome)} <b>${toN(v.capacidade)} m³</b>`).join(' · '):'<span class="text-danger">🚚 Ainda não definiste as carrinhas</span>'; };
+const renderListaCarrinhas=()=>{ document.getElementById('listaCarrinhas').innerHTML=getCarrinhas().map(v=>`<div class="d-flex gap-1 align-items-center mb-1">
+    <span class="fw-bold flex-grow-1">${esc(v.nome)}</span>
+    <div class="input-group input-group-sm" style="max-width:110px"><input type="number" class="form-control text-end" value="${toN(v.capacidade)}" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}',this.value)"><span class="input-group-text">m³</span></div>
+    <i class="bi bi-trash text-danger" onclick="window.removerCarrinha('${escJs(v.id)}')"></i></div>`).join('')||'<small class="text-muted">Sem carrinhas — acrescenta abaixo.</small>'; };
+window.abrirCarrinhas=()=>{ renderListaCarrinhas(); window.abrirModal('modalCarrinhas'); };
+window.adicionarCarrinha=()=>{ const n=document.getElementById('novaCarrinhaNome').value.trim(), c=toN(document.getElementById('novaCarrinhaCap').value);
+    if(!n||c<=0){ mostrarToast('Indica o nome e a capacidade em m³','erro'); return; }
+    window.db.carrinhas=[...getCarrinhas(),{id:uid(),nome:n,capacidade:c}]; window.atualizarBD();
+    document.getElementById('novaCarrinhaNome').value=''; document.getElementById('novaCarrinhaCap').value=''; renderListaCarrinhas(); };
+window.alterarCarrinha=(id,v)=>{ window.db.carrinhas=getCarrinhas().map(x=>x.id===id?{...x,capacidade:toN(v)}:x); window.atualizarBD(); };
+window.removerCarrinha=id=>{ window.db.carrinhas=getCarrinhas().filter(x=>x.id!==id); window.atualizarBD(); renderListaCarrinhas(); };
+
+// ── SELEÇÃO DE ENTREGAS ──────────────────
+let _pendentes=[];
+const _selEnt=new Set((()=>{ try{ return JSON.parse(localStorage.getItem('selEntregas')||'[]'); }catch(e){ return []; } })());
+const guardarSel=()=>{ try{ localStorage.setItem('selEntregas',JSON.stringify([..._selEnt])); }catch(e){} };
+const atualizarBarraRota=()=>{
+    const sel=_pendentes.filter(p=>_selEnt.has(String(p.e.id)));
+    const ativo=document.getElementById('tabEntregas').classList.contains('active');
+    document.getElementById('barraRota').style.display=sel.length&&ativo?'flex':'none';
+    document.getElementById('barraRotaN').textContent=sel.length;
+    document.getElementById('barraRotaM3').textContent=sel.reduce((a,p)=>a+p.fM,0).toFixed(1);
+};
+document.addEventListener('shown.bs.tab',()=>atualizarBarraRota());
+window.marcarEntrega=(id,on)=>{ on?_selEnt.add(String(id)):_selEnt.delete(String(id)); guardarSel(); window.render(); };
+window.marcarZona=ids=>{ const todas=ids.every(i=>_selEnt.has(String(i))); ids.forEach(i=>todas?_selEnt.delete(String(i)):_selEnt.add(String(i))); guardarSel(); window.render(); };
+window.limparSelecao=()=>{ _selEnt.clear(); guardarSel(); window.render(); };
+
+// ── PLANEAR ROTA ─────────────────────────
+// 1) encomendas maiores que a carrinha dividem-se em viagens cheias; 2) agrupamento por poupança (Clarke-Wright)
+//    junta clientes vizinhos em voltas que cabem na carrinha; 3) voltas distribuídas pelas carrinhas, equilibrando km;
+// 4) cada volta é ordenada pelo OSRM /trip (ida e volta a Casal Comba); sem rede, vizinho mais próximo.
+window.abrirPlanear=()=>{
+    const c=getCarrinhas();
+    if(!c.length){ mostrarToast('Define primeiro as carrinhas (⚙️ Carrinhas)','erro'); window.abrirCarrinhas(); return; }
+    document.getElementById('planearCarrinhas').innerHTML=c.map((v,i)=>`<button type="button" class="btn btn-sm chip-pessoa ${i===0?'btn-success':'btn-outline-secondary'} fw-bold" data-id="${esc(v.id)}" onclick="this.classList.toggle('btn-success');this.classList.toggle('btn-outline-secondary')">${esc(v.nome)} <small class="fw-normal">${toN(v.capacidade)} m³</small></button>`).join('');
+    document.getElementById('planearResultado').innerHTML='';
+    window.abrirModal('modalPlanear');
+};
+async function ordenarVolta(base,paragens){
+    if(paragens.length<=1){ /* ainda assim pedir km */ }
+    const pts=[base,...paragens.map(p=>({lat:p.cli.lat,lon:p.cli.lon}))];
+    try{
+        const coords=pts.map(p=>`${p.lon},${p.lat}`).join(';');
+        const r=await fetch(`https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&roundtrip=true&overview=false`);
+        const j=await r.json();
+        if(j.code!=='Ok'||!j.trips||!j.trips[0]) throw new Error('trip');
+        const ordem=paragens.map((p,i)=>({p,idx:j.waypoints[i+1].waypoint_index})).sort((a,b)=>a.idx-b.idx).map(x=>x.p);
+        return {ordem,km:j.trips[0].distance/1000,min:Math.round(j.trips[0].duration/60),aprox:false};
+    }catch(e){
+        // vizinho mais próximo, km em linha reta × 1,3
+        const resto=[...paragens], ordem=[]; let atual=base, km=0;
+        while(resto.length){ resto.sort((a,b)=>haversineKm(atual,a.cli)-haversineKm(atual,b.cli)); const n=resto.shift(); km+=haversineKm(atual,n.cli); ordem.push(n); atual=n.cli; }
+        km+=haversineKm(atual,base);
+        return {ordem,km:km*1.3,min:null,aprox:true};
+    }
+}
+window.calcularPlano=async()=>{
+    const res=document.getElementById('planearResultado');
+    const ids=[...document.querySelectorAll('#planearCarrinhas .btn-success')].map(b=>b.dataset.id);
+    const carr=getCarrinhas().filter(v=>ids.includes(v.id)&&toN(v.capacidade)>0);
+    if(!carr.length){ mostrarToast('Escolhe pelo menos uma carrinha','erro'); return; }
+    const base=window.db.base;
+    if(!base||base.lat==null){ res.innerHTML='<div class="alert alert-warning small">Ainda não tenho a localização de partida. Abre o separador Clientes com rede e espera que os km apareçam.</div>'; window.calcularDistancias&&window.calcularDistancias(); return; }
+    const sel=_pendentes.filter(p=>_selEnt.has(String(p.e.id)));
+    const comMapa=sel.filter(p=>p.cli.lat!=null&&p.cli.kmEnd===enderecoMaps(p.cli)), semMapa=sel.filter(p=>!comMapa.includes(p));
+    if(!comMapa.length){ res.innerHTML='<div class="alert alert-warning small">Nenhuma das entregas marcadas tem localização. Põe a morada ou localidade nos clientes.</div>'; return; }
+    res.innerHTML='<div class="text-center text-muted my-3">⏳ A calcular…</div>';
+    const capMax=Math.max(...carr.map(v=>toN(v.capacidade)));
+    // 1) encomendas maiores que a maior carrinha: viagens cheias só para esse cliente + o resto entra no agrupamento
+    const voltas=[], itens=[];
+    comMapa.forEach(p=>{ let f=p.fM; while(f>capMax+0.001){ voltas.push({paragens:[{...p,m3:capMax,parcial:true}],carga:capMax}); f-=capMax; } if(f>0.001) itens.push({...p,m3:f,parcial:f<p.fM-0.001}); });
+    // 2) agrupamento por poupança (Clarke-Wright): junta voltas vizinhas enquanto couberem na carrinha maior
+    const pt=x=>({lat:x.cli.lat,lon:x.cli.lon}), d0=itens.map(x=>haversineKm(base,pt(x)));
+    let rotas=itens.map((x,k)=>({ids:[k],carga:x.m3}));
+    const rotaDe=k=>rotas.find(r=>r.ids.includes(k));
+    const poup=[]; for(let a=0;a<itens.length;a++) for(let b=a+1;b<itens.length;b++) poup.push({a,b,s:d0[a]+d0[b]-haversineKm(pt(itens[a]),pt(itens[b]))});
+    poup.sort((x,y)=>y.s-x.s);
+    poup.forEach(({a,b})=>{
+        const ra=rotaDe(a), rb=rotaDe(b); if(ra===rb||ra.carga+rb.carga>capMax+0.001) return;
+        const fimA=ra.ids[ra.ids.length-1]===a, iniA=ra.ids[0]===a, fimB=rb.ids[rb.ids.length-1]===b, iniB=rb.ids[0]===b;
+        let ids=null;
+        if(fimA&&iniB) ids=[...ra.ids,...rb.ids]; else if(fimB&&iniA) ids=[...rb.ids,...ra.ids];
+        else if(fimA&&fimB) ids=[...ra.ids,...rb.ids.slice().reverse()]; else if(iniA&&iniB) ids=[...ra.ids.slice().reverse(),...rb.ids];
+        if(!ids) return;
+        rotas=rotas.filter(r=>r!==ra&&r!==rb); rotas.push({ids,carga:ra.carga+rb.carga});
+    });
+    rotas.forEach(r=>voltas.push({paragens:r.ids.map(k=>itens[k]),carga:r.carga}));
+    // 3) distribuir as voltas pelas carrinhas: a que cabe e tem menos km até agora (equilibra o trabalho)
+    const kmVolta=v=>{ let a=base,k=0; v.paragens.forEach(p=>{k+=haversineKm(a,pt(p)); a=pt(p);}); return k+haversineKm(a,base); };
+    const acum={}; carr.forEach(c=>acum[c.id]=0);
+    voltas.sort((x,y)=>y.carga-x.carga).forEach(v=>{
+        const cabem=carr.filter(c=>toN(c.capacidade)+0.001>=v.carga);
+        const c=(cabem.length?cabem:carr).slice().sort((x,y)=>acum[x.id]-acum[y.id]||toN(x.capacidade)-toN(y.capacidade))[0];
+        v.carrinha=c; acum[c.id]+=kmVolta(v);
+    });
+    const voltasOk=voltas.filter(v=>v.paragens.length).sort((x,y)=>getCarrinhas().indexOf(x.carrinha)-getCarrinhas().indexOf(y.carrinha));
+    for(const v of voltasOk){ Object.assign(v,await ordenarVolta(base,v.paragens)); await espera(300); }
+    // juntar a mesma encomenda repetida seguida na mesma volta
+    const origem=encodeURIComponent(baseTexto()+', Portugal');
+    const linkMaps=ordem=>{ const pts=ordem.map(p=>`${p.cli.lat},${p.cli.lon}`).filter((x,i,a)=>a.indexOf(x)===i);
+        const partes=[]; for(let i=0;i<pts.length;i+=9) partes.push(pts.slice(i,i+9));
+        return partes.map((pp,k)=>`https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${k===0?origem:pp[0]}&destination=${k===partes.length-1?origem:encodeURIComponent(partes[k+1][0])}&waypoints=${encodeURIComponent(pp.join('|'))}`); };
+    const porCarrinha={}; voltasOk.forEach(v=>(porCarrinha[v.carrinha.id]=porCarrinha[v.carrinha.id]||[]).push(v));
+    const totKm=voltasOk.reduce((a,v)=>a+v.km,0), totMin=voltasOk.reduce((a,v)=>a+(v.min||0),0), algumAprox=voltasOk.some(v=>v.aprox);
+    let texto=`🧭 Entregas ${fmtData(hoje())}\n`;
+    const html=Object.values(porCarrinha).map(vs=>vs.map((v,k)=>{
+        const cap=toN(v.carrinha.capacidade), links=linkMaps(v.ordem);
+        texto+=`\n🚚 ${v.carrinha.nome} — volta ${k+1} (${v.carga.toFixed(1)}/${cap} m³, ${v.km.toFixed(0)} km)\n`+v.ordem.map((p,i)=>`${i+1}. ${p.cli.nome} — ${p.m3.toFixed(1)} m³ ${p.e.tipoLenha}${p.cli.zona?' ('+p.cli.zona+')':''}${p.cli.contacto?' · '+p.cli.contacto:''}`).join('\n')+'\n';
+        return `<div class="volta-card"><div class="volta-head">
+            <div class="d-flex justify-content-between"><b>🚚 ${esc(v.carrinha.nome)} · volta ${k+1}</b><span class="small">${v.aprox?'≈ ':''}${v.km.toFixed(0)} km${v.min?` · ${Math.floor(v.min/60)?Math.floor(v.min/60)+'h':''}${v.min%60} min`:''}</span></div>
+            <div class="small">Carga <b>${v.carga.toFixed(1)}</b> de ${cap} m³</div>
+            <div class="progress mt-1" style="height:6px"><div class="progress-bar ${v.carga>cap?'bg-danger':'bg-success'}" style="width:${Math.min(100,v.carga/cap*100).toFixed(0)}%"></div></div>
+            <div class="small text-muted mt-1">${Object.entries(v.ordem.reduce((o,p)=>(o[p.e.tipoLenha]=(o[p.e.tipoLenha]||0)+p.m3,o),{})).map(([t,m])=>`${esc(t)} ${m.toFixed(1)} m³`).join(' · ')}</div>
+        </div>
+        <div class="paragem"><span class="paragem-n" style="background:var(--primary)">🏠</span><span class="small">Sair de ${esc(baseTexto())}</span></div>
+        ${v.ordem.map((p,i)=>`<div class="paragem"><span class="paragem-n">${i+1}</span><div class="flex-grow-1 small"><b>${esc(p.cli.nome)}</b> — <b>${p.m3.toFixed(1)} m³</b> ${esc(p.e.tipoLenha)}${p.parcial?' <span class="badge text-bg-warning">parte</span>':''}<br><span class="text-muted">${esc(enderecoMaps(p.cli).replace(', Portugal',''))}</span></div>
+            <div class="d-flex gap-1">${botoesContacto(p.cli)}<button class="btn btn-success btn-contacto" title="Registar entrega" onclick="window.fecharModalSemSalvar('modalPlanear');setTimeout(()=>window.abrirEntrega('${escJs(p.e.id)}'),250)">✅</button></div></div>`).join('')}
+        <div class="paragem"><span class="paragem-n" style="background:var(--primary)">🏠</span><span class="small">Voltar a ${esc(baseTexto())}</span></div>
+        <div class="p-2 d-flex gap-1">${links.map((l,i)=>`<a class="btn btn-primary btn-sm fw-bold flex-fill" href="${esc(l)}" target="_blank" rel="noopener">🗺️ Abrir no Maps${links.length>1?` (parte ${i+1})`:''}</a>`).join('')}</div>
+        </div>`; }).join('')).join('');
+    res.innerHTML=`<div class="alert alert-info py-2 small mb-2"><b>${voltasOk.length}</b> volta(s) · ${algumAprox?'≈ ':''}<b>${totKm.toFixed(0)} km</b>${totMin?` · ${Math.floor(totMin/60)}h${String(totMin%60).padStart(2,'0')}`:''} de condução</div>`+
+        (semMapa.length?`<div class="alert alert-warning py-2 small mb-2">Sem localização (não entram na rota): ${semMapa.map(p=>esc(p.cli.nome)).join(', ')}</div>`:'')+html+
+        `<a class="btn btn-outline-success w-100 mt-1" href="https://wa.me/?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener">💬 Enviar o plano por WhatsApp</a>`+
+        (algumAprox?'<div class="small text-muted mt-2">≈ Sem ligação ao serviço de rotas: ordem pelo vizinho mais próximo e km estimados.</div>':'');
+};
+
 // ── ENTREGAS PENDENTES (por zona) ────────
 function renderEntregasPendentes(pend){
     const zonaDe=c=>(c.zona||'').trim()||'Sem zona';
@@ -1469,15 +1651,14 @@ function renderEntregasPendentes(pend){
         const itens=grupos[z].sort((a,b)=>(a.e.dataEnc||'').localeCompare(b.e.dataEnc||''));
         const m3=itens.reduce((a,p)=>a+p.fM,0);
         const porTipo={}; itens.forEach(p=>porTipo[p.e.tipoLenha]=(porTipo[p.e.tipoLenha]||0)+p.fM);
-        const moradas=[...new Set(itens.map(p=>enderecoMaps(p.cli)).filter(Boolean))].slice(0,10);
-        const rota=moradas.length?`https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(moradas[moradas.length-1])}`+(moradas.length>1?`&waypoints=${encodeURIComponent(moradas.slice(0,-1).join('|'))}`:''):'';
         return `<div class="zona-card">
             <div class="zona-head"><div><b>📍 ${esc(z)}</b> <small class="opacity-75">${itens.length} entrega(s) · ${m3.toFixed(1)} m³${mediaKm(z)!=null?` · ≈ ${mediaKm(z).toFixed(0)} km`:''}</small>
                 <div class="small opacity-75">${Object.entries(porTipo).map(([t,v])=>`${esc(t)}: ${v.toFixed(1)} m³`).join(' · ')}</div></div>
-                ${rota?`<a class="btn btn-sm btn-warning fw-bold py-0" href="${esc(rota)}" target="_blank" rel="noopener">🗺️ Rota</a>`:''}</div>
-            ${itens.map(p=>`<div class="ent-item">
+                <button class="btn btn-sm btn-warning fw-bold py-0" onclick="window.marcarZona([${itens.map(p=>`'${escJs(p.e.id)}'`).join(',')}])">☑️ Marcar zona</button></div>
+            ${itens.map(p=>`<div class="ent-item ${_selEnt.has(String(p.e.id))?'marcada':''}">
                 <div class="d-flex justify-content-between align-items-start gap-2">
-                    <div><b>${esc(p.cli.nome)}</b> ${diasTag(p.dias)}
+                    <input type="checkbox" class="form-check-input ent-check" ${_selEnt.has(String(p.e.id))?'checked':''} onchange="window.marcarEntrega('${escJs(p.e.id)}',this.checked)">
+                    <div class="flex-grow-1"><b>${esc(p.cli.nome)}</b> ${diasTag(p.dias)}
                         <div><span class="badge text-bg-warning">${p.fM.toFixed(1)} m³</span> <span class="small">${esc(p.e.tipoLenha)}</span> <span class="small text-muted">· enc. ${fmtData(p.e.dataEnc)}</span></div>
                         ${p.cli.morada?`<div class="small text-muted">${esc(p.cli.morada)}</div>`:''}
                         ${kmTag(p.cli)}
@@ -1491,6 +1672,9 @@ function renderEntregasPendentes(pend){
         </div>`;
     }).join('');
     document.getElementById('listaEntregasPendentes').innerHTML=html||'<p class="text-center text-muted my-4">Nada por entregar 🎉</p>';
+    // limpar da seleção o que já não está pendente
+    const ids=new Set(pend.map(p=>String(p.e.id))); [..._selEnt].forEach(id=>{ if(!ids.has(id)) _selEnt.delete(id); });
+    _pendentes=pend; atualizarBarraRota(); renderCarrinhasResumo();
 }
 
 // ── PAINEL CLIENTE ───────────────────────
