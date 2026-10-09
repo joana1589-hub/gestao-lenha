@@ -267,6 +267,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHoras">⏱️ Horas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSim">🧮 Simular</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSocios">🤝 Sócios</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHist">📜 Histórico</button></li>
     </ul>
 
@@ -512,6 +513,33 @@
             </div>
             <h6 class="fw-bold mt-3 text-muted small">RESUMO POR PESSOA</h6>
             <div id="horasResumoPessoa"></div>
+        </div>
+
+        <!-- SÓCIOS: CAPITAL -->
+        <div id="tabSocios" class="tab-pane fade">
+            <div class="p-2 mb-3 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
+                <b>🤝 Dinheiro dos sócios</b> — o que vocês põem no negócio e tiram depois.
+                <div class="mt-1">Mexe <b>só na caixa</b> (Dinheiro em Mão). Não é receita, não é gasto e não conta para o lucro.</div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6"><button class="btn btn-success w-100 fw-bold" onclick="window.abrirCapital('entrada')">➕ Pôr dinheiro</button></div>
+                <div class="col-6"><button class="btn btn-outline-danger w-100 fw-bold" onclick="window.abrirCapital('saida')">➖ Tirar dinheiro</button></div>
+            </div>
+            <div class="row g-2 mb-3 text-center">
+                <div class="col-4"><div class="kpi-card border-start border-success border-4"><span class="kpi-lbl">Entrou</span><span id="capTotEnt" class="kpi-val text-success">0€</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-danger border-4"><span class="kpi-lbl">Saiu</span><span id="capTotSai" class="kpi-val text-danger">0€</span></div></div>
+                <div class="col-4"><div class="kpi-card border-start border-primary border-4"><span class="kpi-lbl">No negócio</span><span id="capTotSaldo" class="kpi-val text-primary">0€</span></div></div>
+            </div>
+            <h6 class="fw-bold text-muted small">POR SÓCIO</h6>
+            <div id="capPorSocio" class="mb-3"></div>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-muted small mb-0">MOVIMENTOS</h6>
+                <button class="btn btn-outline-success btn-sm py-0" onclick="window.exportarCapital()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+            </div>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle">
+                <thead><tr><th>Data</th><th>Sócio</th><th>Movimento</th><th class="text-end">Valor</th><th></th></tr></thead>
+                <tbody id="corpoCapital"></tbody>
+            </table></div>
         </div>
 
         <!-- HISTÓRICO + VERIFICAR -->
@@ -849,6 +877,26 @@
     </div></div>
 </div>
 
+<!-- Capital dos sócios -->
+<div class="modal fade" id="modalCapital" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold" id="capTitulo">Pôr dinheiro</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCapital')"></button></div>
+        <div class="btn-group w-100 mb-2">
+            <button type="button" class="btn btn-sm fw-bold" id="capTipoE" onclick="window.setTipoCapital('entrada')">➕ Pôr</button>
+            <button type="button" class="btn btn-sm fw-bold" id="capTipoS" onclick="window.setTipoCapital('saida')">➖ Tirar</button>
+        </div>
+        <label class="small fw-bold mb-1">Quem?</label>
+        <div id="capSocios" class="d-flex flex-wrap gap-2 mb-2"></div>
+        <label class="small fw-bold">Valor €</label>
+        <input type="number" id="capValor" class="form-control mb-1" step="0.01" min="0" inputmode="decimal" placeholder="ex: 800">
+        <div id="capAviso" class="small mb-2"></div>
+        <label class="small fw-bold">Data</label>
+        <input type="date" id="capData" class="form-control mb-2">
+        <input type="text" id="capDesc" class="form-control mb-3" placeholder="Nota (opcional) — ex: para comprar lenha">
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarCapital()">GUARDAR</button>
+    </div></div>
+</div>
+
 <!-- Cópia de segurança -->
 <div class="modal fade" id="modalCopia" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content p-3">
@@ -922,7 +970,7 @@ const auth = getAuth(app);
 // Agora: cada registo é um documento próprio em producao/v2/<coleção>/<id>; as definições (saldo, tipos, preços)
 // ficam em producao/v2, gravadas campo a campo. Só se grava o que mudou.
 // O documento antigo NÃO é apagado — fica como cópia de segurança.
-const COLS = ['clientes','encomendas','despesas','lotes','dividendos','horas'];
+const COLS = ['clientes','encomendas','despesas','lotes','dividendos','horas','capital'];
 const antigoRef = doc(db2,"producao","dados_mestre");
 const configRef = doc(db2,"producao","v2");
 const colRef = c => collection(db2,"producao","v2",c);
@@ -1319,7 +1367,7 @@ const CFG_IGNORAR=['base','_migradoEm'];
 const semIgnorados=o=>{ const r={}; Object.keys(o||{}).sort().forEach(k=>{ if(!IGNORAR.includes(k)) r[k]=o[k]; }); return r; };
 const mudouAlgo=(a,b)=>JSON.stringify(semIgnorados(a))!==JSON.stringify(semIgnorados(b));
 const limparHist=o=>JSON.parse(JSON.stringify(o));
-const NOMES_COL={clientes:'Cliente',encomendas:'Encomenda',despesas:'Gasto',lotes:'Carga',dividendos:'Dividendo',horas:'Horas',definicoes:'Definições'};
+const NOMES_COL={clientes:'Cliente',encomendas:'Encomenda',despesas:'Gasto',lotes:'Carga',dividendos:'Dividendo',horas:'Horas',capital:'Capital',definicoes:'Definições'};
 const nomeCliente=id=>{ const c=(window.db.clientes||[]).find(x=>x.id==id); return c?c.nome:'(cliente apagado)'; };
 const fmtV=(k,v)=>{ if(v==null||v==='') return '—'; if(Array.isArray(v)) return v.length+' itens'; if(typeof v==='object') return '…';
     if(/valor|preco|custo|acrescimo|saldo/i.test(k)&&!isNaN(v)) return toN(v).toFixed(2).replace('.',',')+'€';
@@ -1335,6 +1383,7 @@ const rotulo=(col,o)=>{ if(!o) return '';
         case 'despesas': return `${o.categoria||catDe(o)} ${o.desc||''} · ${fmtV('valor',o.valor)}`.trim();
         case 'lotes': return `${o.nome||''} · ${fmtV('custo',o.custoCompra)}`;
         case 'dividendos': return `${o.desc||''} · ${fmtV('valor',o.valor)}`;
+        case 'capital': return `${o.tipo==='saida'?'Levantamento':'Entrada'} ${o.socio||''} · ${fmtV('valor',o.valor)}${o.desc?' · '+o.desc:''}`;
         case 'horas': return `${o.nome||''} ${toN(o.horas)}h ${fmtData(o.data)}${o.pago?' (paga)':''}`;
         default: return '';
     } };
@@ -1479,6 +1528,11 @@ window.verificarDados=()=>{
         const m3V=(l.saidasLenha||[]).reduce((a,x)=>a+toN(x.m3),0);
         if(toN(l.m3Comprados)>0&&m3V>toN(l.m3Comprados)*1.15) add('info',`${lbl}: recebido ${m3V.toFixed(1)} m³ mas só tem ≈ ${toN(l.m3Comprados)} m³ comprados — corrigir os m³?`,`window.abrirEditarLote('${escJs(l.id)}')`);
         (l.gastosExtras||[]).forEach(g=>{ if(toN(g.valor)<=0) add('erro',`${lbl}: gasto extra de 0€.`,`window.irPara('tabLotes')`); }); });
+    // capital dos sócios
+    (window.db.capital||[]).forEach(x=>{ const lbl=`Capital ${esc(x.socio||'?')} ${fmtV('valor',x.valor)}`;
+        if(toN(x.valor)<=0) add('erro',`${lbl}: valor 0€.`,`window.abrirCapital(null,'${escJs(x.id)}')`);
+        if(!dataOk(x.data)) add('erro',`${lbl}: sem data.`,`window.abrirCapital(null,'${escJs(x.id)}')`); });
+    sociosLista().forEach(n=>{ const s=saldoSocio(n); if(s<-0.005) add('aviso',`${esc(n)} tirou mais ${(-s).toFixed(2)}€ do que pôs no negócio.`,"window.irPara('tabSocios')"); });
     // dividendos
     (window.db.dividendos||[]).forEach(d=>{ if(toN(d.valor)<=0) add('erro',`Dividendo ${esc(d.desc||'')}: valor 0€.`,`window.irPara('tabFin')`); if(!dataOk(d.data)) add('aviso',`Dividendo ${esc(d.desc||'')}: sem data.`,`window.irPara('tabFin')`); });
     // clientes repetidos
@@ -1526,7 +1580,7 @@ window.irPag=(key,pg)=>{ PG[key].pg=pg; window.render(); };
 
 // ── RENDER ───────────────────────────────
 window.render=function(){
-    ['clientes','encomendas','despesas','dividendos','lotes','horas'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
+    ['clientes','encomendas','despesas','dividendos','lotes','horas','capital'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
 
     const modo=document.getElementById('dashModoFiltro').value;
     const dAno=document.getElementById('dashFiltroAno').value;
@@ -1736,7 +1790,10 @@ window.render=function(){
     const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0)+totalHorasPagas;
     sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor),0);
     const lucT=sRecE-(sCusL+totalDespesasHistorico);
-    const caixaFinal=(toN(window.db.saldoInicial)+lucT)-sDivT;
+    // capital dos sócios: entradas somam e levantamentos tiram — só à caixa, não ao lucro
+    const capEnt=(window.db.capital||[]).filter(x=>x.tipo!=='saida').reduce((a,x)=>a+toN(x.valor),0);
+    const capSai=(window.db.capital||[]).filter(x=>x.tipo==='saida').reduce((a,x)=>a+toN(x.valor),0);
+    const caixaFinal=r2((toN(window.db.saldoInicial)+lucT)-sDivT+capEnt-capSai);
     document.getElementById('resumoCaixaTotal').innerText=caixaFinal.toFixed(0)+'€';
     document.getElementById('resumoPendentesGlobal').innerText=m3FGlobal.toFixed(1)+' m³';
     document.getElementById('resumoDividaEntregue').innerText=divC.toFixed(0)+'€';
@@ -1798,6 +1855,7 @@ window.render=function(){
     document.getElementById('avisoCategorizar').innerHTML=semCat?`<div class="alert alert-warning py-2 px-3 small d-flex justify-content-between align-items-center mb-0">Há ${semCat} gasto(s) antigo(s) sem categoria.<button class="btn btn-warning btn-sm fw-bold py-0" onclick="window.abrirCategorizar()">🏷️ Categorizar</button></div>`:'';
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
 
+    renderCapital();
     { const bt=document.getElementById('baseTexto'); if(document.activeElement!==bt) bt.value=baseTexto(); }
     if(!document.querySelector('#tabSim input:focus')) renderSimulador();
     // ── 8. CLIENTES
@@ -1837,7 +1895,7 @@ document.addEventListener('shown.bs.tab',e=>{
     document.querySelectorAll('#navFundo button').forEach(b=>b.classList.toggle('ativo',b.dataset.tab===id||(b.dataset.tab==='mais'&&!fundo.includes(id))));
 });
 window.abrirMais=()=>{
-    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabHist','📜','Histórico']];
+    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabSocios','🤝','Sócios'],['tabHist','📜','Histórico']];
     document.getElementById('maisBotoes').innerHTML=itens.map(([id,ic,t])=>`<div class="col-4"><button class="btn btn-outline-secondary w-100 btn-mais" onclick="window.irPara('${id}')"><span>${ic}</span>${t}</button></div>`).join('')+
         `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.abrirCopia()">💾 Cópia de segurança</button></div>`;
     window.abrirModal('modalMais');
@@ -2592,6 +2650,66 @@ window.exportarCSVHoras=()=>{
 };
 
 // ── CSV ──────────────────────────────────
+// ── CAPITAL DOS SÓCIOS ───────────────────
+const sociosLista=()=>{ const s=getTrabalhadores().filter(w=>!w.pago).map(w=>w.nome); (window.db.capital||[]).forEach(x=>{ if(x.socio&&!s.includes(x.socio)) s.push(x.socio); }); return s.length?s:[...SOCIOS_DEFAULT]; };
+const saldoSocio=n=>(window.db.capital||[]).filter(x=>x.socio===n).reduce((a,x)=>a+(x.tipo==='saida'?-1:1)*toN(x.valor),0);
+let _capTipo='entrada', _capId=null;
+window.setTipoCapital=t=>{ _capTipo=t;
+    document.getElementById('capTipoE').className='btn btn-sm fw-bold '+(t==='entrada'?'btn-success':'btn-outline-success');
+    document.getElementById('capTipoS').className='btn btn-sm fw-bold '+(t==='saida'?'btn-danger':'btn-outline-danger');
+    document.getElementById('capTitulo').textContent=(_capId?'Editar · ':'')+(t==='entrada'?'Pôr dinheiro no negócio':'Tirar dinheiro do negócio');
+    window.avisoCapital(); };
+window.escolherSocio=btn=>{ document.querySelectorAll('#capSocios button').forEach(b=>{ b.className='btn btn-sm fw-bold px-3 '+(b===btn?'btn-dark':'btn-outline-secondary'); }); window.avisoCapital(); };
+const socioEscolhido=()=>{ const b=document.querySelector('#capSocios .btn-dark'); return b?b.dataset.nome:''; };
+window.avisoCapital=()=>{ const n=socioEscolhido(), el=document.getElementById('capAviso'); if(!n){ el.innerHTML=''; return; }
+    let s=saldoSocio(n); if(_capId){ const o=(window.db.capital||[]).find(x=>x.id===_capId); if(o&&o.socio===n) s-=(o.tipo==='saida'?-1:1)*toN(o.valor); }
+    el.innerHTML=`<span class="text-muted">${esc(n)} tem <b>${s.toFixed(2).replace('.',',')}€</b> no negócio.</span>`; };
+window.abrirCapital=(tipo,id)=>{
+    _capId=id||null; const o=id?(window.db.capital||[]).find(x=>x.id===id):null;
+    const sel=o?o.socio:'';
+    document.getElementById('capSocios').innerHTML=sociosLista().map(n=>`<button type="button" class="btn btn-sm fw-bold px-3 ${n===sel?'btn-dark':'btn-outline-secondary'}" data-nome="${esc(n)}" onclick="window.escolherSocio(this)">${esc(n)}</button>`).join('');
+    document.getElementById('capValor').value=o?toN(o.valor):'';
+    document.getElementById('capData').value=o?o.data:hoje();
+    document.getElementById('capDesc').value=o?(o.desc||''):'';
+    window.setTipoCapital(o?o.tipo:tipo);
+    window.abrirModal('modalCapital');
+};
+window.salvarCapital=()=>{
+    const n=socioEscolhido(), v=r2(document.getElementById('capValor').value), d=document.getElementById('capData').value;
+    if(!n){ mostrarToast('Escolhe quem','erro'); return; }
+    if(v<=0){ mostrarToast('Indica o valor','erro'); return; }
+    if(!d){ mostrarToast('Indica a data','erro'); return; }
+    const reg={tipo:_capTipo,socio:n,valor:v,data:d,desc:document.getElementById('capDesc').value.trim()};
+    const gravar=()=>{ if(!window.db.capital) window.db.capital=[];
+        if(_capId) Object.assign(window.db.capital.find(x=>x.id===_capId),reg); else window.db.capital.push({id:uid(),...reg});
+        window.fecharModal('modalCapital'); };
+    let s=saldoSocio(n); if(_capId){ const o=window.db.capital.find(x=>x.id===_capId); if(o&&o.socio===n) s-=(o.tipo==='saida'?-1:1)*toN(o.valor); }
+    if(_capTipo==='saida'&&v>s+0.005){ window.fecharModalSemSalvar('modalCapital');
+        window.avisar(`⚠️ ${esc(n)} só tem <b>${s.toFixed(2)}€</b> no negócio e vai tirar <b>${v.toFixed(2)}€</b>.<br>Registar mesmo assim?`,gravar); return; }
+    gravar();
+};
+function renderCapital(){
+    const L=(window.db.capital||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+    const ent=L.filter(x=>x.tipo!=='saida').reduce((a,x)=>a+toN(x.valor),0), sai=L.filter(x=>x.tipo==='saida').reduce((a,x)=>a+toN(x.valor),0);
+    document.getElementById('capTotEnt').textContent=ent.toFixed(0)+'€';
+    document.getElementById('capTotSai').textContent=sai.toFixed(0)+'€';
+    document.getElementById('capTotSaldo').textContent=(ent-sai).toFixed(0)+'€';
+    document.getElementById('capPorSocio').innerHTML=sociosLista().map(n=>{ const e=L.filter(x=>x.socio===n&&x.tipo!=='saida').reduce((a,x)=>a+toN(x.valor),0), s=L.filter(x=>x.socio===n&&x.tipo==='saida').reduce((a,x)=>a+toN(x.valor),0);
+        return `<div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded" style="background:var(--surface2);border:1px solid var(--border)">
+            <span class="fw-bold">${esc(n)}</span><span class="small">pôs <b class="text-success">${e.toFixed(0)}€</b> · tirou <b class="text-danger">${s.toFixed(0)}€</b> · tem <b class="text-primary">${(e-s).toFixed(0)}€</b></span></div>`; }).join('');
+    document.getElementById('corpoCapital').innerHTML=L.map(x=>`<tr><td><span class="bg-data">${esc(x.data)}</span></td><td><b>${esc(x.socio)}</b></td>
+        <td>${x.tipo==='saida'?'<span class="text-danger">➖ Tirou</span>':'<span class="text-success">➕ Pôs</span>'}${x.desc?`<div class="small text-muted">${esc(x.desc)}</div>`:''} ${porTag(x)}</td>
+        <td class="text-end fw-bold ${x.tipo==='saida'?'text-danger':'text-success'}">${x.tipo==='saida'?'−':'+'}${toN(x.valor).toFixed(2)}€</td>
+        <td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirCapital(null,'${escJs(x.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('capital','${escJs(x.id)}'))"></i></td></tr>`).join('')
+        ||'<tr><td colspan="5" class="text-center text-muted">Ainda sem movimentos</td></tr>';
+}
+window.exportarCapital=()=>{
+    const L=(window.db.capital||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+    const linhas=L.map(x=>[dataXL(x.data),x.socio,x.tipo==='saida'?'Tirou':'Pôs',x.tipo==='saida'?-r2(x.valor):r2(x.valor),x.desc||'',x.criadoPor||'']);
+    exportarExcel(`socios_capital_${hoje()}.xlsx`,'Capital sócios',[{t:'Data',tipo:'data',w:11},{t:'Sócio',w:12},{t:'Movimento',w:10},{t:'Valor',tipo:'eur',w:11},{t:'Nota',w:30},{t:'Registado por',w:13}],
+        linhas,['SALDO','','',r2(linhas.reduce((a,l)=>a+l[3],0)),'','']);
+};
+
 // ── EXCEL (.xlsx) ────────────────────────
 // A biblioteca só é carregada quando se exporta (fica em cache para usar sem rede depois)
 let _xlsx=null;
@@ -2675,7 +2793,7 @@ window.exportarBackupExcel=async()=>{
             ['Data da cópia',dataXL(hoje())],['Saldo inicial da caixa',r2(db.saldoInicial)],
             ['Dinheiro em mão (caixa)',document.getElementById('resumoCaixaTotal').innerText],['Lucro acumulado',document.getElementById('resumoLucro').innerText],
             ['Dívida de clientes',document.getElementById('resumoDividaEntregue').innerText],['Por entregar',document.getElementById('resumoPendentesGlobal').innerText],
-            ['Clientes',(db.clientes||[]).length],['Encomendas',encs.length],['Gastos',(db.despesas||[]).length],['Cargas',(db.lotes||[]).length],['Registos de horas',(db.horas||[]).length]]);
+            ['Clientes',(db.clientes||[]).length],['Encomendas',encs.length],['Gastos',(db.despesas||[]).length],['Cargas',(db.lotes||[]).length],['Registos de horas',(db.horas||[]).length],['Movimentos de capital dos sócios',(db.capital||[]).length]]);
         { const ws=wb.Sheets['Resumo']; ws['B2'].z='dd/mm/yyyy'; ws['B3'].z='#,##0.00 "€"'; }
         // Clientes
         const cl=(db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{ const es=encs.filter(e=>e.clienteId==c.id);
@@ -2711,6 +2829,8 @@ window.exportarBackupExcel=async()=>{
         add('Horas',[C('Data','data',11),C('Pessoa',null,14),C('Tipo',null,16),C('Carga',null,20),C('Horas','num',8),C('€/hora','eur',9),C('Valor','eur',10),C('Obs',null,28)],hs,['TOTAL','','','',soma(hs,4),'',soma(hs,6),'']);
         const dv=(db.dividendos||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(d=>[dataXL(d.data),d.desc||'',r2(d.valor)]);
         add('Dividendos',[C('Data','data',11),C('Descrição',null,30),C('Valor','eur',11)],dv,['TOTAL','',soma(dv,2)]);
+        const cp=(db.capital||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(x=>[dataXL(x.data),x.socio,x.tipo==='saida'?'Tirou':'Pôs',x.tipo==='saida'?-r2(x.valor):r2(x.valor),x.desc||'']);
+        add('Capital sócios',[C('Data','data',11),C('Sócio',null,12),C('Movimento',null,10),C('Valor','eur',11),C('Nota',null,30)],cp,['SALDO','','',soma(cp,3),'']);
         XLSX.writeFile(wb,`lenhapro_copia_${hoje()}.xlsx`,{compression:true});
         mostrarToast('Excel descarregado','ok');
     }catch(e){ console.error(e); mostrarToast('Não consegui criar o Excel — verifica a ligação à internet','erro'); }
@@ -2727,7 +2847,7 @@ window.lerCopia=input=>{
         if(!c||!Array.isArray(c.encomendas)||!Array.isArray(c.clientes)){ out.innerHTML='<div class="alert alert-danger small py-2">Este ficheiro não parece uma cópia do LenhaPro.</div>'; return; }
         _copiaLida=c;
         const n=(o,k)=>(o[k]||[]).length;
-        const linhas=[['Clientes','clientes'],['Encomendas','encomendas'],['Gastos','despesas'],['Cargas','lotes'],['Horas','horas'],['Dividendos','dividendos']]
+        const linhas=[['Clientes','clientes'],['Encomendas','encomendas'],['Gastos','despesas'],['Cargas','lotes'],['Horas','horas'],['Dividendos','dividendos'],['Capital sócios','capital']]
             .map(([t,k])=>`<tr><td>${t}</td><td class="text-end">${n(c,k)}</td><td class="text-end">${n(window.db,k)}</td></tr>`).join('');
         out.innerHTML=`<div class="p-2 rounded small mb-2" style="border:1px solid var(--border)">
             <div class="mb-1">Cópia de <b>${c.ultimoBackup?fmtData(c.ultimoBackup):'data desconhecida'}</b> · saldo inicial ${r2(c.saldoInicial).toFixed(2)}€</div>
