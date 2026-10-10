@@ -267,6 +267,7 @@
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHoras">⏱️ Horas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCli">👥 Cli.</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSim">🧮 Simular</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMaq">🛠️ Máquinas</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSocios">🤝 Sócios</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHist">📜 Histórico</button></li>
     </ul>
@@ -513,6 +514,13 @@
             </div>
             <h6 class="fw-bold mt-3 text-muted small">RESUMO POR PESSOA</h6>
             <div id="horasResumoPessoa"></div>
+        </div>
+
+        <!-- MÁQUINAS -->
+        <div id="tabMaq" class="tab-pane fade">
+            <button class="btn btn-dark w-100 fw-bold mb-2" onclick="window.abrirMaquina()">+ NOVA MÁQUINA</button>
+            <div class="small text-muted mb-3">A compra e as despesas contam como gastos; os alugueres recebidos contam como receita — na caixa, no lucro e no Dashboard.</div>
+            <div id="listaMaquinas"></div>
         </div>
 
         <!-- SÓCIOS: CAPITAL -->
@@ -883,6 +891,60 @@
     </div></div>
 </div>
 
+<!-- Máquina -->
+<div class="modal fade" id="modalMaquina" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold" id="maqTitulo">Nova máquina</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalMaquina')"></button></div>
+        <label class="small fw-bold">Nome</label>
+        <input type="text" id="maqNome" class="form-control mb-2" placeholder="ex: Destroçador">
+        <label class="small fw-bold">A compra já está registada nos Gastos?</label>
+        <select id="maqGasto" class="form-select mb-2" onchange="window.maqGastoMudou()"></select>
+        <div id="maqCompraBox">
+            <div class="row g-2 mb-2">
+                <div class="col-6"><label class="small fw-bold">Custo €</label><input type="number" id="maqCusto" class="form-control" step="0.01" min="0" inputmode="decimal"></div>
+                <div class="col-6"><label class="small fw-bold">Data da compra</label><input type="date" id="maqData" class="form-control"></div>
+            </div>
+        </div>
+        <div id="maqGastoInfo" class="small text-muted mb-2"></div>
+        <textarea id="maqNotas" class="form-control mb-3" rows="2" placeholder="Notas (opcional)"></textarea>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarMaquina()">GUARDAR</button>
+    </div></div>
+</div>
+
+<!-- Aluguer de máquina -->
+<div class="modal fade" id="modalAluguer" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold" id="alugTitulo">Aluguer</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalAluguer')"></button></div>
+        <label class="small fw-bold">A quem?</label>
+        <input type="text" id="alugCliente" class="form-control mb-2" list="alugClientes" placeholder="Nome">
+        <datalist id="alugClientes"></datalist>
+        <div class="row g-2 mb-2">
+            <div class="col-6"><label class="small fw-bold">Data</label><input type="date" id="alugData" class="form-control"></div>
+            <div class="col-6"><label class="small fw-bold">Dias</label><input type="number" id="alugDias" class="form-control" step="0.5" min="0" inputmode="decimal" placeholder="1"></div>
+        </div>
+        <label class="small fw-bold">Valor €</label>
+        <input type="number" id="alugValor" class="form-control mb-2" step="0.01" min="0" inputmode="decimal">
+        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="alugPago" checked><label class="form-check-label small" for="alugPago">Já recebi o dinheiro</label></div>
+        <input type="text" id="alugObs" class="form-control mb-3" placeholder="Notas (opcional)">
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarAluguer()">GUARDAR</button>
+    </div></div>
+</div>
+
+<!-- Despesa de máquina -->
+<div class="modal fade" id="modalDespMaq" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold" id="dmTitulo">Despesa da máquina</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalDespMaq')"></button></div>
+        <label class="small fw-bold">Categoria</label>
+        <select id="dmCategoria" class="form-select mb-2"></select>
+        <input type="text" id="dmDesc" class="form-control mb-2" placeholder="Descrição — ex: lâminas, óleo, oficina">
+        <div class="row g-2 mb-3">
+            <div class="col-6"><label class="small fw-bold">Valor €</label><input type="number" id="dmValor" class="form-control" step="0.01" min="0" inputmode="decimal"></div>
+            <div class="col-6"><label class="small fw-bold">Data</label><input type="date" id="dmData" class="form-control"></div>
+        </div>
+        <button class="btn btn-primary w-100 fw-bold" onclick="window.salvarDespMaq()">GUARDAR</button>
+    </div></div>
+</div>
+
 <!-- Capital dos sócios -->
 <div class="modal fade" id="modalCapital" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
@@ -976,7 +1038,7 @@ const auth = getAuth(app);
 // Agora: cada registo é um documento próprio em producao/v2/<coleção>/<id>; as definições (saldo, tipos, preços)
 // ficam em producao/v2, gravadas campo a campo. Só se grava o que mudou.
 // O documento antigo NÃO é apagado — fica como cópia de segurança.
-const COLS = ['clientes','encomendas','despesas','lotes','dividendos','horas','capital'];
+const COLS = ['clientes','encomendas','despesas','lotes','dividendos','horas','capital','maquinas'];
 const antigoRef = doc(db2,"producao","dados_mestre");
 const configRef = doc(db2,"producao","v2");
 const colRef = c => collection(db2,"producao","v2",c);
@@ -1405,7 +1467,7 @@ const CFG_IGNORAR=['base','_migradoEm'];
 const semIgnorados=o=>{ const r={}; Object.keys(o||{}).sort().forEach(k=>{ if(!IGNORAR.includes(k)) r[k]=o[k]; }); return r; };
 const mudouAlgo=(a,b)=>JSON.stringify(semIgnorados(a))!==JSON.stringify(semIgnorados(b));
 const limparHist=o=>JSON.parse(JSON.stringify(o));
-const NOMES_COL={clientes:'Cliente',encomendas:'Encomenda',despesas:'Gasto',lotes:'Carga',dividendos:'Dividendo',horas:'Horas',capital:'Capital',definicoes:'Definições'};
+const NOMES_COL={clientes:'Cliente',encomendas:'Encomenda',despesas:'Gasto',lotes:'Carga',dividendos:'Dividendo',horas:'Horas',capital:'Capital',maquinas:'Máquina',definicoes:'Definições'};
 const nomeCliente=id=>{ const c=(window.db.clientes||[]).find(x=>x.id==id); return c?c.nome:'(cliente apagado)'; };
 const fmtV=(k,v)=>{ if(v==null||v==='') return '—'; if(Array.isArray(v)) return v.length+' itens'; if(typeof v==='object') return '…';
     if(/valor|preco|custo|acrescimo|saldo/i.test(k)&&!isNaN(v)) return toN(v).toFixed(2).replace('.',',')+'€';
@@ -1421,6 +1483,7 @@ const rotulo=(col,o)=>{ if(!o) return '';
         case 'despesas': return `${o.categoria||catDe(o)} ${o.desc||''} · ${fmtV('valor',o.valor)}`.trim();
         case 'lotes': return `${o.nome||''} · ${fmtV('custo',o.custoCompra)}`;
         case 'dividendos': return `${o.desc||''} · ${fmtV('valor',o.valor)}`;
+        case 'maquinas': return `${o.nome||''} · compra ${fmtV('valor',o.custo)}`;
         case 'capital': return `${o.tipo==='saida'?'Levantamento':'Entrada'} ${o.socio||''} · ${fmtV('valor',o.valor)}${o.desc?' · '+o.desc:''}`;
         case 'horas': return `${o.nome||''} ${toN(o.horas)}h ${fmtData(o.data)}${o.pago?' (paga)':''}`;
         default: return '';
@@ -1442,9 +1505,10 @@ function descreverMudanca(acao,col,a,b){
     const out=[];
     if(col==='encomendas'){ out.push(...difSub(a.entregas,b.entregas,'m3','Entrega','m³')); out.push(...difSub(a.pagamentos,b.pagamentos,'valor','Pagamento','€')); }
     if(col==='lotes'){ out.push(...difSub(a.saidasLenha,b.saidasLenha,'valor','Recebido','€')); out.push(...difSub(a.gastosExtras,b.gastosExtras,'valor','Gasto extra','€')); }
+    if(col==='maquinas'){ out.push(...difSub(a.alugueres,b.alugueres,'valor','Aluguer','€')); out.push(...difSub(a.despesas,b.despesas,'valor','Despesa','€')); }
     const sa=semIgnorados(a), sb=semIgnorados(b);
     new Set([...Object.keys(sa),...Object.keys(sb)]).forEach(k=>{
-        if(['entregas','pagamentos','saidasLenha','gastosExtras','id','trabalho'].includes(k)) return;
+        if(['entregas','pagamentos','saidasLenha','gastosExtras','alugueres','despesas','id','trabalho'].includes(k)) return;
         if(JSON.stringify(sa[k])===JSON.stringify(sb[k])) return;
         if(k==='clienteId') out.push(`cliente: ${nomeCliente(sa[k])} → ${nomeCliente(sb[k])}`);
         else if(k==='loteId'){ const l=id=>((window.db.lotes||[]).find(x=>String(x.id)===String(id))||{}).nome||'—'; out.push(`carga: ${l(sa[k])} → ${l(sb[k])}`); }
@@ -1566,6 +1630,15 @@ window.verificarDados=()=>{
         const m3V=(l.saidasLenha||[]).reduce((a,x)=>a+toN(x.m3),0);
         if(toN(l.m3Comprados)>0&&m3V>toN(l.m3Comprados)*1.15) add('info',`${lbl}: recebido ${m3V.toFixed(1)} m³ mas só tem ≈ ${toN(l.m3Comprados)} m³ comprados — corrigir os m³?`,`window.abrirEditarLote('${escJs(l.id)}')`);
         (l.gastosExtras||[]).forEach(g=>{ if(toN(g.valor)<=0) add('erro',`${lbl}: gasto extra de 0€.`,`window.irPara('tabLotes')`); }); });
+    // máquinas
+    (window.db.maquinas||[]).forEach(m=>{ const ab=`window.abrirMaquina('${escJs(m.id)}')`;
+        if(!m.custoGastoId&&toN(m.custo)>0){ const pal=semAcentos(m.nome).split(/\s+/).filter(w=>w.length>3);
+            const perto=d=>d.data&&m.dataCompra&&Math.abs(new Date(d.data)-new Date(m.dataCompra))<=15*864e5;
+            const dup=(window.db.despesas||[]).find(d=>(Math.abs(toN(d.valor)-toN(m.custo))<0.01&&(perto(d)||pal.some(w=>semAcentos(d.desc).includes(w))))||(pal.some(w=>semAcentos(d.desc).includes(w))&&/compra|maquina|ferrament/.test(semAcentos(catDe(d)+' '+(d.desc||'')))));
+            if(dup) add('erro',`Máquina ${esc(m.nome)}: a compra (${toN(m.custo).toFixed(2)}€) pode estar também nos Gastos ("${esc(dup.desc||catDe(dup))}" ${toN(dup.valor).toFixed(2)}€) — conta a dobrar? Edita a máquina e escolhe esse gasto.`,ab); }
+        if(m.custoGastoId&&!(window.db.despesas||[]).some(d=>d.id===m.custoGastoId)) add('aviso',`Máquina ${esc(m.nome)}: o gasto da compra foi apagado dos Gastos — o custo deixou de contar.`,ab);
+        (m.alugueres||[]).forEach(a=>{ if(toN(a.valor)<=0) add('erro',`${esc(m.nome)}: aluguer de 0€.`,ab); if(!a.pago&&diasDesde(a.data)>30) add('info',`${esc(m.nome)}: aluguer de ${fmtData(a.data)}${a.cliente?' ('+esc(a.cliente)+')':''} por receber há ${diasDesde(a.data)} dias (${toN(a.valor).toFixed(2)}€).`,"window.irPara('tabMaq')"); });
+        (m.despesas||[]).forEach(d=>{ if(toN(d.valor)<=0) add('erro',`${esc(m.nome)}: despesa de 0€.`,ab); }); });
     // capital dos sócios
     (window.db.capital||[]).forEach(x=>{ const lbl=`Capital ${esc(x.socio||'?')} ${fmtV('valor',x.valor)}`;
         if(toN(x.valor)<=0) add('erro',`${lbl}: valor 0€.`,`window.abrirCapital(null,'${escJs(x.id)}')`);
@@ -1618,7 +1691,7 @@ window.irPag=(key,pg)=>{ PG[key].pg=pg; window.render(); };
 
 // ── RENDER ───────────────────────────────
 window.render=function(){
-    ['clientes','encomendas','despesas','dividendos','lotes','horas','capital'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
+    ['clientes','encomendas','despesas','dividendos','lotes','horas','capital','maquinas'].forEach(k=>{if(!window.db[k])window.db[k]=[];});
 
     const modo=document.getElementById('dashModoFiltro').value;
     const dAno=document.getElementById('dashFiltroAno').value;
@@ -1631,7 +1704,7 @@ window.render=function(){
     const filtroTxt=(document.getElementById('filtroEnc').value||'').toLowerCase();
 
     let sRecE=0,sCusL=0,sGstGTotal=0,sDivT=0,m3FGlobal=0,divC=0;
-    let dRec=0,dGstTotal=0,dM3=0,dGstCompras=0,dGstExtras=0,dGstGerais=0,dGstMO=0;
+    let dRec=0,dGstTotal=0,dM3=0,dGstCompras=0,dGstExtras=0,dGstGerais=0,dGstMO=0,dGstMaq=0;
     const custosAgrupados={}, pT={}, rank={}, tps={};
     (window.db.tiposLenha||[]).forEach(t=>pT[t]=0);
     const hoje_ms=Date.now();
@@ -1799,6 +1872,13 @@ window.render=function(){
         if(h.data&&h.data.startsWith(dAno)) evolGst[parseInt(h.data.split('-')[1],10)-1]+=v;
     });
 
+    // ── 3c. MÁQUINAS: compra e despesas são gastos; alugueres recebidos são receita
+    const MQ=movimentosMaquinas();
+    MQ.gastos.forEach(g=>{ if(inPeriodo(g.data,dAno,modo==='ano'?'':dMes)){ dGstTotal+=g.valor; dGstMaq+=g.valor; custosAgrupados[g.cat]=(custosAgrupados[g.cat]||0)+g.valor; }
+        if(g.data&&g.data.startsWith(dAno)) evolGst[parseInt(g.data.split('-')[1],10)-1]+=g.valor; });
+    MQ.receitas.forEach(r=>{ sRecE+=r.valor; if(inPeriodo(r.data,dAno,modo==='ano'?'':dMes)) dRec+=r.valor;
+        if(r.data&&r.data.startsWith(dAno)) evolRec[parseInt(r.data.split('-')[1],10)-1]+=r.valor; });
+
     // ── 4. TABELA CUSTOS
     document.getElementById('tabelaCustosAgrupados').innerHTML=Object.entries(custosAgrupados).sort((a,b)=>b[1]-a[1]).map(([desc,t])=>`<tr><td>${esc(desc)}</td><td class="text-end fw-bold">${t.toFixed(2)}€</td><td class="text-end text-muted">${dGstTotal>0?((t/dGstTotal)*100).toFixed(0):0}%</td></tr>`).join('')||'<tr><td colspan="3" class="text-center text-muted">Sem registos</td></tr>';
     document.getElementById('totalCustosDash').innerText=dGstTotal.toFixed(2)+'€';
@@ -1825,7 +1905,7 @@ window.render=function(){
     document.getElementById('dashGanhoHora').innerText=horasPeriodo>0?(lucroCaixa/horasPeriodo).toFixed(2)+'€':'—';
 
     // ── 6. RESUMO GLOBAL (usa totais históricos, não filtrados por período)
-    const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0)+totalHorasPagas;
+    const totalDespesasHistorico=(window.db.despesas||[]).reduce((a,c)=>a+toN(c.valor),0)+totalHorasPagas+MQ.gastos.reduce((a,g)=>a+g.valor,0);
     sDivT=(window.db.dividendos||[]).reduce((a,c)=>a+toN(c.valor),0);
     const lucT=sRecE-(sCusL+totalDespesasHistorico);
     // capital dos sócios: entradas somam e levantamentos tiram — só à caixa, não ao lucro
@@ -1870,21 +1950,22 @@ window.render=function(){
         const gq=semAcentos(document.getElementById('filtroGstTxt').value||'').trim(), gc=document.getElementById('filtroGstCat').value,
               ga=document.getElementById('filtroGstAno').value, gm=document.getElementById('filtroGstMes').value, go=document.getElementById('ordemGst').value;
         const noPer=d=>(!ga||(d||'').startsWith(ga))&&(!gm||(d||'').split('-')[1]===gm);
-        const lista=(window.db.despesas||[]).filter(d=>noPer(d.data)&&(!gc||catDe(d)===gc)&&(!gq||semAcentos(`${d.desc||''} ${catDe(d)}`).includes(gq)))
+        const lista=[...(window.db.despesas||[]),...MQ.gastos.map(g=>({id:g.id,data:g.data,categoria:g.cat,desc:`${g.maq} — ${g.desc}`,valor:g.valor,_maq:g.maqId}))]
+            .filter(d=>noPer(d.data)&&(!gc||catDe(d)===gc)&&(!gq||semAcentos(`${d.desc||''} ${catDe(d)}`).includes(gq)))
             .map(d=>({id:d.id,d:d.data||'',c:catDe(d)+' '+(d.desc||''),cat:catDe(d),desc:(d.desc||'').trim().toLowerCase(),v:toN(d.valor),o:d}));
         const hp=(window.db.horas||[]).filter(h=>h.pago&&noPer(h.data)&&(!gc||gc==='Mão de obra')&&(!gq||semAcentos('mao de obra horas pagas '+(h.nome||'')).includes(gq)));
         const vhp=hp.reduce((a,h)=>a+valorDeHora(h),0);
         if(go==='categoria') lista.sort((a,b)=>a.cat.localeCompare(b.cat,'pt')||b.d.localeCompare(a.d)); else if(go==='desc') lista.sort((a,b)=>a.desc.localeCompare(b.desc,'pt')||b.d.localeCompare(a.d)); else ordenarLinhas(lista,go);
         window._gastosFiltrados=lista.map(x=>x.o); window._horasPagasFiltradas=hp;
         document.getElementById('corpoDespesas').innerHTML=(vhp?`<tr style="cursor:pointer" onclick="window.irPara('tabHoras')"><td><span class="bg-data">⏱️</span></td><td><span class="cat-badge">Mão de obra</span> horas pagas (${hp.reduce((a,h)=>a+toN(h.horas),0).toFixed(1)}h) <small class="text-muted">— ver Horas</small></td><td class="text-end">${vhp.toFixed(2)}€</td><td></td></tr>`:'')+
-            lista.map(({o:d})=>`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')
+            lista.map(({o:d})=>d._maq?`<tr style="cursor:pointer" onclick="window.irPara('tabMaq')"><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge">${esc(d.categoria)}</span> 🛠️ ${esc(d.desc)} <small class="text-muted">— ver Máquinas</small></td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td></td></tr>`:`<tr><td><span class="bg-data">${esc(d.data)}</span></td><td><span class="cat-badge ${d.categoria?'':'cat-auto'}" title="${d.categoria?'':'Categoria sugerida — confirma em Categorizar'}">${esc(catDe(d))}</span> ${esc(d.desc||'')} ${porTag(d)}</td><td class="text-end">${toN(d.valor).toFixed(2)}€</td><td class="text-end text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirEditarDespesa('${escJs(d.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('despesas','${escJs(d.id)}'))"></i></td></tr>`).join('')
             ||'<tr><td colspan="4" class="text-muted text-center">Sem gastos com estes filtros</td></tr>';
         const tot=lista.reduce((a,x)=>a+x.v,0)+vhp;
         document.getElementById('footGstN').textContent=`${lista.length+(vhp?1:0)} registo(s)`;
         document.getElementById('footGstTotal').textContent=tot.toFixed(2)+'€';
         const porCat={}; lista.forEach(x=>porCat[x.cat]=(porCat[x.cat]||0)+x.v); if(vhp) porCat['Mão de obra']=(porCat['Mão de obra']||0)+vhp;
         document.getElementById('footGstCats').innerHTML=gc?'':Object.entries(porCat).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([c,v])=>`${esc(c)} ${v.toFixed(0)}€`).join(' · ');
-        const sc=document.getElementById('filtroGstCat'), cc=sc.value, cats=[...new Set([...getCategorias(),...(window.db.despesas||[]).map(catDe)])];
+        const sc=document.getElementById('filtroGstCat'), cc=sc.value, cats=[...new Set([...getCategorias(),...(window.db.despesas||[]).map(catDe),...MQ.gastos.map(g=>g.cat)])];
         sc.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option ${c===cc?'selected':''}>${esc(c)}</option>`).join('');
         const sa=document.getElementById('filtroGstAno'), ca=sa.value, anos=[...new Set((window.db.despesas||[]).map(d=>(d.data||'').slice(0,4)).filter(Boolean))].sort().reverse();
         sa.innerHTML='<option value="">Todos os anos</option>'+anos.map(a=>`<option ${a===ca?'selected':''}>${a}</option>`).join('');
@@ -1894,6 +1975,7 @@ window.render=function(){
     document.getElementById('corpoDividendos').innerHTML=(window.db.dividendos||[]).sort((a,b)=>new Date(b.data)-new Date(a.data)).map(d=>`<tr><td>${esc(d.data)}</td><td>${esc(d.desc)}</td><td>${toN(d.valor).toFixed(2)}€</td><td class="text-end"><i class="bi bi-trash text-danger" onclick="window.confirmarApagar(()=>window.apagar('dividendos','${esc(d.id)}'))"></i></td></tr>`).join('');
 
     renderCapital();
+    renderMaquinas();
     { const bt=document.getElementById('baseTexto'); if(document.activeElement!==bt) bt.value=baseTexto(); }
     if(!document.querySelector('#tabSim input:focus')) renderSimulador();
     // ── 8. CLIENTES
@@ -1904,7 +1986,7 @@ window.render=function(){
     }).join('');
 
     // ── 9. CHARTS
-    window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais,dGstMO],dAno,evolRec,evolGst);
+    window.updateCharts(rank,tps,[dGstCompras,dGstExtras,dGstGerais,dGstMO,dGstMaq],dAno,evolRec,evolGst);
     window.renderHoras();
 };
 
@@ -1913,7 +1995,7 @@ window.updateCharts=(rank,tps,gb,dAno,evolRec,evolGst)=>{
     const cfg={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
     chCli=new Chart(document.getElementById('chartClientes'),{type:'bar',data:{labels:Object.keys(rank),datasets:[{data:Object.values(rank),backgroundColor:'#1a252f'}]},options:cfg});
     chTp=new Chart(document.getElementById('chartTipos'),{type:'doughnut',data:{labels:Object.keys(tps),datasets:[{data:Object.values(tps),backgroundColor:['#e67e22','#27ae60','#3498db','#f39c12','#c0392b','#7f8c8d']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
-    chGst=new Chart(document.getElementById('chartGastoDist'),{type:'pie',data:{labels:['Cargas','Extras','Geral','Mão de obra'],datasets:[{data:gb,backgroundColor:['#c0392b','#e67e22','#7f8c8d','#5a3e8a']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
+    chGst=new Chart(document.getElementById('chartGastoDist'),{type:'pie',data:{labels:['Cargas','Extras','Geral','Mão de obra','Máquinas'],datasets:[{data:gb,backgroundColor:['#c0392b','#e67e22','#7f8c8d','#5a3e8a','#16a085']}]},options:{...cfg,plugins:{legend:{display:true,position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
     // Evolução mensal
     document.getElementById('dashEvolAno').textContent=dAno;
     chEvol=new Chart(document.getElementById('chartEvolucao'),{type:'line',data:{labels:mesesNomes,datasets:[{label:'Receita',data:evolRec,borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,.1)',fill:true,tension:.3},{label:'Gastos',data:evolGst,borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.1)',fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{boxWidth:10,font:{size:9}}}},scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}});
@@ -1933,7 +2015,7 @@ document.addEventListener('shown.bs.tab',e=>{
     document.querySelectorAll('#navFundo button').forEach(b=>b.classList.toggle('ativo',b.dataset.tab===id||(b.dataset.tab==='mais'&&!fundo.includes(id))));
 });
 window.abrirMais=()=>{
-    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabSocios','🤝','Sócios'],['tabHist','📜','Histórico']];
+    const itens=[['tabDash','📈','Dashboard'],['tabVen','✅','Vendas'],['tabLotes','📦','Cargas'],['tabFin','📊','Finanças'],['tabHoras','⏱️','Horas'],['tabCli','👥','Clientes'],['tabSim','🧮','Simular preço'],['tabMaq','🛠️','Máquinas'],['tabSocios','🤝','Sócios'],['tabHist','📜','Histórico']];
     document.getElementById('maisBotoes').innerHTML=itens.map(([id,ic,t])=>`<div class="col-4"><button class="btn btn-outline-secondary w-100 btn-mais" onclick="window.irPara('${id}')"><span>${ic}</span>${t}</button></div>`).join('')+
         `<div class="col-12 mt-2"><button class="btn btn-outline-secondary w-100" onclick="window.abrirCopia()">💾 Cópia de segurança</button></div>`;
     window.abrirModal('modalMais');
@@ -2439,7 +2521,7 @@ window.executarEntregaParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==w
 // ── PAGAMENTOS ───────────────────────────
 window.abrirPagamento=id=>{ window.idAtivo=id;const e=window.db.encomendas.find(x=>x.id==id);const pags=e.pagamentos||[];const vP=somaEur(pags);document.getElementById('faltaDinheiroTexto').innerText=(r2(e.valorTotal)-vP).toFixed(2)+'€';document.getElementById('pagamentoData').value=hoje();document.getElementById('qtdParcialDinheiro').value='';document.getElementById('historicoPagamentos').innerHTML=buildHist(pags,'pagamentos',id);window.abrirModal('modalPagamento'); };
 window.executarPagamentoTotal=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);if(!e)return;if(!e.pagamentos)e.pagamentos=[];const vP=somaEur(e.pagamentos);const resto=Math.max(0,r2(e.valorTotal)-vP);if(resto>0)e.pagamentos.push({id:uid(),data:document.getElementById('pagamentoData').value,valor:resto,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento'); };
-window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=somaEur(e.pagamentos);const falta=r2(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const gravar=()=>{e.pagamentos.push({id:uid(),data,valor:v,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
+window.executarPagamentoParcial=()=>{ const e=window.db.encomendas.find(x=>x.id==window.idAtivo);const v=toN(document.getElementById('qtdParcialDinheiro').value);if(!e||v<=0)return;if(!e.pagamentos)e.pagamentos=[];const vP=somaEur(e.pagamentos);const falta=r2(e.valorTotal)-vP;const data=document.getElementById('pagamentoData').value;const encId=e.id;const gravar=()=>{const en=window.db.encomendas.find(x=>x.id==encId);if(!en)return;if(!en.pagamentos)en.pagamentos=[];en.pagamentos.push({id:uid(),data,valor:v,por:quem(),em:agoraIso()});window.fecharModal('modalPagamento');};if(v>falta+0.01){window.fecharModalSemSalvar('modalPagamento');window.avisar(`⚠️ Em dívida só <b>${falta.toFixed(2)}€</b>. Registar <b>${v.toFixed(2)}€</b> mesmo assim?`,gravar);return;}gravar(); };
 
 // ── EDITAR REGISTO ───────────────────────
 window.abrirEdicaoRegisto=(encId,tipo,itemId)=>{ const e=window.db.encomendas.find(x=>x.id==encId);const item=e[tipo].find(x=>x.id==itemId);window.editRegistoCtx={encId,tipo,itemId};document.getElementById('editRegistoTitulo').textContent=tipo==='entregas'?'Editar Entrega':'Editar Pagamento';document.getElementById('editRegistoData').value=item.data;document.getElementById('editRegistoValor').value=tipo==='entregas'?item.m3:item.valor;window.fecharModalSemSalvar(tipo==='entregas'?'modalEntrega':'modalPagamento');window.abrirModal('modalEditarRegisto'); };
@@ -2720,6 +2802,124 @@ window.exportarCSVHoras=()=>{
 };
 
 // ── CSV ──────────────────────────────────
+// ── MÁQUINAS ─────────────────────────────
+// Compra (se não estiver já nos Gastos) e despesas = gastos; alugueres recebidos = receita.
+function movimentosMaquinas(){
+    const gastos=[], receitas=[], porReceber=[];
+    (window.db.maquinas||[]).forEach(m=>{
+        if(!m.custoGastoId&&toN(m.custo)>0) gastos.push({id:'mq-c-'+m.id,data:m.dataCompra||'',valor:r2(m.custo),cat:'Compra de máquinas',desc:'compra',maq:m.nome,maqId:m.id});
+        (m.despesas||[]).forEach(d=>gastos.push({id:'mq-d-'+d.id,data:d.data||'',valor:r2(d.valor),cat:d.categoria||'Manutenção',desc:d.desc||'despesa',maq:m.nome,maqId:m.id}));
+        (m.alugueres||[]).forEach(a=>{ if(a.pago) receitas.push({data:a.dataPago||a.data,valor:r2(a.valor),maq:m.nome}); else porReceber.push({...a,maq:m.nome,maqId:m.id}); });
+    });
+    return {gastos,receitas,porReceber};
+}
+const custoMaq=m=>{ if(m.custoGastoId){ const g=(window.db.despesas||[]).find(d=>d.id===m.custoGastoId); return g?r2(g.valor):r2(m.custo); } return r2(m.custo); };
+const dataCompraMaq=m=>{ if(m.custoGastoId){ const g=(window.db.despesas||[]).find(d=>d.id===m.custoGastoId); if(g) return g.data; } return m.dataCompra||''; };
+let _maqId=null, _maqAtiva=null, _subId=null;
+window.abrirMaquina=id=>{
+    _maqId=id||null; const m=id?(window.db.maquinas||[]).find(x=>x.id===id):null;
+    document.getElementById('maqTitulo').textContent=m?'Editar máquina':'Nova máquina';
+    document.getElementById('maqNome').value=m?m.nome:'';
+    document.getElementById('maqCusto').value=m&&!m.custoGastoId?toN(m.custo)||'':'';
+    document.getElementById('maqData').value=m&&m.dataCompra?m.dataCompra:hoje();
+    document.getElementById('maqNotas').value=m?(m.notas||''):'';
+    const usados=new Set((window.db.maquinas||[]).filter(x=>x.custoGastoId&&x.id!==_maqId).map(x=>x.custoGastoId));
+    const gs=(window.db.despesas||[]).filter(d=>!usados.has(d.id)).slice().sort((a,b)=>{ const sa=/destro|maquina|máquina|rachador|motosserra|trator/i.test(a.desc||'')?0:1, sb=/destro|maquina|máquina|rachador|motosserra|trator/i.test(b.desc||'')?0:1; return sa-sb||(b.data||'').localeCompare(a.data||''); }).slice(0,40);
+    document.getElementById('maqGasto').innerHTML='<option value="">Não — registar a compra aqui</option>'+gs.map(d=>`<option value="${esc(d.id)}" ${m&&m.custoGastoId===d.id?'selected':''}>Sim: ${fmtData(d.data)} · ${esc(d.desc||catDe(d))} · ${toN(d.valor).toFixed(2)}€</option>`).join('');
+    window.maqGastoMudou(); window.abrirModal('modalMaquina');
+};
+window.maqGastoMudou=()=>{ const id=document.getElementById('maqGasto').value;
+    document.getElementById('maqCompraBox').style.display=id?'none':'';
+    document.getElementById('maqGastoInfo').textContent=id?'O custo e a data vêm desse gasto — não conta duas vezes.':''; };
+window.salvarMaquina=()=>{
+    const nome=document.getElementById('maqNome').value.trim(), gid=document.getElementById('maqGasto').value, custo=r2(document.getElementById('maqCusto').value);
+    if(!nome){ mostrarToast('Indica o nome da máquina','erro'); return; }
+    if(!gid&&custo<=0){ mostrarToast('Indica quanto custou (ou escolhe o gasto onde já está)','erro'); return; }
+    const g=gid?(window.db.despesas||[]).find(d=>d.id===gid):null;
+    const d={nome,custoGastoId:gid||null,custo:g?r2(g.valor):custo,dataCompra:g?g.data:document.getElementById('maqData').value,notas:document.getElementById('maqNotas').value.trim()};
+    if(!window.db.maquinas) window.db.maquinas=[];
+    if(_maqId) Object.assign(window.db.maquinas.find(x=>x.id===_maqId),d); else window.db.maquinas.push({id:uid(),...d,alugueres:[],despesas:[]});
+    window.fecharModal('modalMaquina');
+};
+window.apagarMaquina=id=>{ const m=window.db.maquinas.find(x=>x.id===id); if(!m) return;
+    window.confirmar(`Apagar "${m.nome}" com ${(m.alugueres||[]).length} aluguer(es) e ${(m.despesas||[]).length} despesa(s)?${m.custoGastoId?' (o gasto da compra fica nos Gastos)':''}`,()=>window.apagar('maquinas',id),'Apagar'); };
+window.abrirAluguer=(maqId,id)=>{
+    _maqAtiva=maqId; _subId=id||null; const m=window.db.maquinas.find(x=>x.id===maqId), a=id?(m.alugueres||[]).find(x=>x.id===id):null;
+    document.getElementById('alugTitulo').textContent=`${a?'Editar aluguer':'Novo aluguer'} · ${m.nome}`;
+    document.getElementById('alugClientes').innerHTML=[...new Set([...(window.db.clientes||[]).map(c=>c.nome),...(window.db.maquinas||[]).flatMap(x=>(x.alugueres||[]).map(y=>y.cliente))].filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
+    document.getElementById('alugCliente').value=a?a.cliente||'':'';
+    document.getElementById('alugData').value=a?a.data:hoje();
+    document.getElementById('alugDias').value=a?toN(a.dias)||'':'';
+    document.getElementById('alugValor').value=a?toN(a.valor):'';
+    document.getElementById('alugPago').checked=a?!!a.pago:true;
+    document.getElementById('alugObs').value=a?a.obs||'':'';
+    window.abrirModal('modalAluguer');
+};
+window.salvarAluguer=()=>{
+    const m=window.db.maquinas.find(x=>x.id===_maqAtiva); if(!m) return;
+    const v=r2(document.getElementById('alugValor').value), d=document.getElementById('alugData').value, pago=document.getElementById('alugPago').checked;
+    if(v<=0||!d){ mostrarToast('Indica o valor e a data','erro'); return; }
+    if(!m.alugueres) m.alugueres=[];
+    const o=_subId?m.alugueres.find(x=>x.id===_subId):null;
+    const reg={cliente:document.getElementById('alugCliente').value.trim(),data:d,dias:toN(document.getElementById('alugDias').value)||null,valor:v,pago,
+        dataPago:pago?(o&&o.pago&&o.dataPago?o.dataPago:d):null,obs:document.getElementById('alugObs').value.trim(),por:quem(),em:agoraIso()};
+    if(o) Object.assign(o,reg); else m.alugueres.push({id:uid(),...reg});
+    window.fecharModal('modalAluguer');
+};
+window.receberAluguer=(maqId,id)=>{ const m=window.db.maquinas.find(x=>x.id===maqId), a=m&&(m.alugueres||[]).find(x=>x.id===id); if(!a) return;
+    window.confirmar(`Marcar como recebido hoje: ${toN(a.valor).toFixed(2)}€${a.cliente?' de '+a.cliente:''}?`,()=>{ const mm=(window.db.maquinas||[]).find(x=>x.id===maqId), aa=mm&&(mm.alugueres||[]).find(x=>x.id===id); if(!aa) return; aa.pago=true; aa.dataPago=hoje(); aa.por=quem(); aa.em=agoraIso(); window.atualizarBD(); },'Recebi'); };
+window.apagarSubMaq=(maqId,lista,id)=>window.confirmarApagar(()=>{ const m=window.db.maquinas.find(x=>x.id===maqId); m[lista]=(m[lista]||[]).filter(x=>x.id!==id); window.atualizarBD(); });
+window.abrirDespMaq=(maqId,id)=>{
+    _maqAtiva=maqId; _subId=id||null; const m=window.db.maquinas.find(x=>x.id===maqId), d=id?(m.despesas||[]).find(x=>x.id===id):null;
+    document.getElementById('dmTitulo').textContent=`${d?'Editar despesa':'Nova despesa'} · ${m.nome}`;
+    document.getElementById('dmCategoria').innerHTML=opcoesCategorias(d?d.categoria:'Manutenção');
+    document.getElementById('dmDesc').value=d?d.desc||'':''; document.getElementById('dmValor').value=d?toN(d.valor):''; document.getElementById('dmData').value=d?d.data:hoje();
+    window.abrirModal('modalDespMaq');
+};
+window.salvarDespMaq=()=>{
+    const m=window.db.maquinas.find(x=>x.id===_maqAtiva); if(!m) return;
+    const v=r2(document.getElementById('dmValor').value), dt=document.getElementById('dmData').value;
+    if(v<=0||!dt){ mostrarToast('Indica o valor e a data','erro'); return; }
+    if(!m.despesas) m.despesas=[];
+    const reg={categoria:document.getElementById('dmCategoria').value,desc:document.getElementById('dmDesc').value.trim(),valor:v,data:dt,por:quem(),em:agoraIso()};
+    if(_subId) Object.assign(m.despesas.find(x=>x.id===_subId),reg); else m.despesas.push({id:uid(),...reg});
+    window.fecharModal('modalDespMaq');
+};
+function renderMaquinas(){
+    const L=(window.db.maquinas||[]).slice().sort((a,b)=>(dataCompraMaq(b)).localeCompare(dataCompraMaq(a)));
+    document.getElementById('listaMaquinas').innerHTML=L.map(m=>{
+        const custo=custoMaq(m), al=(m.alugueres||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||'')), ds=(m.despesas||[]).slice().sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+        const rec=al.filter(a=>a.pago).reduce((s,a)=>s+toN(a.valor),0), porRec=al.filter(a=>!a.pago).reduce((s,a)=>s+toN(a.valor),0), desp=ds.reduce((s,d)=>s+toN(d.valor),0);
+        const bal=rec-custo-desp, pct=custo+desp>0?Math.min(100,rec/(custo+desp)*100):100, dias=al.reduce((s,a)=>s+toN(a.dias),0);
+        const linha=(l,v,c='')=>`<div class="d-flex justify-content-between ${c}"><span>${l}</span><span>${v}</span></div>`;
+        return `<div class="lote-card">
+            <div class="d-flex justify-content-between align-items-start"><div><b>🛠️ ${esc(m.nome)}</b> <span class="bg-data">${esc(dataCompraMaq(m))}</span></div>
+                <div class="text-nowrap"><i class="bi bi-pencil-square text-primary me-2" onclick="window.abrirMaquina('${escJs(m.id)}')"></i><i class="bi bi-trash text-danger" onclick="window.apagarMaquina('${escJs(m.id)}')"></i></div></div>
+            <div class="mt-1">🛒 Compra: <b>${custo.toFixed(2)}€</b>${m.custoGastoId?' <span class="cat-badge">já nos Gastos</span>':''}</div>
+            ${m.notas?`<div class="small text-muted">${esc(m.notas)}</div>`:''}
+            <div class="mt-2 p-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
+                ${linha(`Alugueres recebidos (${al.filter(a=>a.pago).length}${dias?` · ${dias} dia${dias===1?'':'s'}`:''})`,`<b class="text-success">${rec.toFixed(0)}€</b>`)}
+                ${linha('− Compra',`${custo.toFixed(0)}€`)}
+                ${desp?linha(`− Despesas (${ds.length})`,`${desp.toFixed(0)}€`):''}
+                ${linha('<b>Balanço</b>',`<b class="${bal>=0?'text-success':'text-danger'}">${bal>=0?'✅':''} ${bal.toFixed(0)}€</b>`,'border-top pt-1 mt-1')}
+                <div class="progress mt-1" style="height:6px"><div class="progress-bar ${bal>=0?'bg-success':'bg-warning'}" style="width:${pct.toFixed(0)}%"></div></div>
+                <div class="text-center mt-1 ${bal>=0?'text-success':'text-muted'}">${bal>=0?'A máquina já se pagou':`Faltam <b>${(-bal).toFixed(0)}€</b> para pagar a máquina (${pct.toFixed(0)}%)`}</div>
+                ${porRec?`<div class="text-center text-danger mt-1">Por receber: <b>${porRec.toFixed(0)}€</b></div>`:''}
+            </div>
+            <div class="mt-2 bg-light rounded">
+                ${al.map(a=>`<div class="movimento-item"><span class="${a.pago?'text-success':'text-danger'}">${a.pago?'💶':'⏳'} ${fmtData(a.data)} · ${esc(a.cliente||'—')}${a.dias?` · ${toN(a.dias)} dia${toN(a.dias)===1?'':'s'}`:''} · <b>${toN(a.valor).toFixed(0)}€</b>${a.pago?'':' <span class="cat-badge">por receber</span>'} ${porTag(a)}</span>
+                    <div class="text-nowrap">${a.pago?'':`<button class="btn btn-success btn-sm py-0 me-1" onclick="window.receberAluguer('${escJs(m.id)}','${escJs(a.id)}')">Recebi</button>`}<i class="bi bi-pencil text-primary me-2" onclick="window.abrirAluguer('${escJs(m.id)}','${escJs(a.id)}')"></i><i class="bi bi-x text-danger" onclick="window.apagarSubMaq('${escJs(m.id)}','alugueres','${escJs(a.id)}')"></i></div></div>`).join('')}
+                ${ds.map(d=>`<div class="movimento-item"><span class="text-danger"><span class="cat-badge">${esc(d.categoria||'')}</span> ${fmtData(d.data)} · ${esc(d.desc||'')} · <b>${toN(d.valor).toFixed(0)}€</b> ${porTag(d)}</span>
+                    <div class="text-nowrap"><i class="bi bi-pencil text-primary me-2" onclick="window.abrirDespMaq('${escJs(m.id)}','${escJs(d.id)}')"></i><i class="bi bi-x text-danger" onclick="window.apagarSubMaq('${escJs(m.id)}','despesas','${escJs(d.id)}')"></i></div></div>`).join('')}
+                ${!al.length&&!ds.length?'<small class="p-2 d-block text-muted">Ainda sem alugueres nem despesas</small>':''}
+            </div>
+            <div class="mt-2 d-flex gap-1 justify-content-end">
+                <button class="btn btn-sm btn-success py-0" onclick="window.abrirAluguer('${escJs(m.id)}')">+ Aluguer</button>
+                <button class="btn btn-sm btn-danger py-0" onclick="window.abrirDespMaq('${escJs(m.id)}')">+ Despesa</button>
+            </div></div>`;
+    }).join('')||'<p class="text-center text-muted my-4">Ainda sem máquinas. Carrega em <b>+ NOVA MÁQUINA</b>.</p>';
+}
+
 // ── CAPITAL DOS SÓCIOS ───────────────────
 const sociosLista=()=>{ const s=getTrabalhadores().filter(w=>!w.pago).map(w=>w.nome); (window.db.capital||[]).forEach(x=>{ if(x.socio&&!s.includes(x.socio)) s.push(x.socio); }); return s.length?s:[...SOCIOS_DEFAULT]; };
 const saldoSocio=n=>(window.db.capital||[]).filter(x=>x.socio===n).reduce((a,x)=>a+(x.tipo==='saida'?-1:1)*toN(x.valor),0);
@@ -2812,7 +3012,7 @@ async function exportarExcel(ficheiro,folha,colunas,linhas,totais){
 const ordemCSV=(tipo,lista)=>{ const ids=tipo==='div'?window._idsDiv:window._idsVen; if(!ids) return lista; const m=new Map(lista.map(e=>[e.id,e])); return ids.map(id=>m.get(id)).filter(Boolean); };
 window.exportarCSVGastos=()=>{
     const g=window._gastosFiltrados||[], hp=window._horasPagasFiltradas||[];
-    const linhas=[...g.map(d=>[dataXL(d.data),catDe(d),d.desc||'',r2(d.valor),d.alteradoPor||d.criadoPor||'']),
+    const linhas=[...g.map(d=>[dataXL(d.data),catDe(d),(d._maq?'🛠️ ':'')+(d.desc||''),r2(d.valor),d.alteradoPor||d.criadoPor||'']),
         ...hp.map(h=>[dataXL(h.data),'Mão de obra',`Horas pagas — ${h.nome} (${toN(h.horas)}h × ${taxaDe(h)}€)`,r2(valorDeHora(h)),h.alteradoPor||h.criadoPor||''])];
     exportarExcel(`gastos_${hoje()}.xlsx`,'Gastos',
         [{t:'Data',tipo:'data',w:11},{t:'Categoria',w:16},{t:'Descrição',w:34},{t:'Valor',tipo:'eur',w:11},{t:'Registado por',w:13}],
@@ -2863,7 +3063,7 @@ window.exportarBackupExcel=async()=>{
             ['Data da cópia',dataXL(hoje())],['Saldo inicial da caixa',r2(db.saldoInicial)],
             ['Dinheiro em mão (caixa)',document.getElementById('resumoCaixaTotal').innerText],['Lucro acumulado',document.getElementById('resumoLucro').innerText],
             ['Dívida de clientes',document.getElementById('resumoDividaEntregue').innerText],['Por entregar',document.getElementById('resumoPendentesGlobal').innerText],
-            ['Clientes',(db.clientes||[]).length],['Encomendas',encs.length],['Gastos',(db.despesas||[]).length],['Cargas',(db.lotes||[]).length],['Registos de horas',(db.horas||[]).length],['Movimentos de capital dos sócios',(db.capital||[]).length]]);
+            ['Clientes',(db.clientes||[]).length],['Encomendas',encs.length],['Gastos',(db.despesas||[]).length],['Cargas',(db.lotes||[]).length],['Registos de horas',(db.horas||[]).length],['Movimentos de capital dos sócios',(db.capital||[]).length],['Máquinas',(db.maquinas||[]).length]]);
         { const ws=wb.Sheets['Resumo']; ws['B2'].z='dd/mm/yyyy'; ws['B3'].z='#,##0.00 "€"'; }
         // Clientes
         const cl=(db.clientes||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt')).map(c=>{ const es=encs.filter(e=>e.clienteId==c.id);
@@ -2883,6 +3083,7 @@ window.exportarBackupExcel=async()=>{
         add('Pagamentos',[C('Data','data',11),C('Cliente',null,26),C('Encomenda de','data',12),C('Valor','eur',11),C('Registado por',null,13)],pag,['TOTAL','','',soma(pag,3),'']);
         // Gastos (incl. horas pagas)
         const gs=[...(db.despesas||[]).map(d=>[dataXL(d.data),catDe(d),d.desc||'',r2(d.valor),d.alteradoPor||d.criadoPor||'']),
+            ...movimentosMaquinas().gastos.map(g=>[dataXL(g.data),g.cat,`🛠️ ${g.maq} — ${g.desc}`,g.valor,'']),
             ...(db.horas||[]).filter(h=>h.pago).map(h=>[dataXL(h.data),'Mão de obra',`Horas pagas — ${h.nome} (${toN(h.horas)}h × ${taxaDe(h)}€)`,r2(valorDeHora(h)),h.criadoPor||''])].sort((a,b)=>(a[0]||0)-(b[0]||0));
         add('Gastos',[C('Data','data',11),C('Categoria',null,16),C('Descrição',null,34),C('Valor','eur',11),C('Registado por',null,13)],gs,['TOTAL','','',soma(gs,3),'']);
         // Cargas
@@ -2899,6 +3100,12 @@ window.exportarBackupExcel=async()=>{
         add('Horas',[C('Data','data',11),C('Pessoa',null,14),C('Tipo',null,16),C('Carga',null,20),C('Horas','num',8),C('€/hora','eur',9),C('Valor','eur',10),C('Obs',null,28)],hs,['TOTAL','','','',soma(hs,4),'',soma(hs,6),'']);
         const dv=(db.dividendos||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(d=>[dataXL(d.data),d.desc||'',r2(d.valor)]);
         add('Dividendos',[C('Data','data',11),C('Descrição',null,30),C('Valor','eur',11)],dv,['TOTAL','',soma(dv,2)]);
+        const mq=(db.maquinas||[]).map(m=>{ const rec=(m.alugueres||[]).filter(a=>a.pago).reduce((s,a)=>s+toN(a.valor),0), des=(m.despesas||[]).reduce((s,d)=>s+toN(d.valor),0);
+            return [dataXL(dataCompraMaq(m)),m.nome,custoMaq(m),m.custoGastoId?'sim':'não',(m.alugueres||[]).length,r2(rec),r2((m.alugueres||[]).filter(a=>!a.pago).reduce((s,a)=>s+toN(a.valor),0)),r2(des),r2(rec-custoMaq(m)-des)]; });
+        add('Máquinas',[C('Compra','data',11),C('Máquina',null,20),C('Custo','eur',11),C('Compra nos Gastos',null,10),C('Alugueres',null,9),C('Recebido','eur',11),C('Por receber','eur',11),C('Despesas','eur',11),C('Balanço','eur',11)],mq,['TOTAL','',soma(mq,2),'',soma(mq,4),soma(mq,5),soma(mq,6),soma(mq,7),soma(mq,8)]);
+        const mm=[]; (db.maquinas||[]).forEach(m=>{ (m.alugueres||[]).forEach(a=>mm.push([dataXL(a.data),m.nome,'Aluguer',a.cliente||'',toN(a.dias)||'',r2(a.valor),a.pago?'recebido':'por receber'])); (m.despesas||[]).forEach(d=>mm.push([dataXL(d.data),m.nome,'Despesa',[d.categoria,d.desc].filter(Boolean).join(' — '),'',-r2(d.valor),''])); });
+        mm.sort((a,b)=>(a[0]||0)-(b[0]||0));
+        add('Máquinas - movimentos',[C('Data','data',11),C('Máquina',null,20),C('Tipo',null,9),C('Cliente / descrição',null,28),C('Dias',null,6),C('Valor','eur',11),C('Estado',null,12)],mm);
         const cp=(db.capital||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(x=>[dataXL(x.data),x.socio,x.tipo==='saida'?'Tirou':'Pôs',x.tipo==='saida'?-r2(x.valor):r2(x.valor),x.desc||'']);
         add('Capital sócios',[C('Data','data',11),C('Sócio',null,12),C('Movimento',null,10),C('Valor','eur',11),C('Nota',null,30)],cp,['SALDO','','',soma(cp,3),'']);
         XLSX.writeFile(wb,`lenhapro_copia_${hoje()}.xlsx`,{compression:true});
@@ -2917,7 +3124,7 @@ window.lerCopia=input=>{
         if(!c||!Array.isArray(c.encomendas)||!Array.isArray(c.clientes)){ out.innerHTML='<div class="alert alert-danger small py-2">Este ficheiro não parece uma cópia do LenhaPro.</div>'; return; }
         _copiaLida=c;
         const n=(o,k)=>(o[k]||[]).length;
-        const linhas=[['Clientes','clientes'],['Encomendas','encomendas'],['Gastos','despesas'],['Cargas','lotes'],['Horas','horas'],['Dividendos','dividendos'],['Capital sócios','capital']]
+        const linhas=[['Clientes','clientes'],['Encomendas','encomendas'],['Gastos','despesas'],['Cargas','lotes'],['Horas','horas'],['Dividendos','dividendos'],['Capital sócios','capital'],['Máquinas','maquinas']]
             .map(([t,k])=>`<tr><td>${t}</td><td class="text-end">${n(c,k)}</td><td class="text-end">${n(window.db,k)}</td></tr>`).join('');
         out.innerHTML=`<div class="p-2 rounded small mb-2" style="border:1px solid var(--border)">
             <div class="mb-1">Cópia de <b>${c.ultimoBackup?fmtData(c.ultimoBackup):'data desconhecida'}</b> · saldo inicial ${r2(c.saldoInicial).toFixed(2)}€</div>
