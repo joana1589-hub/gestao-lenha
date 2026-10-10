@@ -852,7 +852,8 @@
 <div class="modal fade" id="modalCarrinhas" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content p-3">
         <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0 fw-bold">🚚 Carrinhas</h6><button type="button" class="btn-close" onclick="window.fecharModalSemSalvar('modalCarrinhas')"></button></div>
-        <div class="input-group input-group-sm mb-3"><span class="input-group-text">⛽ Preço do combustível</span><input type="number" id="precoCombustivel" class="form-control text-end fw-bold" step="0.01" min="0" inputmode="decimal" onchange="window.guardarPrecoCombustivel(this.value)"><span class="input-group-text">€/L</span></div>
+        <div class="input-group input-group-sm mb-2"><span class="input-group-text">⛽ Preço do combustível</span><input type="number" id="precoCombustivel" class="form-control text-end fw-bold" step="0.01" min="0" inputmode="decimal" onchange="window.guardarPrecoCombustivel(this.value)"><span class="input-group-text">€/L</span></div>
+        <div class="input-group input-group-sm mb-3"><span class="input-group-text">🪵 Peso de 1 m³ de lenha</span><input type="number" id="pesoLenhaM3" class="form-control text-end fw-bold" step="10" min="0" inputmode="numeric" onchange="window.guardarPesoLenha(this.value)"><span class="input-group-text">kg</span></div>
         <div id="listaCarrinhas"></div>
         <div class="d-flex gap-1 mt-2 flex-wrap">
             <input type="text" id="novaCarrinhaNome" class="form-control form-control-sm" style="min-width:140px;flex:1" placeholder="Nome (ex: Carrinha grande)">
@@ -860,7 +861,7 @@
             <div class="input-group input-group-sm" style="max-width:135px"><input type="number" id="novaCarrinhaCons" class="form-control" placeholder="consumo" step="0.5" min="0" inputmode="decimal"><span class="input-group-text">L/100km</span></div>
             <button class="btn btn-success btn-sm fw-bold" onclick="window.adicionarCarrinha()">+</button>
         </div>
-        <div class="small text-muted mt-2">Capacidade = quantos m³ leva numa viagem. Consumo = litros aos 100 km (carregada).</div>
+        <div class="small text-muted mt-2">Capacidade = quantos m³ leva numa viagem. Consumo = litros aos 100 km em estrada plana (as subidas são somadas à parte). kg = peso da carrinha vazia.</div>
     </div></div>
 </div>
 
@@ -1192,10 +1193,46 @@ async function geocodificar(q){
 }
 const espera=ms=>new Promise(r=>setTimeout(r,ms));
 const haversineKm=(a,b)=>{ const R=6371,d=x=>x*Math.PI/180; const h=Math.sin(d(b.lat-a.lat)/2)**2+Math.cos(d(a.lat))*Math.cos(d(b.lat))*Math.sin(d(b.lon-a.lon)/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+// Perfil do caminho: rota de carro (OSRM, com o desenho completo) + altitudes ao longo dela
+// (OpenTopoData, modelo EU-DEM 25 m; máx. 100 pontos por pedido, 1 pedido/segundo, 1000/dia).
+// Devolve km, minutos e metros de subida/descida no sentido da IDA (na volta trocam).
+async function altitudes(pts){
+    const loc=pts.map(p=>`${p[1].toFixed(5)},${p[0].toFixed(5)}`).join('|');
+    const r=await fetch(`https://api.opentopodata.org/v1/eudem25m?locations=${loc}`);
+    const j=await r.json(); if(j.status!=='OK') throw new Error('elev');
+    return j.results.map(x=>x.elevation);
+}
+function subidasDescidas(el){
+    // média de 3 pontos para tirar ruído (pontes, taludes) + histerese de 3 m
+    const sm=el.map((v,i)=>{ const a=el.slice(Math.max(0,i-1),i+2).filter(x=>x!=null); return a.reduce((s,x)=>s+x,0)/a.length; });
+    let sub=0,des=0,ref=sm[0];
+    for(const v of sm){ if(v-ref>3){ sub+=v-ref; ref=v; } else if(ref-v>3){ des+=ref-v; ref=v; } }
+    return {sub:Math.round(sub),des:Math.round(des),alt0:Math.round(sm[0]),alt1:Math.round(sm[sm.length-1]),max:Math.round(Math.max(...sm))};
+}
+function amostrar(coords,n){
+    const d=[0]; for(let i=1;i<coords.length;i++) d.push(d[i-1]+haversineKm({lat:coords[i-1][1],lon:coords[i-1][0]},{lat:coords[i][1],lon:coords[i][0]}));
+    const tot=d[d.length-1], out=[]; let k=0;
+    for(let i=0;i<n;i++){ const alvo=tot*i/(n-1); while(k<d.length-2&&d[k+1]<alvo) k++;
+        const f=d[k+1]>d[k]?(alvo-d[k])/(d[k+1]-d[k]):0; out.push([coords[k][0]+(coords[k+1][0]-coords[k][0])*f,coords[k][1]+(coords[k+1][1]-coords[k][1])*f]); }
+    return out;
+}
+async function perfilRota(base,g,comAltitude=true){
+    let km,min=null,aprox=false,perfil=null;
+    try{
+        const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${base.lon},${base.lat};${g.lon},${g.lat}?overview=full&geometries=geojson`);
+        const j=await r.json(); if(j.code!=='Ok'||!j.routes||!j.routes[0]) throw new Error('rota');
+        km=j.routes[0].distance/1000; min=Math.round(j.routes[0].duration/60);
+        if(comAltitude&&km>0.3){
+            try{ const pts=amostrar(j.routes[0].geometry.coordinates,Math.min(100,Math.max(10,Math.ceil(km*1000/150))));
+                perfil=subidasDescidas(await altitudes(pts)); }catch(e){ console.warn('altitudes:',e); }
+        } else if(comAltitude) perfil={sub:0,des:0};
+    }catch(err){ km=haversineKm(base,g)*1.3; aprox=true; }   // sem rota: linha reta × 1,3
+    return {km,min,aprox,perfil};
+}
 let _kmACorrer=false;
 window.calcularDistancias=async(forcar=false)=>{
     if(_kmACorrer||!navigator.onLine||!_carregado) return;
-    const falta=(window.db.clientes||[]).filter(c=>{ const e=enderecoMaps(c); return e&&(forcar||c.kmEnd!==e); });
+    const falta=(window.db.clientes||[]).filter(c=>{ const e=enderecoMaps(c); return e&&(forcar||c.kmEnd!==e||(!c.kmErro&&c.elevEnd!==e&&c.elevTentado!==hoje())); });
     if(!falta.length) return;
     _kmACorrer=true;
     try{
@@ -1209,18 +1246,14 @@ window.calcularDistancias=async(forcar=false)=>{
         let feitos=0;
         for(const c of falta){
             const e=enderecoMaps(c);
-            let g=await geocodificar(e); await espera(1100);   // o Nominatim pede no máximo 1 pedido por segundo
-            if(!g&&c.zona&&c.morada){ g=await geocodificar(c.zona+', Portugal'); await espera(1100); }
             const cli=window.db.clientes.find(x=>x.id===c.id); if(!cli) continue;
+            let g=(!forcar&&c.kmEnd===e&&c.lat!=null)?{lat:c.lat,lon:c.lon}:null;   // já localizado: só falta o perfil
+            if(!g){ g=await geocodificar(e); await espera(1100);   // o Nominatim pede no máximo 1 pedido por segundo
+                if(!g&&c.zona&&c.morada){ g=await geocodificar(c.zona+', Portugal'); await espera(1100); } }
             if(!g){ cli.km=null; cli.kmMin=null; cli.kmEnd=e; cli.kmErro=true; continue; }
-            let km,min=null,aprox=false;
-            try{
-                const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${base.lon},${base.lat};${g.lon},${g.lat}?overview=false`);
-                const j=await r.json();
-                if(j.code!=='Ok'||!j.routes||!j.routes[0]) throw new Error('rota');
-                km=j.routes[0].distance/1000; min=Math.round(j.routes[0].duration/60);
-            }catch(err){ km=haversineKm(base,g)*1.3; aprox=true; }   // sem rota: linha reta × 1,3
-            Object.assign(cli,{lat:g.lat,lon:g.lon,km:Math.round(km*10)/10,kmMin:min,kmAprox:aprox,kmEnd:e,kmErro:false});
+            const pr=await perfilRota(base,g); await espera(1100);   // OpenTopoData: 1 pedido por segundo
+            Object.assign(cli,{lat:g.lat,lon:g.lon,km:Math.round(pr.km*10)/10,kmMin:pr.min,kmAprox:pr.aprox,kmEnd:e,kmErro:false,elevTentado:hoje()});
+            if(pr.perfil){ cli.subidaIda=pr.perfil.sub; cli.descidaIda=pr.perfil.des; cli.elevEnd=e; }
             feitos++;
             if(feitos%5===0){ window.atualizarBD(); }
         }
@@ -1362,7 +1395,7 @@ window.addEventListener('online',()=>mostrarToast('Ligação recuperada — a si
 window.addEventListener('online',()=>setTimeout(()=>window.calcularDistancias&&window.calcularDistancias(),3000));
 
 // ── HISTÓRICO: descrição legível de cada mudança ──
-const IGNORAR=['criadoPor','criadoEm','alteradoPor','alteradoEm','lat','lon','km','kmMin','kmAprox','kmEnd','kmErro'];
+const IGNORAR=['criadoPor','criadoEm','alteradoPor','alteradoEm','lat','lon','km','kmMin','kmAprox','kmEnd','kmErro','subidaIda','descidaIda','elevEnd','elevTentado'];
 const CFG_IGNORAR=['base','_migradoEm'];
 const semIgnorados=o=>{ const r={}; Object.keys(o||{}).sort().forEach(k=>{ if(!IGNORAR.includes(k)) r[k]=o[k]; }); return r; };
 const mudouAlgo=(a,b)=>JSON.stringify(semIgnorados(a))!==JSON.stringify(semIgnorados(b));
@@ -1926,14 +1959,27 @@ const faixaDe=km=>{ const f=getFaixas(); if(km==null||!f.length) return null; re
 const nomeFaixa=(f,i,lista)=>f.acima?`acima de ${toN(f.ate)} km`:`${i>0?toN(lista[i-1].ate):0}–${toN(f.ate)} km`;
 const precoBase=t=>toN((window.db.precosMemoria||{})[t]);
 // combustível de uma entrega: escolhe a carrinha mais pequena que leva tudo numa viagem (ou a maior, várias viagens)
-const combustivelEntrega=(kmIda,m3)=>{
+// Energia para subir: m·g·h. Gasóleo ≈ 35,8 MJ/L com ~30% de rendimento do motor → ≈ 10,7 MJ úteis por litro.
+const MJ_UTIL_LITRO=10.7;
+const pesoLenhaM3=()=>toN(window.db.pesoLenhaM3)||500;
+const perfilCli=c=>c&&c.elevEnd&&c.elevEnd===enderecoMaps(c)?{sub:toN(c.subidaIda),des:toN(c.descidaIda)}:null;
+const combustivelEntrega=(kmIda,m3,perfil)=>{
     const c=getCarrinhas().filter(v=>toN(v.capacidade)>0); const preco=toN(window.db.precoCombustivel);
     if(!c.length||kmIda==null) return null;
     const umaViagem=c.filter(v=>toN(v.capacidade)+0.001>=m3).sort((a,b)=>toN(a.capacidade)-toN(b.capacidade))[0];
     const v=umaViagem||c.slice().sort((a,b)=>toN(b.capacidade)-toN(a.capacidade))[0];
     const viagens=Math.max(1,Math.ceil(m3/toN(v.capacidade)-0.001));
-    const kmTotal=kmIda*2*viagens, litros=toN(v.consumo)?kmTotal*toN(v.consumo)/100:null;
-    return {carrinha:v,viagens,kmTotal,litros,custo:litros!=null&&preco?litros*preco:null};
+    const kmTotal=kmIda*2*viagens, litrosBase=toN(v.consumo)?kmTotal*toN(v.consumo)/100:null;
+    let litrosSub=0, taraAprox=false;
+    if(perfil&&litrosBase!=null){
+        const tara=toN(v.peso)||(taraAprox=true,2000);
+        let resto=m3;
+        for(let i=0;i<viagens;i++){ const carga=Math.min(toN(v.capacidade),resto); resto-=carga;
+            const mIda=tara+carga*pesoLenhaM3(), mVolta=tara;           // vai carregada, volta vazia
+            litrosSub+=(mIda*perfil.sub+mVolta*perfil.des)*9.81/(MJ_UTIL_LITRO*1e6); }  // descidas da ida = subidas da volta
+    }
+    const litros=litrosBase!=null?litrosBase+litrosSub:null;
+    return {carrinha:v,viagens,kmTotal,litrosBase,litrosSub,litros,taraAprox,perfil,custo:litros!=null&&preco?litros*preco:null,custoSub:preco?litrosSub*preco:0};
 };
 // custo da lenha por m³ (média das cargas desse tipo com m³ registados, com as vossas horas)
 const custoLenhaM3=t=>{
@@ -1982,16 +2028,14 @@ async function kmAte(endereco){
     let base=window.db.base;
     if(!base||base.lat==null||base.texto!==baseTexto()){ const g=await geocodificar(baseTexto()+', Portugal'); if(!g) throw new Error('base'); window.db.base={texto:baseTexto(),...g}; base=window.db.base; await espera(1100); }
     const g=await geocodificar(/portugal/i.test(endereco)?endereco:endereco+', Portugal'); if(!g) return null;
-    try{ const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${base.lon},${base.lat};${g.lon},${g.lat}?overview=false`); const j=await r.json();
-        if(j.code!=='Ok') throw 0; return {km:j.routes[0].distance/1000,min:Math.round(j.routes[0].duration/60),aprox:false}; }
-    catch(e){ return {km:haversineKm(base,g)*1.3,min:null,aprox:true}; }
+    return await perfilRota(base,g);
 }
 window.simular=async()=>{
     const res=document.getElementById('simResultado'), txt=document.getElementById('simEndereco').value.trim(), tipo=document.getElementById('simTipo').value, m3=toN(document.getElementById('simM3').value);
     if(!txt||m3<=0){ mostrarToast('Indica a localidade e os m³','erro'); return; }
     const cli=(window.db.clientes||[]).find(c=>c.nome.toLowerCase()===txt.toLowerCase());
     let d;
-    if(cli&&cli.km!=null&&cli.kmEnd===enderecoMaps(cli)) d={km:cli.km,min:cli.kmMin,aprox:cli.kmAprox};
+    if(cli&&cli.km!=null&&cli.kmEnd===enderecoMaps(cli)&&cli.elevEnd===enderecoMaps(cli)) d={km:cli.km,min:cli.kmMin,aprox:cli.kmAprox,perfil:{sub:toN(cli.subidaIda),des:toN(cli.descidaIda)}};
     else {
         if(!navigator.onLine){ res.innerHTML='<div class="alert alert-warning small">Sem rede — não consigo calcular os km.</div>'; return; }
         res.innerHTML='<div class="text-center text-muted">⏳ A calcular os km…</div>';
@@ -2002,13 +2046,15 @@ window.simular=async()=>{
 };
 function htmlSimulacao(d,tipo,m3,cli){
     const f=faixaDe(d.km), lista=getFaixas(), acr=f?toN(f.acrescimo):0, base=precoBase(tipo), preco=base+acr, total=preco*m3;
-    const comb=combustivelEntrega(d.km,m3), cL=custoLenhaM3(tipo);
+    const comb=combustivelEntrega(d.km,m3,d.perfil), cL=custoLenhaM3(tipo);
     const lucro=cL!=null?total-cL*m3-(comb&&comb.custo||0):null;
     const linha=(a,b,cls='')=>`<div class="d-flex justify-content-between ${cls}"><span>${a}</span><span>${b}</span></div>`;
     return `<div class="p-2 rounded small" style="background:var(--surface2);border:1px solid var(--border)">
         ${linha('🚗 Distância',`<b>${d.aprox?'≈ ':''}${d.km.toFixed(1)} km</b>${d.min?` · ${d.min} min`:''}`)}
         ${f?linha('📏 Faixa',`${nomeFaixa(f,lista.indexOf(lista.find(x=>toN(x.ate)===toN(f.ate))),lista)} · <b>+${acr}€/m³</b>`):linha('📏 Faixa','<span class="text-danger">sem faixas definidas</span>')}
         ${comb?linha(`⛽ Combustível (${comb.viagens} viagem${comb.viagens>1?'ens':''} · ${esc(comb.carrinha.nome)} · ${comb.kmTotal.toFixed(0)} km)`,comb.custo!=null?`<b>${fmtE(comb.custo)}</b> <span class="text-muted">(${comb.litros.toFixed(1)} L)</span>`:'<span class="text-danger">falta consumo/preço</span>'):linha('⛽ Combustível','<span class="text-danger">define as carrinhas</span>')}
+        ${d.perfil?linha('⛰️ Subidas',`ida <b>+${d.perfil.sub} m</b> · volta <b>+${d.perfil.des} m</b>`):linha('⛰️ Subidas','<span class="text-muted">sem dados de altitude</span>')}
+        ${comb&&comb.custo!=null&&d.perfil?linha('',`<span class="text-muted">${fmtE(comb.custo-comb.custoSub)} distância + <b>${fmtE(comb.custoSub)}</b> subidas (${comb.litrosSub.toFixed(1)} L)${comb.taraAprox?' · peso da carrinha ≈ 2000 kg':''}</span>`):''}
         ${comb&&comb.custo!=null?linha('',`<span class="text-muted">${fmtE(comb.custo/m3)} por m³</span>`):''}
         <hr class="my-1">
         ${linha(`🪵 ${esc(tipo)} base`,base?`${base}€/m³`:'<span class="text-danger">sem preço base</span>')}
@@ -2031,8 +2077,11 @@ const renderListaCarrinhas=()=>{ document.getElementById('listaCarrinhas').inner
     <span class="fw-bold flex-grow-1">${esc(v.nome)}</span>
     <div class="input-group input-group-sm" style="max-width:100px"><input type="number" class="form-control text-end" value="${toN(v.capacidade)}" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}','capacidade',this.value)"><span class="input-group-text">m³</span></div>
     <div class="input-group input-group-sm" style="max-width:135px"><input type="number" class="form-control text-end ${toN(v.consumo)>0?'':'is-invalid'}" value="${toN(v.consumo)||''}" placeholder="?" step="0.5" min="0" inputmode="decimal" onchange="window.alterarCarrinha('${escJs(v.id)}','consumo',this.value)"><span class="input-group-text">L/100km</span></div>
+    <div class="input-group input-group-sm" style="max-width:135px"><input type="number" class="form-control text-end" value="${toN(v.peso)||''}" placeholder="vazia" step="50" min="0" inputmode="numeric" onchange="window.alterarCarrinha('${escJs(v.id)}','peso',this.value)"><span class="input-group-text">kg</span></div>
     <i class="bi bi-trash text-danger" onclick="window.removerCarrinha('${escJs(v.id)}')"></i></div>`).join('')||'<small class="text-muted">Sem carrinhas — acrescenta abaixo.</small>';
-    const pc=document.getElementById('precoCombustivel'); if(pc&&document.activeElement!==pc) pc.value=toN(window.db.precoCombustivel)||''; };
+    const pc=document.getElementById('precoCombustivel'); if(pc&&document.activeElement!==pc) pc.value=toN(window.db.precoCombustivel)||'';
+    const pl=document.getElementById('pesoLenhaM3'); if(pl&&document.activeElement!==pl) pl.value=pesoLenhaM3(); };
+window.guardarPesoLenha=v=>{ window.db.pesoLenhaM3=toN(v)||500; window.atualizarBD(); };
 window.abrirCarrinhas=()=>{ renderListaCarrinhas(); window.abrirModal('modalCarrinhas'); };
 window.adicionarCarrinha=()=>{ const n=document.getElementById('novaCarrinhaNome').value.trim(), c=toN(document.getElementById('novaCarrinhaCap').value), l=toN(document.getElementById('novaCarrinhaCons').value);
     if(!n||c<=0){ mostrarToast('Indica o nome e a capacidade em m³','erro'); return; }
@@ -2307,9 +2356,10 @@ window.atualizarTotalEnc=()=>{
     document.getElementById('encTotalPreview').textContent=(m*p).toFixed(2)+'€';
     const c=cliEnc(), km=kmCli(c), info=document.getElementById('encSimInfo');
     if(!c||km==null){ info.innerHTML=c&&!enderecoMaps(c)?'<span class="text-muted">Sem morada/localidade — sem km</span>':''; return; }
-    const comb=m>0?combustivelEntrega(km,m):null, f=faixaDe(km), lista=getFaixas();
+    const comb=m>0?combustivelEntrega(km,m,perfilCli(c)):null, f=faixaDe(km), lista=getFaixas();
     info.innerHTML=`🚗 ${km.toFixed(0)} km${f?` · ${nomeFaixa(f,lista.indexOf(lista.find(x=>toN(x.ate)===toN(f.ate))),lista)}`:''}`+
-        (comb&&comb.custo!=null?` · ⛽ <b>${fmtE(comb.custo)}</b> (${comb.viagens} viagem${comb.viagens>1?'ens':''})`:'')+
+        (perfilCli(c)?` · ⛰️ +${perfilCli(c).sub}/+${perfilCli(c).des} m`:'')+
+        (comb&&comb.custo!=null?` · ⛽ <b>${fmtE(comb.custo)}</b> (${comb.viagens} viagem${comb.viagens>1?'ens':''}${comb.custoSub>0.005?`, ${fmtE(comb.custoSub)} das subidas`:''})`:'')+
         (comb&&comb.custo!=null&&m*p?` <span class="text-muted">= ${(comb.custo/(m*p)*100).toFixed(1)}% do valor</span>`:'');
 };
 
