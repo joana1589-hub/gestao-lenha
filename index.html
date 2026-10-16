@@ -1225,7 +1225,9 @@ const textoAuditoria = x => {
 const porTag = x => x && (x.por||x.alteradoPor||x.criadoPor) ? `<span class="por-tag" title="${esc(fmtQuando(x.em||x.alteradoEm||x.criadoEm))}">· ${esc(x.por||x.alteradoPor||x.criadoPor)}</span>` : '';
 
 // ── CONTACTOS ────────────────────────────
-const nomeBonito = n => String(n||'').toLowerCase().replace(/(^|[\s\-\/])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+// "PADARIA PAMPILHOSA" → "Padaria Pampilhosa"; "rui da silva" → "Rui da Silva"; "d'ávila" → "D'Ávila"
+const nomeBonito = n => String(n||'').replace(/<[^>]*>/g,'').toLowerCase().replace(/(^|[\s\-\/"'(])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())
+    .replace(/(\s)(Da|De|Do|Das|Dos|E)(?=\s)/g,(m,a,w)=>a+w.toLowerCase());
 const telLimpo = t => {
     let d=String(t||'').replace(/[^\d+]/g,'');
     if(!d) return '';
@@ -1574,7 +1576,7 @@ document.addEventListener('shown.bs.tab',e=>{ if(e.target.getAttribute('data-bs-
 // ── VERIFICAR DADOS ──────────────────────
 window.verificarDados=()=>{
     const P=[], add=(nivel,texto,acao)=>P.push({nivel,texto,acao});
-    const hj=hoje(), amanha=(()=>{ const d=new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+    const hj=hoje(), amanha=(()=>{ const d=new Date(); d.setDate(d.getDate()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
     const dataOk=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'');
     const abrirEnc=id=>`window.abrirEditarEncomenda('${escJs(id)}')`;
     (window.db.encomendas||[]).forEach(e=>{
