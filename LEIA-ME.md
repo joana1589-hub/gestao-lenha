@@ -40,7 +40,7 @@ O documento antigo (`producao/dados_mestre`) fica intacto como cópia de seguran
 - **iPhone (Safari):** abre o link → botão Partilhar → **Adicionar ao ecrã principal**.
 
 ## Atualizações
-Sempre que alterares a app, muda a linha `const VERSAO = 'lenhapro-v27';` no `sw.js` (v28, v29…)
+Sempre que alterares a app, muda a linha `const VERSAO = 'lenhapro-v28';` no `sw.js` (v29, v30…)
 para os telemóveis apanharem a versão nova. Fecha e volta a abrir a app.
 
 ## Sem rede

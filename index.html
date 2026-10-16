@@ -1299,7 +1299,7 @@ async function perfilRota(base,g,comAltitude=true){
 let _kmACorrer=false;
 window.calcularDistancias=async(forcar=false)=>{
     if(_kmACorrer||!navigator.onLine||!_carregado) return;
-    const falta=(window.db.clientes||[]).filter(c=>{ const e=enderecoMaps(c); return e&&(forcar||c.kmEnd!==e||(!c.kmErro&&c.elevEnd!==e&&c.elevTentado!==hoje())); });
+    const falta=(window.db.clientes||[]).filter(c=>{ const e=enderecoMaps(c); return e&&(forcar||c.kmEnd!==e||(!c.kmErro&&c.elevEnd!==e&&(!c.elevTentado||diasDesde(c.elevTentado)>=7))); });
     if(!falta.length) return;
     _kmACorrer=true;
     try{
@@ -1308,23 +1308,25 @@ window.calcularDistancias=async(forcar=false)=>{
         if(!base||base.lat==null||base.texto!==baseTexto()){
             const g=await geocodificar(baseTexto()+', Portugal'); await espera(1100);
             if(!g){ mostrarToast(`Não encontrei "${baseTexto()}" no mapa`,'erro'); return; }
-            window.db.base={texto:baseTexto(),...g}; base=window.db.base;
+            window.db.base={texto:baseTexto(),...g}; base=window.db.base; await window.atualizarBD({silencioso:true});
         }
-        let feitos=0;
         for(const c of falta){
             const e=enderecoMaps(c);
             const cli=window.db.clientes.find(x=>x.id===c.id); if(!cli) continue;
+            // já feito entretanto (pelo outro telemóvel)?
+            if(!forcar&&cli.kmEnd===e&&(cli.kmErro||cli.elevEnd===e||(cli.elevTentado&&diasDesde(cli.elevTentado)<7))) continue;
             let g=(!forcar&&c.kmEnd===e&&c.lat!=null)?{lat:c.lat,lon:c.lon}:null;   // já localizado: só falta o perfil
             if(!g){ g=await geocodificar(e); await espera(1100);   // o Nominatim pede no máximo 1 pedido por segundo
                 if(!g&&c.zona&&c.morada){ g=await geocodificar(c.zona+', Portugal'); await espera(1100); } }
-            if(!g){ cli.km=null; cli.kmMin=null; cli.kmEnd=e; cli.kmErro=true; continue; }
-            const pr=await perfilRota(base,g); await espera(1100);   // OpenTopoData: 1 pedido por segundo
-            Object.assign(cli,{lat:g.lat,lon:g.lon,km:Math.round(pr.km*10)/10,kmMin:pr.min,kmAprox:pr.aprox,kmEnd:e,kmErro:false,elevTentado:hoje()});
-            if(pr.perfil){ cli.subidaIda=pr.perfil.sub; cli.descidaIda=pr.perfil.des; cli.elevEnd=e; }
-            feitos++;
-            if(feitos%5===0){ window.atualizarBD(); }
+            if(!g){ const cc=window.db.clientes.find(x=>x.id===c.id); if(cc){ Object.assign(cc,{km:null,kmMin:null,kmEnd:e,kmErro:true}); await window.atualizarBD({silencioso:true}); } continue; }
+            const pr=await perfilRota(base,g);
+            // procurar o cliente de novo: os dados podem ter sido atualizados entretanto (outro telemóvel)
+            const cc=window.db.clientes.find(x=>x.id===c.id); if(!cc) continue;
+            Object.assign(cc,{lat:g.lat,lon:g.lon,km:Math.round(pr.km*10)/10,kmMin:pr.min,kmAprox:pr.aprox,kmEnd:e,kmErro:false,elevTentado:hoje()});
+            if(pr.perfil){ cc.subidaIda=pr.perfil.sub; cc.descidaIda=pr.perfil.des; cc.elevEnd=e; }
+            await window.atualizarBD({silencioso:true});   // gravar já, para não se perder
+            await espera(1100);   // OpenTopoData: 1 pedido por segundo
         }
-        window.atualizarBD();
     }catch(err){ console.warn('km:',err); }
     finally{ _kmACorrer=false; }
 };
@@ -1398,9 +1400,12 @@ window.avisar=(msg,fn)=>{ document.getElementById('avisoMsg').innerHTML=msg; con
 
 // Compara o estado atual com a última versão do servidor e grava APENAS os registos que mudaram.
 // Assim, se outra pessoa alterou outro registo ao mesmo tempo, essa alteração não é apagada.
-window.atualizarBD=async()=>{
+// silencioso: gravações automáticas (km, subidas, migrações) — não mostram "A guardar / Guardado"
+let _gravouSemRede=false;
+window.atualizarBD=async(opts={})=>{
+    const sil=!!opts.silencioso;
     window.render();
-    if(!_carregado||!_base){ mostrarToast('Ainda a carregar dados — tenta daqui a pouco','erro'); return; }
+    if(!_carregado||!_base){ if(!sil) mostrarToast('Ainda a carregar dados — tenta daqui a pouco','erro'); return; }
     const ops=[], hist=[], t=agoraIso();
     const registar=(acao,col,id,antesObj,depoisObj)=>{
         if(window._restauro){ window._restauro.n=(window._restauro.n||0)+1; return; }
@@ -1451,14 +1456,14 @@ window.atualizarBD=async()=>{
     if(!navigator.onLine){
         // Fica guardado no telemóvel e é enviado automaticamente quando houver rede
         gravar().catch(e=>{ mostrarToast('Erro ao guardar!','erro'); console.error(e); });
-        mostrarToast('Guardado no telemóvel (sem rede — sincroniza depois)','ok'); return;
+        if(!sil){ _gravouSemRede=true; mostrarToast('Guardado no telemóvel (sem rede — sincroniza depois)','ok'); } return;
     }
-    mostrarToast('A guardar...','saving');
-    try{ await gravar(); mostrarToast('Guardado','ok'); }
-    catch(e){ mostrarToast(e.code==='permission-denied'?'Sem permissão para gravar.':'Erro ao guardar! Verifica a ligação.','erro'); console.error(e); }
+    if(!sil) mostrarToast('A guardar...','saving');
+    try{ await gravar(); if(!sil) mostrarToast('Guardado','ok'); }
+    catch(e){ if(!sil||e.code==='permission-denied') mostrarToast(e.code==='permission-denied'?'Sem permissão para gravar.':'Erro ao guardar! Verifica a ligação.','erro'); console.error(e); }
 };
 window.addEventListener('offline',()=>mostrarToast('Sem rede — podes continuar a trabalhar','saving'));
-window.addEventListener('online',()=>mostrarToast('Ligação recuperada — a sincronizar','ok'));
+window.addEventListener('online',()=>{ if(_gravouSemRede){ _gravouSemRede=false; mostrarToast('Ligação recuperada — a enviar o que gravaste sem rede','ok'); } });
 window.addEventListener('online',()=>setTimeout(()=>window.calcularDistancias&&window.calcularDistancias(),3000));
 
 // ── HISTÓRICO: descrição legível de cada mudança ──
@@ -1661,7 +1666,7 @@ window.verificarDados=()=>{
 };
 
 // ── MIGRAÇÃO LEGACY ──────────────────────
-function migrarLegacy(){ let alt=false; (window.db.encomendas||[]).forEach(e=>{ if(!e.entregas&&toN(e.metrosEntregues)>0){e.entregas=[{id:'leg-e-'+e.id,data:e.dataEnc,m3:toN(e.metrosEntregues)}];alt=true;} if(!e.pagamentos&&toN(e.valorPago)>0){e.pagamentos=[{id:'leg-p-'+e.id,data:e.dataEnc,valor:toN(e.valorPago)}];alt=true;} if(!e.entregas)e.entregas=[]; if(!e.pagamentos)e.pagamentos=[]; }); if(alt)window.atualizarBD(); }
+function migrarLegacy(){ let alt=false; (window.db.encomendas||[]).forEach(e=>{ if(!e.entregas&&toN(e.metrosEntregues)>0){e.entregas=[{id:'leg-e-'+e.id,data:e.dataEnc,m3:toN(e.metrosEntregues)}];alt=true;} if(!e.pagamentos&&toN(e.valorPago)>0){e.pagamentos=[{id:'leg-p-'+e.id,data:e.dataEnc,valor:toN(e.valorPago)}];alt=true;} if(!e.entregas)e.entregas=[]; if(!e.pagamentos)e.pagamentos=[]; }); if(alt)window.atualizarBD({silencioso:true}); }
 
 // ── FILTROS ANO ──────────────────────────
 function popularFiltrosAnos(){ const anos=new Set([new Date().getFullYear().toString()]); (window.db.encomendas||[]).forEach(e=>e.dataEnc&&anos.add(e.dataEnc.split('-')[0])); [...(window.db.despesas||[]),...(window.db.lotes||[])].forEach(x=>x.data&&anos.add(x.data.split('-')[0])); const lista=Array.from(anos).sort().reverse(); const fill=(id,comTodos)=>{ const s=document.getElementById(id),cur=s.value; s.innerHTML=(comTodos?'<option value="">Todos os anos</option>':'')+lista.map(a=>`<option value="${a}" ${a==cur?'selected':''}>${a}</option>`).join(''); }; fill('dashFiltroAno'); ['filtroEncAno','filtroDivAno','filtroVenAno'].forEach(id=>fill(id,true)); }
